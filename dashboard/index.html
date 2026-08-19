@@ -18,29 +18,37 @@
     <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar" id="sidebar">
         <div class="brand">
-            <i class="fas fa-bolt" style="color: #f59e0b;"></i> <span class="nav-text" style="font-family: Arial, sans-serif;">ModyStore</span>
+            <i class="fas fa-bolt" style="color: #f59e0b;"></i> 
+            <span class="nav-text" style="font-family: Arial, sans-serif;">ModyStore</span>
         </div>
         <ul class="nav-links">
             <li class="nav-item active" data-target="analytics-view">
-                <i class="fas fa-chart-pie"></i> <span class="nav-text">الإحصائيات</span>
+                <i class="fas fa-chart-pie"></i> 
+                <span class="nav-text">الإحصائيات</span>
             </li>
             <li class="nav-item" data-target="orders-view">
-                <i class="fas fa-shopping-cart"></i> <span class="nav-text">الطلبات</span>
+                <i class="fas fa-shopping-cart"></i> 
+                <span class="nav-text">الطلبات</span>
             </li>
             <li class="nav-item" data-target="products-view">
-                <i class="fas fa-box-open"></i> <span class="nav-text">المنتجات</span>
+                <i class="fas fa-box-open"></i> 
+                <span class="nav-text">المنتجات</span>
             </li>
             <li class="nav-item" data-target="categories-view">
-                <i class="fas fa-tags"></i> <span class="nav-text">الأقسام</span>
+                <i class="fas fa-tags"></i> 
+                <span class="nav-text">الأقسام</span>
             </li>
             <li class="nav-item" data-target="vouchers-view">
-                <i class="fas fa-ticket-alt"></i> <span class="nav-text">الكوبونات</span>
+                <i class="fas fa-ticket-alt"></i> 
+                <span class="nav-text">الكوبونات</span>
             </li>
             <li class="nav-item" data-target="employees-view">
-                <i class="fas fa-users"></i> <span class="nav-text">الموظفين</span>
+                <i class="fas fa-users"></i> 
+                <span class="nav-text">الموظفين</span>
             </li>
             <li class="nav-item" data-target="logs-view">
-                <i class="fas fa-history"></i> <span class="nav-text">سجل النشاطات</span>
+                <i class="fas fa-history"></i> 
+                <span class="nav-text">سجل النشاطات</span>
             </li>
         </ul>
     </aside>
@@ -68,7 +76,9 @@
                 <div class="stat-cards">
                     <!-- كارت إجمالي الطلبات -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab('active')">
-                        <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
                         <div class="stat-info">
                             <h3>إجمالي الطلبات</h3>
                             <p id="statTotalOrders">0</p>
@@ -76,7 +86,9 @@
                     </div>
                     <!-- كارت إجمالي المبيعات -->
                     <div class="stat-card clickable-card" onclick="openSalesReport()">
-                        <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="stat-icon" style="color: #10b981; background: #dcfce7;">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
                         <div class="stat-info">
                             <h3>إجمالي المبيعات</h3>
                             <p id="statTotalRevenue">0 ج.م</p>
@@ -84,7 +96,9 @@
                     </div>
                     <!-- كارت طلبات قيد المراجعة -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab('pending')">
-                        <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
+                        <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;">
+                            <i class="fas fa-clock"></i>
+                        </div>
                         <div class="stat-info">
                             <h3>طلبات قيد المراجعة</h3>
                             <p id="statPendingOrders">0</p>
@@ -92,7 +106,9 @@
                     </div>
                     <!-- كارت المنتجات النشطة -->
                     <div class="stat-card clickable-card" onclick="document.querySelector('[data-target=\'products-view\']').click()">
-                        <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
+                        <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;">
+                            <i class="fas fa-box-open"></i>
+                        </div>
                         <div class="stat-info">
                             <h3>المنتجات النشطة</h3>
                             <p id="statTotalProducts">0</p>
@@ -139,7 +155,9 @@
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody">
-                            <tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -151,7 +169,9 @@
                     <h2 class="page-title">إدارة المنتجات</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchProducts" placeholder="بحث باسم المنتج..." onkeyup="filterProducts()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
+                        <button class="btn-add" onclick="openProductModal()">
+                            <i class="fas fa-plus"></i> إضافة منتج
+                        </button>
                     </div>
                 </div>
                 <div class="card">
@@ -176,7 +196,9 @@
                     <h2 class="page-title">إدارة الأقسام</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchCategories" placeholder="بحث باسم القسم..." onkeyup="filterCategories()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add btn-cat" onclick="openCategoryModal()"><i class="fas fa-plus"></i> إضافة قسم</button>
+                        <button class="btn-add btn-cat" onclick="openCategoryModal()">
+                            <i class="fas fa-plus"></i> إضافة قسم
+                        </button>
                     </div>
                 </div>
                 <div class="card">
@@ -199,7 +221,9 @@
                     <h2 class="page-title">إدارة الكوبونات</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchVouchers" placeholder="بحث بكود الخصم..." onkeyup="filterVouchers()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add btn-voucher" onclick="openVoucherModal()"><i class="fas fa-ticket-alt"></i> إنشاء كود</button>
+                        <button class="btn-add btn-voucher" onclick="openVoucherModal()">
+                            <i class="fas fa-ticket-alt"></i> إنشاء كود
+                        </button>
                     </div>
                 </div>
                 <div class="card">
@@ -224,7 +248,9 @@
                     <h2 class="page-title">إدارة الموظفين</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchEmployees" placeholder="بحث باسم الموظف، الهاتف..." onkeyup="filterEmployees()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add btn-emp" onclick="openEmployeeModal()"><i class="fas fa-user-plus"></i> إضافة موظف</button>
+                        <button class="btn-add btn-emp" onclick="openEmployeeModal()">
+                            <i class="fas fa-user-plus"></i> إضافة موظف
+                        </button>
                     </div>
                 </div>
                 <div class="card">
@@ -247,7 +273,9 @@
             <div id="logs-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">سجل النشاطات</h2>
-                    <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogs()"><i class="fas fa-archive"></i> أرشفة سجلات الشهر الماضي</button>
+                    <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogs()">
+                        <i class="fas fa-archive"></i> أرشفة سجلات الشهر الماضي
+                    </button>
                 </div>
                 <div class="card">
                     <table>
@@ -276,7 +304,7 @@
             </div>
         </div>
 
-        <!-- نافذة التأكيد (Confirm) زي الصورة 99 -->
+        <!-- نافذة التأكيد (Confirm) -->
         <div class="modal-overlay custom-popup" id="customConfirm" style="z-index: 9999;">
             <div class="modal" style="width: 400px; text-align: center; padding: 40px 20px;">
                 <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: var(--accent); margin-bottom: 20px;"></i>
@@ -293,7 +321,9 @@
             <div class="modal" style="width: 800px; max-width: 95%;">
                 <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fas fa-chart-line" style="color: var(--success);"></i> تقرير المبيعات المفصل</span>
-                    <div class="close-btn" style="cursor: pointer; color: var(--text-light);" onclick="closeModal('salesReportModal')"><i class="fas fa-times"></i></div>
+                    <div class="close-btn" style="cursor: pointer; color: var(--text-light);" onclick="closeModal('salesReportModal')">
+                        <i class="fas fa-times"></i>
+                    </div>
                 </h3>
                 
                 <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px; flex-wrap: wrap; align-items: center;">
@@ -369,88 +399,94 @@
 
                 <div class="modal-actions screen-only">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
-                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> طباعة البوليصة</button>
-                    <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')"><i class="fas fa-print"></i> طباعة الفاتورة</button>
+                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')">
+                        <i class="fas fa-truck"></i> طباعة البوليصة
+                    </button>
+                    <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')">
+                        <i class="fas fa-print"></i> طباعة الفاتورة
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- ================= تصميم بوليصة الشحن (Bosta Style) للطباعة ================= -->
+        <!-- ================= تصميم بوليصة الشحن للطباعة (التصميم النظيف) ================= -->
         <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
-            <div class="bosta-waybill">
+            <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 3px solid black; font-family: 'Arial', 'Cairo', sans-serif; direction: rtl; background: white; color: black;">
+                
                 <!-- الهيدر: اللوجو والباركود والQR -->
-                <div class="bosta-header">
-                    <div class="bosta-logo-area">
-                        <!-- تم التبديل للوجو ModyStore بدلاً من Bosta -->
+                <div class="bosta-header" style="display: flex; justify-content: space-between; border-bottom: 2px solid black; padding: 10px; align-items: center;">
+                    <div class="bosta-logo-area" style="display: flex; align-items: center; font-size: 20px; font-weight: 900;">
                         <i class="fas fa-bolt" style="font-size: 30px; margin-left: 8px;"></i>
                         <span style="font-family: Arial, sans-serif; letter-spacing: 1px;">ModyStore</span>
                     </div>
                     <div class="bosta-barcode-top">
-                        <svg id="topBarcode"></svg>
+                        <svg id="topBarcode" style="height: 60px !important; width: 100%; max-width: 170px;"></svg>
                     </div>
+                    <div id="qrCodeBox" style="margin-right:5px;"></div>
                 </div>
 
-                <div class="bosta-row" style="display: flex;">
-                    <div class="bosta-col bosta-center" style="flex:1;"><strong>DELIVER</strong></div>
-                    <div class="bosta-col bosta-center" style="flex:1;"><strong>COD</strong></div>
-                    <div class="bosta-col" style="flex:1; border-left:none; display:flex; justify-content:center; align-items:center;" rowspan="2">
-                        <div id="qrCodeBox"></div>
+                <div class="bosta-row bosta-flex" style="display: flex; border-bottom: 2px solid black;">
+                    <div class="bosta-flex-item" style="flex: 1; padding: 8px; text-align: center;">
+                        <strong>السماح بفتح الشحنة:</strong> <span id="printAllowOpen">نعم</span>
                     </div>
-                </div>
-
-                <div class="bosta-row bosta-flex">
-                    <div class="bosta-flex-item"><strong>السماح بفتح الشحنة:</strong> <span id="printAllowOpen">نعم</span></div>
-                    <div class="bosta-flex-item"><strong>عدد القطع:</strong> <span id="printQty">1</span></div>
+                    <div class="bosta-flex-item" style="flex: 1; border-right: 2px solid black; padding: 8px; text-align: center;">
+                        <strong>عدد القطع:</strong> <span id="printQty">1</span>
+                    </div>
                 </div>
 
                 <!-- بيانات العميل والمكان -->
-                <div class="bosta-row" style="display:flex;">
-                    <div style="flex:1; border-left: 2px solid black; padding: 8px;">
+                <div class="bosta-row" style="display:flex; border-bottom: 2px solid black;">
+                    <div style="flex:1; padding: 8px;">
                         <div style="font-weight:bold; font-size:14px; margin-bottom:10px;">من: ModyStore</div>
-                        <div><strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:15px;"></span></div>
+                        <div>
+                            <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:15px;"></span>
+                        </div>
                     </div>
-                    <div style="flex:1; padding: 8px; text-align: right; font-size:14px;">
-                        <div style="margin-bottom:5px;"><strong>المدينة:</strong> <span id="printCity"></span></div>
-                        <div><strong>المنطقة:</strong> <span id="printRegion"></span></div>
+                    <div style="flex:1; border-right: 2px solid black; padding: 8px; text-align: right; font-size:14px;">
+                        <div style="margin-bottom:5px;">
+                            <strong>المدينة:</strong> <span id="printCity"></span>
+                        </div>
+                        <div>
+                            <strong>المنطقة:</strong> <span id="printRegion"></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bosta-row" style="padding: 8px; font-size:14px;">
+                <div class="bosta-row" style="padding: 8px; font-size:14px; border-bottom: 2px solid black;">
                     <strong>العنوان بالتفصيل:</strong> <br>
                     <span id="printAddress"></span>
                 </div>
 
-                <div class="bosta-row" style="display:flex;">
-                    <div style="flex:1; border-left: 2px solid black; padding: 8px;">
+                <div class="bosta-row" style="display:flex; border-bottom: 2px solid black;">
+                    <div style="flex:1; padding: 8px;">
                         <strong>تليفون:</strong> <br>
                         <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:18px;"></span>
                     </div>
-                    <div style="flex:1; padding: 8px;">
+                    <div style="flex:1; border-right: 2px solid black; padding: 8px;">
                         <strong>تليفون آخر:</strong> <br>
                         -
                     </div>
                 </div>
 
-                <div class="bosta-row" style="padding: 8px;">
+                <div class="bosta-row" style="padding: 8px; border-bottom: 2px solid black;">
                     <strong>وصف الشحنة (المنتجات):</strong><br>
                     <span id="printProductsDesc" style="font-size:14px; font-weight:bold;"></span>
                 </div>
 
-                <div class="bosta-row" style="padding: 8px;">
+                <div class="bosta-row" style="padding: 8px; border-bottom: 2px solid black;">
                     <strong>ملاحظات:</strong><br>
                     <span id="printNotes" style="font-size:14px;"></span>
                 </div>
 
-                <!-- الفوتر (رقم الأوردر والمبلغ) -->
-                <div class="bosta-footer">
-                    <div style="flex:1; border-left: 2px solid black; padding: 15px; display:flex; flex-direction:column; justify-content:center;">
-                        <strong style="font-size:12px;">Order REF</strong> 
-                        <span id="printOrderRef" style="font-weight:900; font-size:22px;"></span>
-                    </div>
-                    <div style="flex:1; padding: 15px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
-                        <strong style="font-size:14px;">المبلغ المطلوب (COD):</strong>
-                        <span id="printCodAmount" style="font-size:28px; font-weight:900;"></span>
-                    </div>
+                <!-- الفوتر الديناميكي للمبلغ (يظهر حسب طريقة الدفع) -->
+                <div id="codAmountContainer" style="padding: 15px; text-align: center; display:none;">
+                    <strong style="font-size:16px;">المبلغ المطلوب تحصيله (COD):</strong><br>
+                    <span id="printCodAmount" style="font-size:35px; font-weight:900;"></span>
+                </div>
+
+                <div id="paidAmountContainer" style="padding: 15px; text-align: center; font-size: 16px; display:none; background-color: #f8fafc;">
+                    <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> &nbsp;&nbsp;|&nbsp;&nbsp; 
+                    <strong>القيمة:</strong> <span id="printPaidAmount" style="font-weight:bold;"></span>
                 </div>
             </div>
         </div>
