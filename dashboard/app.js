@@ -391,7 +391,7 @@ window.updateOrderStatus = (orderId, selectElement) => {
 };
 
 // ==========================================
-// تجهيز بوليصة الشحن Bosta (التعديل الجديد)
+// تجهيز بوليصة الشحن Bosta
 // ==========================================
 let currentPrintOrder = null;
 
@@ -470,18 +470,14 @@ window.viewOrderDetails = (orderDbId) => {
     document.getElementById("orderDetailsModal").style.display = "flex";
 };
 
-// ==========================================
-// دالة الطباعة باللوجيك الجديد للبوليصة
-// ==========================================
 window.printDocument = (type) => {
     if (type === 'waybill') {
         const order = currentPrintOrder;
         
-        // ضبط الباركود والـ QR Code
         JsBarcode("#topBarcode", order.orderId, { 
             format: "CODE128", 
             width: 2, 
-            height: 45, 
+            height: 50, 
             displayValue: true 
         });
         
@@ -497,7 +493,7 @@ window.printDocument = (type) => {
             document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
         }
         
-        document.getElementById("printCustName").innerText = order.customer.name || "";
+        document.getElementById("printCustName").innerText = order.customer.name;
         
         let addrParts = [];
         if (order.customer && order.customer.address) {
@@ -505,49 +501,38 @@ window.printDocument = (type) => {
         }
         document.getElementById("printCity").innerText = addrParts[0] || "غير محدد";
         document.getElementById("printRegion").innerText = addrParts[1] || "";
-        document.getElementById("printAddress").innerText = order.customer.address || "";
-        document.getElementById("printPhone1").innerText = order.customer.phone || "";
+        document.getElementById("printAddress").innerText = order.customer.address;
+        document.getElementById("printPhone1").innerText = order.customer.phone;
         
         let descParts = [];
-        if (order.items && Array.isArray(order.items)) {
-            order.items.forEach(i => {
-                descParts.push(`${i.qty}x ${i.name}`);
-            });
-        }
+        order.items.forEach(i => {
+            descParts.push(`${i.qty}x ${i.name}`);
+        });
         document.getElementById("printProductsDesc").innerText = descParts.join(' ، ');
         
-        const notesInput = document.getElementById("wbNotes");
-        let notesText = notesInput ? notesInput.value : "";
+        let notesText = document.getElementById("wbNotes").value;
         if (!notesText) {
             notesText = "لا يوجد";
         }
         document.getElementById("printNotes").innerText = notesText;
-        
-        // المنطق الجديد للتحكم في ظهور المبلغ في البوليصة
+
+        // التحكم في ظهور المبلغ (كاش ولا مدفوع إلكتروني)
         const codContainer = document.getElementById("codAmountContainer");
         const paidContainer = document.getElementById("paidAmountContainer");
         let payMethod = order.paymentMethod || "الدفع عند الاستلام (COD)";
         
-        // لو الدفع كاش أو عند الاستلام
         if (payMethod.includes("عند الاستلام") || payMethod.includes("COD")) {
             if (codContainer) codContainer.style.display = "block";
             if (paidContainer) paidContainer.style.display = "none";
-            
             let codAmountEl = document.getElementById("printCodAmount");
-            if (codAmountEl) {
-                codAmountEl.innerText = Math.round(order.total || 0) + " ج.م";
-            }
-        } 
-        // لو الدفع فيزا أو محفظة
-        else {
+            if (codAmountEl) codAmountEl.innerText = Math.round(order.total) + " ج.م";
+        } else {
             if (codContainer) codContainer.style.display = "none";
             if (paidContainer) paidContainer.style.display = "block";
-            
             let payMethodLabel = document.getElementById("printPaymentMethodLabel");
             if (payMethodLabel) payMethodLabel.innerText = payMethod;
-            
             let paidAmountEl = document.getElementById("printPaidAmount");
-            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total || 0) + " ج.م (مدفوع)";
+            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total) + " ج.م (مدفوع)";
         }
 
         document.body.className = 'print-mode-waybill';
