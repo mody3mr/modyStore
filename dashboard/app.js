@@ -273,7 +273,7 @@ window.filterReportProducts = () => {
 };
 
 // ==========================================
-// إدارة الطلبات (شاملة فلاتر البحث)
+// إدارة الطلبات (مع إصلاح الفلاتر والبحث لتظهر كل الطلبات)
 // ==========================================
 let allOrders = [];
 let currentOrderTab = 'active';
@@ -282,40 +282,56 @@ window.switchOrderTab = (tab) => {
     currentOrderTab = tab;
     document.getElementById('tabActiveOrders').classList.toggle('active', tab === 'active');
     document.getElementById('tabArchivedOrders').classList.toggle('active', tab === 'archived');
-    renderOrdersTable();
+    window.renderOrdersTable();
 };
 
 window.renderOrdersTable = () => {
     const table = document.getElementById("ordersTableBody");
     table.innerHTML = "";
     
-    const search = document.getElementById("searchOrders").value.toLowerCase();
-    const dateFilter = document.getElementById("filterOrderDate").value;
-    const paymentFilter = document.getElementById("filterOrderPayment").value;
+    const searchInput = document.getElementById("searchOrders");
+    const search = searchInput ? searchInput.value.toLowerCase() : "";
+    
+    const dateInput = document.getElementById("filterOrderDate");
+    const dateFilter = dateInput ? dateInput.value : "";
+    
+    const paymentInput = document.getElementById("filterOrderPayment");
+    const paymentFilter = paymentInput ? paymentInput.value : "";
 
     let filteredOrders = allOrders.filter(order => {
         let tabMatch = false;
+        
+        // دمج "تم الاستلام" القديمة مع "تم تسليمه" الجديدة عشان مفيش حاجة تختفي
         if (currentOrderTab === 'active') {
             tabMatch = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن'].includes(order.status);
         } else {
-            tabMatch = ['تم تسليمه', 'ملغي'].includes(order.status);
+            tabMatch = ['تم تسليمه', 'تم الاستلام', 'ملغي'].includes(order.status);
         }
             
-        let searchMatch = order.orderId.includes(search) || 
-                          order.customer.name.toLowerCase().includes(search) || 
-                          order.customer.phone.includes(search);
+        // حماية المتغيرات لو הדاتا قديمة ومفيهاش اسم أو رقم عشان ميعملش Error
+        let orderIdStr = order.orderId ? String(order.orderId).toLowerCase() : "";
+        let custName = (order.customer && order.customer.name) ? String(order.customer.name).toLowerCase() : "";
+        let custPhone = (order.customer && order.customer.phone) ? String(order.customer.phone).toLowerCase() : "";
+
+        let searchMatch = orderIdStr.includes(search) || custName.includes(search) || custPhone.includes(search);
                           
         let dateMatch = true;
-        if (dateFilter) {
-            let oDate = new Date(order.createdAt).toISOString().split('T')[0];
-            if (oDate !== dateFilter) {
+        if (dateFilter && order.createdAt) {
+            let oDateObj = new Date(order.createdAt);
+            let y = oDateObj.getFullYear();
+            let m = String(oDateObj.getMonth() + 1).padStart(2, '0');
+            let d = String(oDateObj.getDate()).padStart(2, '0');
+            let formattedDate = `${y}-${m}-${d}`;
+            
+            if (formattedDate !== dateFilter) {
                 dateMatch = false;
             }
         }
 
         let payMatch = true;
         if (paymentFilter) {
-            if (!(order.paymentMethod || "").includes(paymentFilter)) {
+            let pMethod = order.paymentMethod ? String(order.paymentMethod) : "";
+            if (!pMethod.includes(paymentFilter)) {
                 payMatch = false;
             }
         }
@@ -336,26 +352,28 @@ window.renderOrdersTable = () => {
             statusClass = 'status-processing';
         } else if (order.status === 'تم الشحن') {
             statusClass = 'status-shipped';
-        } else if (order.status === 'تم تسليمه') {
+        } else if (order.status === 'تم تسليمه' || order.status === 'تم الاستلام') {
             statusClass = 'status-delivered';
         }
         
+        let displayStatus = (order.status === 'تم الاستلام') ? 'تم تسليمه' : order.status;
+
         table.innerHTML += `
             <tr>
-                <td style="font-weight:900; color:var(--primary);">#${order.orderId}</td>
+                <td style="font-weight:900; color:var(--primary);">#${order.orderId || "غير محدد"}</td>
                 <td>
-                    <b>${order.customer.name}</b><br>
+                    <b>${(order.customer && order.customer.name) ? order.customer.name : "غير معروف"}</b><br>
                     <span class="meta-info">${order.paymentMethod || "الدفع عند الاستلام"}</span>
                 </td>
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
-                <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total)} ج.م</td>
+                <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total || 0)} ج.م</td>
                 <td>
                     <select class="status-select ${statusClass}" onchange="updateOrderStatus('${order.dbId}', this)">
-                        <option value="قيد المراجعة" ${order.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
-                        <option value="جاري التجهيز" ${order.status === 'جاري التجهيز' ? 'selected' : ''}>📦 جاري التجهيز</option>
-                        <option value="تم الشحن" ${order.status === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
-                        <option value="تم تسليمه" ${order.status === 'تم تسليمه' ? 'selected' : ''}>✅ تم تسليمه</option>
-                        <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
+                        <option value="قيد المراجعة" ${displayStatus === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
+                        <option value="جاري التجهيز" ${displayStatus === 'جاري التجهيز' ? 'selected' : ''}>📦 جاري التجهيز</option>
+                        <option value="تم الشحن" ${displayStatus === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
+                        <option value="تم تسليمه" ${displayStatus === 'تم تسليمه' ? 'selected' : ''}>✅ تم تسليمه</option>
+                        <option value="ملغي" ${displayStatus === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
                     </select>
                 </td>
                 <td>
@@ -404,32 +422,34 @@ window.viewOrderDetails = (orderDbId) => {
     currentPrintOrder = order;
 
     document.getElementById("orderModalTitle").innerText = `تفاصيل الطلب: #${order.orderId}`;
-    document.getElementById("oName").innerText = order.customer.name;
-    document.getElementById("oPhone").innerText = order.customer.phone;
-    document.getElementById("oAddress").innerText = order.customer.address;
+    document.getElementById("oName").innerText = (order.customer && order.customer.name) ? order.customer.name : "غير معروف";
+    document.getElementById("oPhone").innerText = (order.customer && order.customer.phone) ? order.customer.phone : "";
+    document.getElementById("oAddress").innerText = (order.customer && order.customer.address) ? order.customer.address : "";
     document.getElementById("oPayment").innerText = order.paymentMethod || "دفع عند الاستلام";
 
     const list = document.getElementById("oItemsList");
     list.innerHTML = "";
     
-    order.items.forEach(item => {
-        list.innerHTML += `
-            <div class="order-item-row">
-                <span>${item.qty}x ${item.name}</span>
-                <span>${item.qty * item.price} ج.م</span>
-            </div>`;
-    });
+    if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+            list.innerHTML += `
+                <div class="order-item-row">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span>${item.qty * item.price} ج.م</span>
+                </div>`;
+        });
+    }
 
-    document.getElementById("oSubtotal").innerText = `${order.subtotal} ج.م`;
+    document.getElementById("oSubtotal").innerText = `${order.subtotal || 0} ج.م`;
     
-    if (order.discount > 0) {
+    if (order.discount && order.discount > 0) {
         document.getElementById("oDiscountDiv").style.display = "block";
         document.getElementById("oDiscount").innerText = `-${Math.round(order.discount)} ج.م`;
     } else {
         document.getElementById("oDiscountDiv").style.display = "none";
     }
     
-    document.getElementById("oTotal").innerText = `${Math.round(order.total)} ج.م`;
+    document.getElementById("oTotal").innerText = `${Math.round(order.total || 0)} ج.م`;
 
     let tlHtml = `
         <div class="tl-step done">
@@ -488,22 +508,33 @@ window.printDocument = (type) => {
             height: 80 
         });
 
-        document.getElementById("printAllowOpen").innerText = document.getElementById("wbAllowOpen").value;
-        document.getElementById("printCustName").innerText = order.customer.name;
+        const allowOpenSelect = document.getElementById("wbAllowOpen");
+        if (allowOpenSelect) {
+             document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
+        }
+       
+        document.getElementById("printCustName").innerText = (order.customer && order.customer.name) ? order.customer.name : "";
         
-        let addrParts = order.customer.address.split('-');
+        let addrParts = [];
+        if (order.customer && order.customer.address) {
+             addrParts = order.customer.address.split('-');
+        }
+        
         document.getElementById("printCity").innerText = addrParts[0] || "غير محدد";
         document.getElementById("printRegion").innerText = addrParts[1] || "";
-        document.getElementById("printAddress").innerText = order.customer.address;
-        document.getElementById("printPhone1").innerText = order.customer.phone;
+        document.getElementById("printAddress").innerText = (order.customer && order.customer.address) ? order.customer.address : "";
+        document.getElementById("printPhone1").innerText = (order.customer && order.customer.phone) ? order.customer.phone : "";
         
         let descParts = [];
-        order.items.forEach(i => {
-            descParts.push(`${i.qty}x ${i.name}`);
-        });
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(i => {
+                descParts.push(`${i.qty}x ${i.name}`);
+            });
+        }
         document.getElementById("printProductsDesc").innerText = descParts.join(' ، ');
         
-        let notesText = document.getElementById("wbNotes").value;
+        const notesInput = document.getElementById("wbNotes");
+        let notesText = notesInput ? notesInput.value : "";
         if (!notesText) {
             notesText = "لا يوجد";
         }
@@ -514,7 +545,7 @@ window.printDocument = (type) => {
         if (order.paymentMethod && order.paymentMethod !== "الدفع عند الاستلام (COD)") {
             cod = 0;
         } else {
-            cod = Math.round(order.total);
+            cod = Math.round(order.total || 0);
         }
         document.getElementById("printCodAmount").innerText = cod + " EGP";
 
@@ -544,7 +575,7 @@ onValue(ref(db, 'orders'), (snapshot) => {
             ordersCount++;
             
             if (o.status !== 'ملغي') {
-                totalRev += o.total;
+                totalRev += (o.total || 0);
             }
             if (o.status === 'قيد المراجعة') {
                 pending++;
