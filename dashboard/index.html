@@ -60,7 +60,7 @@
                     <h2 class="page-title">نظرة عامة وإحصائيات</h2>
                 </div>
                 <div class="stat-cards">
-                    <!-- كارت إجمالي الطلبات (يوديك للطلبات) -->
+                    <!-- كارت إجمالي الطلبات (يوديك لتاب الطلبات) -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
                         <div class="stat-info">
@@ -68,7 +68,8 @@
                             <p id="statTotalOrders">0</p>
                         </div>
                     </div>
-                    <!-- كارت إجمالي المبيعات (يفتح تقرير المبيعات) -->
+                    
+                    <!-- كارت إجمالي المبيعات (يفتح تقرير المبيعات المفصل) -->
                     <div class="stat-card clickable-card" onclick="openSalesReport()">
                         <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
@@ -76,7 +77,8 @@
                             <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
-                    <!-- كارت طلبات قيد المراجعة (اسمها اتعدل وتوديك للطلبات) -->
+                    
+                    <!-- كارت طلبات قيد المراجعة (تم التعديل وتوديك لتاب الطلبات) -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
@@ -84,6 +86,7 @@
                             <p id="statPendingOrders">0</p>
                         </div>
                     </div>
+                    
                     <!-- كارت المنتجات النشطة -->
                     <div class="stat-card" onclick="document.querySelector('[data-target=\'products-view\']').click()" style="cursor:pointer;">
                         <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
