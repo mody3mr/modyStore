@@ -60,28 +60,32 @@
                     <h2 class="page-title">نظرة عامة وإحصائيات</h2>
                 </div>
                 <div class="stat-cards">
-                    <div class="stat-card">
+                    <!-- كارت إجمالي الطلبات (يذهب للطلبات) -->
+                    <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
                         <div class="stat-info">
                             <h3>إجمالي الطلبات</h3>
                             <p id="statTotalOrders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <!-- كارت إجمالي المبيعات (يفتح تقرير المبيعات المفصل) -->
+                    <div class="stat-card clickable-card" onclick="openSalesReport()">
                         <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
                             <h3>إجمالي المبيعات</h3>
                             <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <!-- كارت طلبات قيد المراجعة (يذهب للطلبات) -->
+                    <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
-                            <h3>قيد المراجعة</h3>
+                            <h3>طلبات قيد المراجعة</h3>
                             <p id="statPendingOrders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <!-- كارت المنتجات النشطة -->
+                    <div class="stat-card" onclick="document.querySelector('[data-target=\'products-view\']').click()" style="cursor:pointer;">
                         <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
                         <div class="stat-info">
                             <h3>المنتجات النشطة</h3>
@@ -228,6 +232,38 @@
 
         <!-- ================= النوافذ المنبثقة (Modals) ================= -->
         
+        <!-- نافذة تقرير المبيعات المفصل -->
+        <div class="modal-overlay" id="salesReportModal">
+            <div class="modal" style="width: 800px; max-width: 95%;">
+                <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-chart-line" style="color: var(--success);"></i> تقرير المبيعات المفصل</span>
+                    <div class="close-btn" style="cursor: pointer; color: var(--text-light);" onclick="closeModal('salesReportModal')"><i class="fas fa-times"></i></div>
+                </h3>
+                
+                <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px;">
+                    <button class="order-tab-btn active" id="btnFilterToday" onclick="generateReport('today', this)">اليوم</button>
+                    <button class="order-tab-btn" id="btnFilterMonth" onclick="generateReport('month', this)">هذا الشهر</button>
+                    <button class="order-tab-btn" id="btnFilterAll" onclick="generateReport('all', this)">كل الأوقات</button>
+                </div>
+
+                <div class="grid-2">
+                    <div style="background: white; border: 1px solid var(--border); padding: 20px; border-radius: 12px;">
+                        <h4 style="color: var(--primary); margin-bottom: 15px;">المبيعات حسب طرق الدفع</h4>
+                        <div id="reportPaymentBreakdown"></div>
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed var(--border); text-align: center;">
+                            <span style="font-weight: bold; color: var(--text-dark);">إجمالي المبيعات المحققة:</span><br>
+                            <span id="reportTotalSales" style="font-size: 28px; font-weight: 900; color: var(--success);">0 ج.م</span>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border: 1px solid var(--border); padding: 20px; border-radius: 12px; max-height: 350px; overflow-y: auto;">
+                        <h4 style="color: var(--primary); margin-bottom: 15px;">المنتجات الأكثر مبيعاً <i class="fas fa-fire" style="color: var(--accent);"></i></h4>
+                        <div id="reportTopProducts"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- نافذة تفاصيل الطلب -->
         <div class="modal-overlay" id="orderDetailsModal">
             <div class="modal" style="width: 700px;">
@@ -252,7 +288,6 @@
                         </div>
                     </div>
 
-                    <!-- التايم لاين -->
                     <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                         <strong style="color: var(--primary); margin-bottom: 15px; display: block;">مسار الطلب:</strong>
                         <div class="order-timeline" id="oTimeline"></div>
