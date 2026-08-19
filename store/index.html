@@ -3,104 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>متجر محمد عمرو | أحدث المنتجات</title>
-    <!-- خط كايرو -->
+    <title>متجر محمد عمرو | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <!-- مكتبة الأيقونات -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root {
-            --primary: #2563eb; /* أزرق رئيسي يدي ثقة للعميل */
-            --dark: #1e293b;
-            --bg: #f8fafc;
-            --white: #ffffff;
-            --gray: #e2e8f0;
-            --text: #334155;
-            --accent: #f59e0b; /* لون برتقالي مميز للعروض */
-        }
-
+        :root { --primary: #2563eb; --dark: #1e293b; --bg: #f8fafc; --white: #ffffff; --gray: #e2e8f0; --text: #334155; --accent: #f59e0b; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-        
         body { background-color: var(--bg); color: var(--text); }
 
-        /* الهيدر (الشريط العلوي) */
         header { background-color: var(--white); box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
         .nav-container { max-width: 1200px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 24px; font-weight: 900; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px; }
-        .logo i { font-size: 28px; }
+        .logo { font-size: 24px; font-weight: 900; color: var(--primary); text-decoration: none; }
         
-        .cart-icon { position: relative; font-size: 22px; color: var(--dark); cursor: pointer; transition: 0.3s; }
+        .cart-icon { position: relative; font-size: 22px; cursor: pointer; color: var(--dark); transition: 0.3s; }
         .cart-icon:hover { color: var(--primary); }
-        .cart-count { position: absolute; top: -8px; right: -8px; background-color: #ef4444; color: white; font-size: 12px; font-weight: bold; height: 20px; width: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .cart-count { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; font-size: 12px; font-weight: bold; height: 20px; width: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
 
-        /* البانر الترحيبي */
-        .hero { background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%); color: white; text-align: center; padding: 50px 20px; margin-bottom: 30px; }
-        .hero h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
-        .hero p { font-size: 16px; color: #cbd5e1; }
-
-        /* شريط الأقسام */
-        .categories-bar { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; display: flex; gap: 15px; overflow-x: auto; scrollbar-width: none; }
-        .categories-bar::-webkit-scrollbar { display: none; }
-        .cat-btn { background-color: var(--white); border: 1px solid var(--gray); padding: 8px 20px; border-radius: 20px; font-weight: 700; color: var(--text); cursor: pointer; white-space: nowrap; transition: 0.3s; }
-        .cat-btn.active, .cat-btn:hover { background-color: var(--primary); color: white; border-color: var(--primary); }
-
-        /* شبكة المنتجات */
-        .products-container { max-width: 1200px; margin: 0 auto; padding: 0 20px 50px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .hero { background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%); color: white; text-align: center; padding: 40px 20px; margin-bottom: 30px; }
         
-        /* كارت المنتج */
-        .product-card { background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: 0.3s; border: 1px solid var(--gray); display: flex; flex-direction: column; }
+        .categories-bar { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+        .categories-bar::-webkit-scrollbar { display: none; }
+        .cat-btn { background: var(--white); border: 1px solid var(--gray); padding: 8px 20px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: 0.3s; white-space: nowrap; }
+        .cat-btn.active, .cat-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .products-container { max-width: 1200px; margin: 0 auto; padding: 0 20px 50px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .product-card { background: var(--white); border-radius: 12px; overflow: hidden; border: 1px solid var(--gray); display: flex; flex-direction: column; transition: 0.3s; position: relative; }
         .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .product-img { width: 100%; height: 200px; object-fit: cover; }
+        
+        .discount-badge { position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        
         .product-details { padding: 15px; flex: 1; display: flex; flex-direction: column; }
         .product-cat { font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 5px; }
-        .product-title { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 10px; line-height: 1.4; }
+        .product-title { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
         .product-price { font-size: 18px; font-weight: 900; color: var(--primary); margin-top: auto; margin-bottom: 15px; }
+        .old-price { text-decoration: line-through; color: #94a3b8; font-size: 14px; margin-left: 8px; font-weight: normal; }
         
-        .add-to-cart { background-color: var(--dark); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-family: 'Cairo'; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
-        .add-to-cart:hover { background-color: var(--primary); }
+        .add-to-cart { background: var(--dark); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; gap: 8px; font-family: 'Cairo'; transition: 0.3s; }
+        .add-to-cart:hover { background: var(--primary); }
 
-        /* رسالة التحميل */
-        .loading { grid-column: 1 / -1; text-align: center; padding: 50px; font-size: 18px; font-weight: bold; color: var(--primary); }
+        /* سلة المشتريات الجانبية */
+        .cart-sidebar { position: fixed; top: 0; left: -400px; width: 350px; max-width: 100%; height: 100vh; background: var(--white); box-shadow: 5px 0 25px rgba(0,0,0,0.1); z-index: 1000; transition: 0.4s; display: flex; flex-direction: column; }
+        .cart-sidebar.open { left: 0; }
+        .cart-header { padding: 20px; border-bottom: 1px solid var(--gray); display: flex; justify-content: space-between; align-items: center; }
+        .cart-header h3 { font-size: 20px; color: var(--dark); }
+        .close-cart { cursor: pointer; font-size: 20px; color: #64748b; }
+        
+        .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
+        .cart-item { display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
+        .cart-item img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
+        .cart-item-details { flex: 1; }
+        .cart-item-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+        .cart-item-price { color: var(--primary); font-weight: bold; }
+        .cart-item-actions { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .qty-btn { width: 25px; height: 25px; background: var(--gray); border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .remove-item { color: #ef4444; cursor: pointer; font-size: 14px; margin-right: auto; }
 
+        .cart-footer { padding: 20px; border-top: 1px solid var(--gray); background: #f8fafc; }
+        
+        .promo-code-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .promo-code-box input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; font-family: 'Cairo'; }
+        .apply-btn { background: var(--dark); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
+        .promo-message { font-size: 13px; font-weight: bold; margin-bottom: 15px; }
+
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; font-weight: 600; }
+        .total-row { font-size: 18px; font-weight: 900; color: var(--primary); border-top: 1px dashed var(--gray); padding-top: 10px; margin-bottom: 20px; }
+
+        .checkout-btn { width: 100%; background: #25d366; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: 'Cairo'; }
+        
+        /* تظليل الخلفية لما السلة تفتح */
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(2px); }
+        .overlay.show { display: block; }
+        
+        /* نافذة بيانات العميل */
+        .checkout-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; z-index: 1001; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .checkout-modal h3 { margin-bottom: 20px; }
+        .checkout-modal input, .checkout-modal textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--gray); border-radius: 6px; font-family: 'Cairo'; outline: none; }
+        .confirm-whatsapp-btn { width: 100%; background: #25d366; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-family: 'Cairo'; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- الهيدر -->
     <header>
         <div class="nav-container">
-            <a href="#" class="logo"><i class="fas fa-store"></i> مودك ستور</a>
-            <div class="cart-icon" id="openCartBtn">
+            <a href="#" class="logo"><i class="fas fa-store"></i> متجري</a>
+            <div class="cart-icon" onclick="toggleCart()">
                 <i class="fas fa-shopping-cart"></i>
-                <span class="cart-count">0</span>
+                <span class="cart-count" id="cartCountBadge">0</span>
             </div>
         </div>
     </header>
 
-    <!-- البانر -->
     <section class="hero">
         <h1>اكتشف أحدث العروض والمنتجات</h1>
-        <p>جودة عالية، أسعار مميزة، وتوصيل لحد باب البيت</p>
     </section>
 
-    <!-- شريط الأقسام (تصفية) -->
-    <div class="categories-bar">
-        <button class="cat-btn active">الكل</button>
-        <button class="cat-btn">إلكترونيات</button>
-        <button class="cat-btn">لعب أطفال</button>
-        <button class="cat-btn">عروض وتخفيضات</button>
-    </div>
+    <!-- شريط الأقسام -->
+    <div class="categories-bar" id="catBar"></div>
 
     <!-- شبكة المنتجات -->
     <div class="products-container" id="productsGrid">
-        <div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل المنتجات...</div>
+        <div style="text-align: center; width: 100%; padding: 50px;">جاري تحميل المنتجات...</div>
+    </div>
+
+    <!-- السلة الجانبية والخلفية المظلمة -->
+    <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>سلة المشتريات</h3>
+            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
+        </div>
+        
+        <div class="cart-items" id="cartItemsContainer">
+            <!-- المنتجات هتضاف هنا -->
+        </div>
+
+        <div class="cart-footer">
+            <div class="promo-code-box">
+                <input type="text" id="promoInput" placeholder="أدخل كود الخصم (إن وجد)">
+                <button class="apply-btn" onclick="applyPromo()">تطبيق</button>
+            </div>
+            <div id="promoMessage" class="promo-message"></div>
+
+            <div class="summary-row">
+                <span>الإجمالي الفرعي:</span>
+                <span id="subtotalPrice">0 ج.م</span>
+            </div>
+            <div class="summary-row" id="discountRow" style="display: none; color: #ef4444;">
+                <span>قيمة الخصم:</span>
+                <span id="discountValue">-0 ج.م</span>
+            </div>
+            <div class="summary-row total-row">
+                <span>الإجمالي النهائي:</span>
+                <span id="finalTotalPrice">0 ج.م</span>
+            </div>
+
+            <button class="checkout-btn" onclick="openCheckoutModal()">
+                <i class="fab fa-whatsapp"></i> إرسال الطلب واتساب
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة بيانات العميل (إتمام الطلب) -->
+    <div class="checkout-modal" id="checkoutModal">
+        <h3>بيانات التوصيل</h3>
+        <input type="text" id="custName" placeholder="الاسم بالكامل">
+        <input type="tel" id="custPhone" placeholder="رقم الموبايل">
+        <textarea id="custAddress" rows="3" placeholder="العنوان بالتفصيل"></textarea>
+        <button class="confirm-whatsapp-btn" onclick="sendOrderToWhatsApp()"><i class="fab fa-whatsapp"></i> تأكيد الطلب</button>
+        <div style="text-align: center; margin-top: 10px; cursor: pointer; color: #64748b; font-size: 13px;" onclick="document.getElementById('checkoutModal').style.display='none'">إلغاء الرجوع للسلة</div>
     </div>
 
     <!-- مكتبات فايربيز -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
@@ -110,59 +168,272 @@
             messagingSenderId: "909293461306",
             appId: "1:909293461306:web:48e5492107ad32ceec7a03"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const productsGrid = document.getElementById("productsGrid");
-        const productsRef = ref(db, 'products');
+        // رقم الواتساب بتاعك اللي هيستقبل الأوردرات (بدون 0 في الأول وبكود الدولة 2)
+        const WHATSAPP_NUMBER = "201000000000"; // <--- غير الرقم ده لرقمك
 
-        // سحب المنتجات من قاعدة البيانات
-        onValue(productsRef, (snapshot) => {
-            productsGrid.innerHTML = ""; // تفريغ علامة التحميل
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                let hasActiveProducts = false;
+        let allActiveProducts = [];
+        let cart = [];
+        let appliedVoucher = null; 
 
-                for (const productId in data) {
-                    const product = data[productId];
-                    
-                    // الأهم: هنعرض بس المنتجات اللي الـ isActive بتاعها true
-                    if (product.isActive) {
-                        hasActiveProducts = true;
-                        
-                        let catName = "";
-                        if(product.category === "electronics") catName = "إلكترونيات";
-                        else if(product.category === "toys") catName = "لعب أطفال";
-                        else if(product.category === "offers") catName = "عروض";
-
-                        // تصميم كارت المنتج
-                        const card = `
-                            <div class="product-card">
-                                <img src="${product.imageUrl}" alt="${product.name}" class="product-img">
-                                <div class="product-details">
-                                    <div class="product-cat">${catName}</div>
-                                    <h3 class="product-title">${product.name}</h3>
-                                    <div class="product-price">${product.price} ج.م</div>
-                                    <button class="add-to-cart" onclick="alert('هنبرمج السلة الخطوة الجاية!')">
-                                        <i class="fas fa-cart-plus"></i> أضف للسلة
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        productsGrid.innerHTML += card;
+        // 1. جلب الأقسام
+        onValue(ref(db, 'categories'), (snapshot) => {
+            const catBar = document.getElementById("catBar");
+            catBar.innerHTML = `<button class="cat-btn active" onclick="filterBy('الكل', this)">الكل</button>`;
+            if(snapshot.exists()){
+                snapshot.forEach(child => {
+                    const c = child.val();
+                    if(c.isActive) {
+                        catBar.innerHTML += `<button class="cat-btn" onclick="filterBy('${c.name}', this)">${c.name}</button>`;
                     }
-                }
-
-                if (!hasActiveProducts) {
-                    productsGrid.innerHTML = "<div class="loading">لا توجد منتجات متاحة حالياً.</div>";
-                }
-            } else {
-                productsGrid.innerHTML = "<div class="loading">لا توجد منتجات في المتجر.</div>";
+                });
             }
         });
-    </script>
 
+        // 2. جلب المنتجات وعرضها
+        onValue(ref(db, 'products'), (snapshot) => {
+            allActiveProducts = [];
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    const p = child.val();
+                    if (p.isActive) {
+                        p.id = child.key;
+                        // تحديد السعر الفعلي للمنتج (لو في خصم بناخده، مفيش بناخد الأساسي)
+                        p.effectivePrice = p.discountPrice ? p.discountPrice : p.price;
+                        allActiveProducts.push(p);
+                    }
+                });
+            }
+            renderProducts("الكل");
+        });
+
+        window.renderProducts = (categoryName) => {
+            const grid = document.getElementById("productsGrid");
+            grid.innerHTML = "";
+            let filtered = categoryName === "الكل" ? allActiveProducts : allActiveProducts.filter(p => p.category === categoryName);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div style="text-align:center; width:100%; padding:40px;">لا توجد منتجات متاحة.</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                let priceHtml = `${p.effectivePrice} ج.م`;
+                let badgeHtml = "";
+                
+                if (p.discountPrice) {
+                    priceHtml = `<span class="old-price">${p.price} ج.م</span> ${p.discountPrice} ج.م`;
+                    badgeHtml = `<div class="discount-badge">خصم خاص</div>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="product-card">
+                        ${badgeHtml}
+                        <img src="${p.imageUrl}" class="product-img">
+                        <div class="product-details">
+                            <div class="product-cat">${p.category}</div>
+                            <h3 class="product-title">${p.name}</h3>
+                            <div class="product-price">${priceHtml}</div>
+                            <button class="add-to-cart" onclick="addToCart('${p.id}', '${p.name}', ${p.effectivePrice}, '${p.imageUrl}')">
+                                <i class="fas fa-cart-plus"></i> أضف للسلة
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        window.filterBy = (catName, btn) => {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderProducts(catName);
+        };
+
+        // 3. نظام سلة المشتريات
+        window.toggleCart = () => {
+            document.getElementById("cartSidebar").classList.toggle("open");
+            document.getElementById("overlay").classList.toggle("show");
+        };
+
+        window.addToCart = (id, name, price, img) => {
+            const existingItem = cart.find(item => item.id === id);
+            if (existingItem) {
+                existingItem.qty++;
+            } else {
+                cart.push({ id, name, price, img, qty: 1 });
+            }
+            updateCartUI();
+            
+            // فتح السلة أوتوماتيك للعميل كنوع من التفاعل
+            document.getElementById("cartSidebar").classList.add("open");
+            document.getElementById("overlay").classList.add("show");
+        };
+
+        window.updateQty = (id, change) => {
+            const item = cart.find(item => item.id === id);
+            if(item) {
+                item.qty += change;
+                if(item.qty <= 0) cart = cart.filter(i => i.id !== id); // مسح لو الكمية بقت صفر
+                updateCartUI();
+            }
+        };
+
+        window.removeFromCart = (id) => {
+            cart = cart.filter(item => item.id !== id);
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            const container = document.getElementById("cartItemsContainer");
+            container.innerHTML = "";
+            let subtotal = 0;
+            let count = 0;
+
+            if(cart.length === 0) {
+                container.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>السلة فارغة</div>";
+            } else {
+                cart.forEach(item => {
+                    subtotal += (item.price * item.qty);
+                    count += item.qty;
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <img src="${item.img}">
+                            <div class="cart-item-details">
+                                <div class="cart-item-title">${item.name}</div>
+                                <div class="cart-item-price">${item.price} ج.م</div>
+                                <div class="cart-item-actions">
+                                    <button class="qty-btn" onclick="updateQty('${item.id}', -1)">-</button>
+                                    <span>${item.qty}</span>
+                                    <button class="qty-btn" onclick="updateQty('${item.id}', 1)">+</button>
+                                    <i class="fas fa-trash remove-item" onclick="removeFromCart('${item.id}')"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById("cartCountBadge").innerText = count;
+            document.getElementById("subtotalPrice").innerText = subtotal + " ج.م";
+            
+            calculateFinalTotal(subtotal);
+        }
+
+        // 4. نظام الكوبونات والخصومات
+        window.applyPromo = () => {
+            const codeInput = document.getElementById("promoInput").value.trim().toUpperCase();
+            const msgBox = document.getElementById("promoMessage");
+            
+            if(!codeInput) return;
+
+            get(ref(db, 'vouchers')).then((snapshot) => {
+                let foundVoucher = null;
+                if(snapshot.exists()){
+                    snapshot.forEach(child => {
+                        const v = child.val();
+                        if(v.code === codeInput && v.isActive) {
+                            foundVoucher = v;
+                        }
+                    });
+                }
+
+                if(foundVoucher) {
+                    appliedVoucher = foundVoucher;
+                    msgBox.style.color = "#166534";
+                    msgBox.innerText = `تم تطبيق كود الخصم (${foundVoucher.code}) بنجاح!`;
+                    updateCartUI(); // إعادة الحساب
+                } else {
+                    appliedVoucher = null;
+                    msgBox.style.color = "#ef4444";
+                    msgBox.innerText = "الكود غير صحيح أو منتهي الصلاحية.";
+                    updateCartUI();
+                }
+            });
+        };
+
+        function calculateFinalTotal(subtotal) {
+            let discount = 0;
+            const discountRow = document.getElementById("discountRow");
+
+            if (appliedVoucher && subtotal > 0) {
+                if (appliedVoucher.type === "percentage") {
+                    discount = subtotal * (appliedVoucher.value / 100);
+                } else if (appliedVoucher.type === "fixed") {
+                    discount = appliedVoucher.value;
+                }
+                
+                // التأكد إن الخصم مش أكبر من تمن المنتجات
+                if(discount > subtotal) discount = subtotal;
+
+                document.getElementById("discountValue").innerText = `-${discount} ج.م`;
+                discountRow.style.display = "flex";
+            } else {
+                discountRow.style.display = "none";
+            }
+
+            const finalTotal = subtotal - discount;
+            document.getElementById("finalTotalPrice").innerText = finalTotal + " ج.م";
+        }
+
+        // 5. إتمام الطلب للواتساب
+        window.openCheckoutModal = () => {
+            if(cart.length === 0) return alert("سلة المشتريات فارغة!");
+            document.getElementById("checkoutModal").style.display = "block";
+            // نقفل السلة عشان النافذة تظهر بوضوح
+            document.getElementById("cartSidebar").classList.remove("open");
+        };
+
+        window.sendOrderToWhatsApp = () => {
+            const name = document.getElementById("custName").value;
+            const phone = document.getElementById("custPhone").value;
+            const address = document.getElementById("custAddress").value;
+
+            if(!name || !phone || !address) return alert("لازم تكتب الاسم ورقم التليفون والعنوان عشان نوصلك الأوردر!");
+
+            let subtotal = 0;
+            let orderText = `*طلب جديد من المتجر* 🛒\n\n`;
+            orderText += `*المنتجات:*\n`;
+            
+            cart.forEach(item => {
+                orderText += `▪️ ${item.qty}x ${item.name} (${item.price * item.qty} ج.م)\n`;
+                subtotal += (item.price * item.qty);
+            });
+
+            orderText += `\n*الإجمالي الفرعي:* ${subtotal} ج.م\n`;
+
+            let finalTotal = subtotal;
+            if(appliedVoucher) {
+                let discount = appliedVoucher.type === "percentage" ? subtotal * (appliedVoucher.value/100) : appliedVoucher.value;
+                if(discount > subtotal) discount = subtotal;
+                finalTotal -= discount;
+                orderText += `*كود الخصم (${appliedVoucher.code}):* -${discount} ج.م\n`;
+            }
+
+            orderText += `*الإجمالي النهائي:* ${finalTotal} ج.م\n\n`;
+            orderText += `*بيانات العميل:*\n`;
+            orderText += `الاسم: ${name}\n`;
+            orderText += `التليفون: ${phone}\n`;
+            orderText += `العنوان: ${address}`;
+
+            // تحويل النص لرابط واتساب
+            const encodedText = encodeURIComponent(orderText);
+            const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedText}`;
+            
+            // فتح الواتساب في نافذة جديدة
+            window.open(whatsappUrl, '_blank');
+            
+            // قفل النافذة وتفريغ السلة كنوع من التأكيد
+            document.getElementById("checkoutModal").style.display = "none";
+            document.getElementById("overlay").classList.remove("show");
+            cart = [];
+            appliedVoucher = null;
+            document.getElementById("promoMessage").innerText = "";
+            document.getElementById("promoInput").value = "";
+            updateCartUI();
+        };
+
+    </script>
 </body>
 </html>
