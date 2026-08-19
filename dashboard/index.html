@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم المتجر | Dashboard</title>
+    <title>مودي ستور | ModyStore Dashboard</title>
     <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
     <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar" id="sidebar">
         <div class="brand">
-            <i class="fas fa-shopping-bag"></i> <span class="nav-text">متجري</span>
+            <i class="fas fa-bolt" style="color: #f59e0b;"></i> <span class="nav-text" style="font-family: Arial, sans-serif;">ModyStore</span>
         </div>
         <ul class="nav-links">
             <li class="nav-item active" data-target="analytics-view">
@@ -64,7 +67,7 @@
                 </div>
                 <div class="stat-cards">
                     <!-- كارت إجمالي الطلبات -->
-                    <div class="stat-card clickable-card" onclick="goToOrdersTab()">
+                    <div class="stat-card clickable-card" onclick="goToOrdersTab('active')">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
                         <div class="stat-info">
                             <h3>إجمالي الطلبات</h3>
@@ -80,7 +83,7 @@
                         </div>
                     </div>
                     <!-- كارت طلبات قيد المراجعة -->
-                    <div class="stat-card clickable-card" onclick="goToOrdersTab()">
+                    <div class="stat-card clickable-card" onclick="goToOrdersTab('pending')">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
                             <h3>طلبات قيد المراجعة</h3>
@@ -98,7 +101,7 @@
                 </div>
             </div>
 
-            <!-- 2. شاشة الطلبات -->
+            <!-- 2. شاشة الطلبات (مع الفلاتر والبحث المتقدم) -->
             <div id="orders-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الطلبات</h2>
@@ -107,6 +110,22 @@
                     <button class="order-tab-btn active" id="tabActiveOrders" onclick="switchOrderTab('active')">الطلبات الحالية</button>
                     <button class="order-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived')">أرشيف الطلبات</button>
                 </div>
+                
+                <!-- فلاتر البحث المتقدم للطلبات -->
+                <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border: 1px solid var(--border);">
+                    <input type="text" id="searchOrders" class="search-input" placeholder="بحث برقم الفاتورة، اسم العميل، التليفون..." onkeyup="renderOrdersTable()" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                    
+                    <input type="date" id="filterOrderDate" onchange="renderOrdersTable()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                    
+                    <select id="filterOrderPayment" onchange="renderOrdersTable()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <option value="">كل طرق الدفع</option>
+                        <option value="الدفع عند الاستلام (COD)">كاش (COD)</option>
+                        <option value="محفظة">محافظ إلكترونية</option>
+                        <option value="إنستا">إنستا باي</option>
+                        <option value="فيزا">فيزا</option>
+                    </select>
+                </div>
+
                 <div class="card">
                     <table>
                         <thead>
@@ -126,11 +145,14 @@
                 </div>
             </div>
 
-            <!-- 3. شاشة المنتجات -->
+            <!-- 3. شاشة المنتجات (مع شريط البحث) -->
             <div id="products-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
-                    <button class="btn-add" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="searchProducts" placeholder="بحث باسم المنتج..." onkeyup="filterProducts()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <button class="btn-add" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج</button>
+                    </div>
                 </div>
                 <div class="card">
                     <table>
@@ -148,11 +170,14 @@
                 </div>
             </div>
 
-            <!-- 4. شاشة الأقسام -->
+            <!-- 4. شاشة الأقسام (مع شريط البحث) -->
             <div id="categories-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الأقسام</h2>
-                    <button class="btn-add btn-cat" onclick="openCategoryModal()"><i class="fas fa-plus"></i> إضافة قسم جديد</button>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="searchCategories" placeholder="بحث باسم القسم..." onkeyup="filterCategories()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <button class="btn-add btn-cat" onclick="openCategoryModal()"><i class="fas fa-plus"></i> إضافة قسم</button>
+                    </div>
                 </div>
                 <div class="card">
                     <table>
@@ -168,18 +193,21 @@
                 </div>
             </div>
 
-            <!-- 5. شاشة الكوبونات -->
+            <!-- 5. شاشة الكوبونات (مع شريط البحث) -->
             <div id="vouchers-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الكوبونات</h2>
-                    <button class="btn-add btn-voucher" onclick="openVoucherModal()"><i class="fas fa-ticket-alt"></i> إنشاء كود خصم</button>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="searchVouchers" placeholder="بحث بكود الخصم..." onkeyup="filterVouchers()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <button class="btn-add btn-voucher" onclick="openVoucherModal()"><i class="fas fa-ticket-alt"></i> إنشاء كود</button>
+                    </div>
                 </div>
                 <div class="card">
                     <table>
                         <thead>
                             <tr>
                                 <th>كود الخصم</th>
-                                <th>النوع والقيمة</th>
+                                <th>النوع/القيمة</th>
                                 <th>الاستخدام</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
@@ -190,11 +218,14 @@
                 </div>
             </div>
 
-            <!-- 6. شاشة الموظفين -->
+            <!-- 6. شاشة الموظفين (مع شريط البحث) -->
             <div id="employees-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الموظفين</h2>
-                    <button class="btn-add btn-emp" onclick="openEmployeeModal()"><i class="fas fa-user-plus"></i> إضافة موظف</button>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="searchEmployees" placeholder="بحث باسم الموظف، الهاتف..." onkeyup="filterEmployees()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <button class="btn-add btn-emp" onclick="openEmployeeModal()"><i class="fas fa-user-plus"></i> إضافة موظف</button>
+                    </div>
                 </div>
                 <div class="card">
                     <table>
@@ -235,9 +266,29 @@
 
         </div>
 
-        <!-- ================= النوافذ المنبثقة (Modals) ================= -->
-        
-        <!-- نافذة تقرير المبيعات المفصل -->
+        <!-- ================= النوافذ الاحترافية (Custom Alerts & Confirms) ================= -->
+        <!-- نافذة التنبيه العادي (Alert) -->
+        <div class="modal-overlay custom-popup" id="customAlert" style="z-index: 9999;">
+            <div class="modal" style="width: 400px; text-align: center; padding: 40px 20px;">
+                <i class="fas fa-info-circle" style="font-size: 50px; color: var(--secondary); margin-bottom: 20px;"></i>
+                <h3 id="alertMsg" style="border:none; margin-bottom: 25px; font-size: 18px; color: var(--text-dark);"></h3>
+                <button class="btn-save" onclick="closeAlert()" style="width: 100%;">حسناً</button>
+            </div>
+        </div>
+
+        <!-- نافذة التأكيد (Confirm) زي الصورة 99 -->
+        <div class="modal-overlay custom-popup" id="customConfirm" style="z-index: 9999;">
+            <div class="modal" style="width: 400px; text-align: center; padding: 40px 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: var(--accent); margin-bottom: 20px;"></i>
+                <h3 id="confirmMsg" style="border:none; margin-bottom: 25px; font-size: 18px; color: var(--text-dark);">هل أنت متأكد؟</h3>
+                <div class="modal-actions" style="justify-content: center;">
+                    <button class="btn-cancel" onclick="closeConfirm()">إلغاء</button>
+                    <button class="btn-save" id="confirmBtn" style="background-color: #ef4444;">نعم، تأكيد</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= تقرير المبيعات المفصل ================= -->
         <div class="modal-overlay" id="salesReportModal">
             <div class="modal" style="width: 800px; max-width: 95%;">
                 <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
@@ -245,10 +296,13 @@
                     <div class="close-btn" style="cursor: pointer; color: var(--text-light);" onclick="closeModal('salesReportModal')"><i class="fas fa-times"></i></div>
                 </h3>
                 
-                <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px;">
+                <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px; flex-wrap: wrap; align-items: center;">
                     <button class="order-tab-btn active" id="btnFilterToday" onclick="generateReport('today', this)">اليوم</button>
                     <button class="order-tab-btn" id="btnFilterMonth" onclick="generateReport('month', this)">هذا الشهر</button>
                     <button class="order-tab-btn" id="btnFilterAll" onclick="generateReport('all', this)">كل الأوقات</button>
+                    
+                    <span style="color: var(--text-light); font-weight: bold; margin: 0 10px;">أو اختر يوماً محدد:</span>
+                    <input type="date" id="reportSpecificDate" onchange="generateReport('specific', this)" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-family: 'Cairo'; flex: 1; outline: none;">
                 </div>
 
                 <div class="grid-2">
@@ -263,13 +317,14 @@
 
                     <div style="background: white; border: 1px solid var(--border); padding: 20px; border-radius: 12px; max-height: 350px; overflow-y: auto;">
                         <h4 style="color: var(--primary); margin-bottom: 15px;">المنتجات الأكثر مبيعاً <i class="fas fa-fire" style="color: var(--accent);"></i></h4>
+                        <input type="text" id="searchReportProducts" placeholder="ابحث في المنتجات المباعة..." onkeyup="filterReportProducts()" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
                         <div id="reportTopProducts"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- نافذة تفاصيل الطلب -->
+        <!-- ================= تفاصيل الطلب وإدخال بيانات بوليصة الشحن ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
             <div class="modal print-invoice-area" style="width: 700px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
@@ -294,38 +349,115 @@
                     </div>
 
                     <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);" class="screen-only">
-                        <strong style="color: var(--primary); margin-bottom: 15px; display: block;">مسار الطلب (التايم لاين):</strong>
+                        <strong style="color: var(--primary); margin-bottom: 10px; display: block;">تجهيز بوليصة الشحن:</strong>
+                        <div class="input-group">
+                            <label>السماح بفتح الشحنة؟</label>
+                            <select id="wbAllowOpen">
+                                <option value="نعم">نعم</option>
+                                <option value="لا">لا</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>ملاحظات إضافية للمندوب</label>
+                            <textarea id="wbNotes" rows="2" placeholder="اكتب أي ملاحظات هنا..."></textarea>
+                        </div>
+                        
+                        <strong style="color: var(--primary); margin-top: 15px; display: block;">مسار الطلب:</strong>
                         <div class="order-timeline" id="oTimeline"></div>
                     </div>
                 </div>
 
                 <div class="modal-actions screen-only">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
-                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> بوليصة الشحن</button>
+                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> طباعة البوليصة</button>
                     <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')"><i class="fas fa-print"></i> طباعة الفاتورة</button>
                 </div>
             </div>
         </div>
 
-        <!-- بوليصة الشحن المخفية (تظهر فقط عند الطباعة) -->
+        <!-- ================= تصميم بوليصة الشحن (Bosta Style) للطباعة ================= -->
         <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
-            <div style="border: 2px solid #000; padding: 20px; width: 100%; max-width: 500px; margin: 0 auto; text-align: right; font-family: 'Cairo', sans-serif;">
-                <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">بوليصة شحن - متجري</h1>
-                <h2 style="margin-top: 20px;">رقم الطلب: <span id="wbOrderId" dir="ltr"></span></h2>
-                <div style="margin-top: 20px; font-size: 18px; line-height: 1.8;">
-                    <strong>إلى السيد/ة:</strong> <span id="wbName"></span><br>
-                    <strong>رقم الهاتف:</strong> <span id="wbPhone" dir="ltr"></span><br>
-                    <strong>العنوان بالتفصيل:</strong> <span id="wbAddress"></span><br>
+            <div class="bosta-waybill">
+                <!-- الهيدر: اللوجو والباركود والQR -->
+                <div class="bosta-header">
+                    <div class="bosta-logo-area">
+                        <!-- تم التبديل للوجو ModyStore بدلاً من Bosta -->
+                        <i class="fas fa-bolt" style="font-size: 30px; margin-left: 8px;"></i>
+                        <span style="font-family: Arial, sans-serif; letter-spacing: 1px;">ModyStore</span>
+                    </div>
+                    <div class="bosta-barcode-top">
+                        <svg id="topBarcode"></svg>
+                    </div>
                 </div>
-                <div style="margin-top: 30px; padding: 15px; border: 2px dashed #000; text-align: center; font-size: 22px;">
-                    <strong>المبلغ المطلوب تحصيله:</strong><br>
-                    <span id="wbTotal" style="font-size: 30px; font-weight: 900;"></span>
+
+                <div class="bosta-row" style="display: flex;">
+                    <div class="bosta-col bosta-center" style="flex:1;"><strong>DELIVER</strong></div>
+                    <div class="bosta-col bosta-center" style="flex:1;"><strong>COD</strong></div>
+                    <div class="bosta-col" style="flex:1; border-left:none; display:flex; justify-content:center; align-items:center;" rowspan="2">
+                        <div id="qrCodeBox"></div>
+                    </div>
                 </div>
-                <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #555;">الرجاء تسليم الشحنة للعميل المذكور أعلاه.</p>
+
+                <div class="bosta-row bosta-flex">
+                    <div class="bosta-flex-item"><strong>السماح بفتح الشحنة:</strong> <span id="printAllowOpen">نعم</span></div>
+                    <div class="bosta-flex-item"><strong>عدد القطع:</strong> <span id="printQty">1</span></div>
+                </div>
+
+                <!-- بيانات العميل والمكان -->
+                <div class="bosta-row" style="display:flex;">
+                    <div style="flex:1; border-left: 2px solid black; padding: 8px;">
+                        <div style="font-weight:bold; font-size:14px; margin-bottom:10px;">من: ModyStore</div>
+                        <div><strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:15px;"></span></div>
+                    </div>
+                    <div style="flex:1; padding: 8px; text-align: right; font-size:14px;">
+                        <div style="margin-bottom:5px;"><strong>المدينة:</strong> <span id="printCity"></span></div>
+                        <div><strong>المنطقة:</strong> <span id="printRegion"></span></div>
+                    </div>
+                </div>
+
+                <div class="bosta-row" style="padding: 8px; font-size:14px;">
+                    <strong>العنوان بالتفصيل:</strong> <br>
+                    <span id="printAddress"></span>
+                </div>
+
+                <div class="bosta-row" style="display:flex;">
+                    <div style="flex:1; border-left: 2px solid black; padding: 8px;">
+                        <strong>تليفون:</strong> <br>
+                        <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:18px;"></span>
+                    </div>
+                    <div style="flex:1; padding: 8px;">
+                        <strong>تليفون آخر:</strong> <br>
+                        -
+                    </div>
+                </div>
+
+                <div class="bosta-row" style="padding: 8px;">
+                    <strong>وصف الشحنة (المنتجات):</strong><br>
+                    <span id="printProductsDesc" style="font-size:14px; font-weight:bold;"></span>
+                </div>
+
+                <div class="bosta-row" style="padding: 8px;">
+                    <strong>ملاحظات:</strong><br>
+                    <span id="printNotes" style="font-size:14px;"></span>
+                </div>
+
+                <!-- الفوتر (رقم الأوردر والمبلغ) -->
+                <div class="bosta-footer">
+                    <div style="flex:1; border-left: 2px solid black; padding: 15px; display:flex; flex-direction:column; justify-content:center;">
+                        <strong style="font-size:12px;">Order REF</strong> 
+                        <span id="printOrderRef" style="font-weight:900; font-size:22px;"></span>
+                    </div>
+                    <div style="flex:1; padding: 15px; text-align: center; display:flex; flex-direction:column; justify-content:center;">
+                        <strong style="font-size:14px;">المبلغ المطلوب (COD):</strong>
+                        <span id="printCodAmount" style="font-size:28px; font-weight:900;"></span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- نافذة إضافة/تعديل منتج -->
+        <!-- ================= النوافذ العادية ================= -->
+        
+        <!-- إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal">
                 <h3 id="productModalTitle">إضافة منتج جديد</h3>
@@ -357,12 +489,12 @@
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveProduct()">حفظ المنتج</button>
+                    <button class="btn-save" onclick="saveProduct()">حفظ</button>
                 </div>
             </div>
         </div>
-
-        <!-- نافذة إضافة قسم -->
+        
+        <!-- إضافة/تعديل قسم -->
         <div class="modal-overlay" id="categoryModal">
             <div class="modal">
                 <h3 id="catModalTitle">إضافة قسم</h3>
@@ -377,7 +509,7 @@
             </div>
         </div>
         
-        <!-- نافذة إنشاء كوبون -->
+        <!-- إنشاء/تعديل كوبون -->
         <div class="modal-overlay" id="voucherModal">
             <div class="modal">
                 <h3 id="voucherModalTitle">إنشاء كود</h3>
@@ -400,7 +532,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label>حد الاستخدام (عدد الأشخاص)</label>
+                        <label>حد الاستخدام</label>
                         <input type="number" id="voucherLimit" value="1" min="1">
                     </div>
                 </div>
@@ -411,7 +543,7 @@
             </div>
         </div>
 
-        <!-- نافذة عرض مستخدمي الكوبون -->
+        <!-- عرض مستخدمي الكوبون -->
         <div class="modal-overlay" id="voucherUsersModal">
             <div class="modal">
                 <h3 id="vuTitle">سجل استخدام الكوبون</h3>
@@ -422,7 +554,7 @@
             </div>
         </div>
 
-        <!-- نافذة إضافة موظف -->
+        <!-- إضافة/تعديل موظف -->
         <div class="modal-overlay" id="employeeModal">
             <div class="modal">
                 <h3 id="empModalTitle">إضافة موظف</h3>
