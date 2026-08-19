@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
+    <!-- مكتبات التفاعل والأنيميشن -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- مكتبة الرسوم البيانية Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -56,7 +63,6 @@
     <!-- ================= المحتوى الرئيسي ================= -->
     <main class="main-content">
         <header class="topbar">
-            <!-- زرار إخفاء وإظهار القائمة الجانبية -->
             <div id="sidebarToggle" style="color: #64748b; font-weight: 600; cursor: pointer; font-size: 22px;">
                 <i class="fas fa-bars"></i>
             </div>
@@ -69,22 +75,21 @@
         <div class="workspace">
             
             <!-- 1. شاشة الإحصائيات -->
-            <div id="analytics-view" class="view-section active">
+            <div id="analytics-view" class="view-section active animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">نظرة عامة وإحصائيات</h2>
                 </div>
                 <div class="stat-cards">
-                    <!-- كارت إجمالي الطلبات -->
-                    <div class="stat-card clickable-card" onclick="goToOrdersTab('active')">
+                    <!-- تم تعديل الزر ليوجه إلى أرشيف الطلبات عند الضغط -->
+                    <div class="stat-card clickable-card" onclick="goToOrdersTab('archived')">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;">
                             <i class="fas fa-shopping-bag"></i>
                         </div>
                         <div class="stat-info">
-                            <h3>إجمالي الطلبات</h3>
+                            <h3>إجمالي الطلبات (اضغط للأرشيف)</h3>
                             <p id="statTotalOrders">0</p>
                         </div>
                     </div>
-                    <!-- كارت إجمالي المبيعات -->
                     <div class="stat-card clickable-card" onclick="openSalesReport()">
                         <div class="stat-icon" style="color: #10b981; background: #dcfce7;">
                             <i class="fas fa-money-bill-wave"></i>
@@ -94,7 +99,6 @@
                             <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
-                    <!-- كارت طلبات قيد المراجعة -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab('pending')">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;">
                             <i class="fas fa-clock"></i>
@@ -104,7 +108,6 @@
                             <p id="statPendingOrders">0</p>
                         </div>
                     </div>
-                    <!-- كارت المنتجات النشطة -->
                     <div class="stat-card clickable-card" onclick="document.querySelector('[data-target=\'products-view\']').click()">
                         <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;">
                             <i class="fas fa-box-open"></i>
@@ -115,10 +118,22 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- إضافة الرسوم البيانية -->
+                <div class="charts-container grid-2" style="margin-top: 30px;">
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات (آخر 7 أيام)</h3>
+                        <canvas id="salesChart" height="200"></canvas>
+                    </div>
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-pie"></i> حالة الطلبات الحالية</h3>
+                        <canvas id="ordersChart" height="200"></canvas>
+                    </div>
+                </div>
             </div>
 
-            <!-- 2. شاشة الطلبات (مع الفلاتر والبحث المتقدم) -->
-            <div id="orders-view" class="view-section">
+            <!-- 2. شاشة الطلبات -->
+            <div id="orders-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الطلبات</h2>
                 </div>
@@ -127,7 +142,6 @@
                     <button class="order-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived')">أرشيف الطلبات</button>
                 </div>
                 
-                <!-- فلاتر البحث المتقدم للطلبات -->
                 <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border: 1px solid var(--border);">
                     <input type="text" id="searchOrders" class="search-input" placeholder="بحث برقم الفاتورة، اسم العميل، التليفون..." onkeyup="renderOrdersTable()" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
                     
@@ -163,8 +177,8 @@
                 </div>
             </div>
 
-            <!-- 3. شاشة المنتجات (مع شريط البحث) -->
-            <div id="products-view" class="view-section">
+            <!-- 3. شاشة المنتجات -->
+            <div id="products-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
                     <div style="display:flex; gap:10px;">
@@ -190,8 +204,8 @@
                 </div>
             </div>
 
-            <!-- 4. شاشة الأقسام (مع شريط البحث) -->
-            <div id="categories-view" class="view-section">
+            <!-- 4. شاشة الأقسام -->
+            <div id="categories-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الأقسام</h2>
                     <div style="display:flex; gap:10px;">
@@ -215,8 +229,8 @@
                 </div>
             </div>
 
-            <!-- 5. شاشة الكوبونات (مع شريط البحث) -->
-            <div id="vouchers-view" class="view-section">
+            <!-- 5. شاشة الكوبونات -->
+            <div id="vouchers-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الكوبونات</h2>
                     <div style="display:flex; gap:10px;">
@@ -242,8 +256,8 @@
                 </div>
             </div>
 
-            <!-- 6. شاشة الموظفين (مع شريط البحث) -->
-            <div id="employees-view" class="view-section">
+            <!-- 6. شاشة الموظفين -->
+            <div id="employees-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الموظفين</h2>
                     <div style="display:flex; gap:10px;">
@@ -269,13 +283,20 @@
                 </div>
             </div>
 
-            <!-- 7. سجل النشاطات -->
-            <div id="logs-view" class="view-section">
+            <!-- 7. سجل النشاطات (مع تحديثات البحث والأرشفة الدقيقة) -->
+            <div id="logs-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">سجل النشاطات</h2>
-                    <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogs()">
-                        <i class="fas fa-archive"></i> أرشفة سجلات الشهر الماضي
-                    </button>
+                    <div style="display:flex; gap:10px; align-items: center;">
+                        <input type="text" id="searchLogs" placeholder="بحث بالحدث أو المستخدم..." onkeyup="filterLogs()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <input type="month" id="archiveMonthInput" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogsByMonth()">
+                            <i class="fas fa-archive"></i> أرشفة بالشهر
+                        </button>
+                        <button class="btn-add" id="btnDeleteAllLogs" style="background-color: #ef4444; display: none;" onclick="deleteAllLogs()">
+                            <i class="fas fa-trash-alt"></i> حذف الكل
+                        </button>
+                    </div>
                 </div>
                 <div class="card">
                     <table>
@@ -294,31 +315,10 @@
 
         </div>
 
-        <!-- ================= النوافذ الاحترافية (Custom Alerts & Confirms) ================= -->
-        <!-- نافذة التنبيه العادي (Alert) -->
-        <div class="modal-overlay custom-popup" id="customAlert" style="z-index: 9999;">
-            <div class="modal" style="width: 400px; text-align: center; padding: 40px 20px;">
-                <i class="fas fa-info-circle" style="font-size: 50px; color: var(--secondary); margin-bottom: 20px;"></i>
-                <h3 id="alertMsg" style="border:none; margin-bottom: 25px; font-size: 18px; color: var(--text-dark);"></h3>
-                <button class="btn-save" onclick="closeAlert()" style="width: 100%;">حسناً</button>
-            </div>
-        </div>
-
-        <!-- نافذة التأكيد (Confirm) -->
-        <div class="modal-overlay custom-popup" id="customConfirm" style="z-index: 9999;">
-            <div class="modal" style="width: 400px; text-align: center; padding: 40px 20px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: var(--accent); margin-bottom: 20px;"></i>
-                <h3 id="confirmMsg" style="border:none; margin-bottom: 25px; font-size: 18px; color: var(--text-dark);">هل أنت متأكد؟</h3>
-                <div class="modal-actions" style="justify-content: center;">
-                    <button class="btn-cancel" onclick="closeConfirm()">إلغاء</button>
-                    <button class="btn-save" id="confirmBtn" style="background-color: #ef4444;">نعم، تأكيد</button>
-                </div>
-            </div>
-        </div>
-
         <!-- ================= تقرير المبيعات المفصل ================= -->
         <div class="modal-overlay" id="salesReportModal">
-            <div class="modal" style="width: 800px; max-width: 95%;">
+            <!-- (نفس محتوى النافذة السابقة) -->
+            <div class="modal animate__animated animate__zoomIn" style="width: 800px; max-width: 95%;">
                 <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fas fa-chart-line" style="color: var(--success);"></i> تقرير المبيعات المفصل</span>
                     <div class="close-btn" style="cursor: pointer; color: var(--text-light);" onclick="closeModal('salesReportModal')">
@@ -356,7 +356,7 @@
 
         <!-- ================= تفاصيل الطلب وإدخال بيانات بوليصة الشحن ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
-            <div class="modal print-invoice-area" style="width: 700px;">
+            <div class="modal print-invoice-area animate__animated animate__zoomIn" style="width: 800px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
                 
                 <div class="grid-2 screen-only-flex">
@@ -379,7 +379,44 @@
                     </div>
 
                     <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);" class="screen-only">
-                        <strong style="color: var(--primary); margin-bottom: 10px; display: block;">تجهيز بوليصة الشحن:</strong>
+                        <strong style="color: var(--primary); margin-bottom: 10px; display: block;">تجهيز بوليصة الشحن (تأكيد البيانات):</strong>
+                        
+                        <!-- إدخال تفاصيل العنوان للبوليصة الجديدة -->
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>المدينة/المحافظة</label>
+                                <input type="text" id="wbCity" placeholder="مثال: القاهرة">
+                            </div>
+                            <div class="input-group">
+                                <label>المنطقة</label>
+                                <input type="text" id="wbRegion" placeholder="مثال: مدينة نصر">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>رقم المبنى</label>
+                                <input type="text" id="wbBuilding">
+                            </div>
+                            <div class="input-group">
+                                <label>الدور</label>
+                                <input type="text" id="wbFloor">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>رقم الشقة</label>
+                                <input type="text" id="wbAppt">
+                            </div>
+                            <div class="input-group">
+                                <label>علامة مميزة</label>
+                                <input type="text" id="wbLandmark">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>تليفون آخر (اختياري)</label>
+                            <input type="tel" id="wbPhone2">
+                        </div>
+
                         <div class="input-group">
                             <label>السماح بفتح الشحنة؟</label>
                             <select id="wbAllowOpen">
@@ -388,7 +425,7 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label>ملاحظات إضافية للمندوب</label>
+                            <label>ملاحظات للمندوب</label>
                             <textarea id="wbNotes" rows="2" placeholder="اكتب أي ملاحظات هنا..."></textarea>
                         </div>
                         
@@ -409,84 +446,60 @@
             </div>
         </div>
 
-        <!-- ================= تصميم بوليصة الشحن للطباعة (التصميم النظيف) ================= -->
+        <!-- ================= تصميم بوليصة الشحن للطباعة (محدث بالكامل) ================= -->
         <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
-            <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 3px solid black; font-family: 'Arial', 'Cairo', sans-serif; direction: rtl; background: white; color: black;">
+            <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 2px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 10px;">
                 
-                <!-- الهيدر: اللوجو والباركود والQR -->
-                <div class="bosta-header" style="display: flex; justify-content: space-between; border-bottom: 2px solid black; padding: 10px; align-items: center;">
-                    <div class="bosta-logo-area" style="display: flex; align-items: center; font-size: 20px; font-weight: 900;">
-                        <i class="fas fa-bolt" style="font-size: 30px; margin-left: 8px;"></i>
-                        <span style="font-family: Arial, sans-serif; letter-spacing: 1px;">ModyStore</span>
-                    </div>
-                    <div class="bosta-barcode-top">
-                        <svg id="topBarcode" style="height: 60px !important; width: 100%; max-width: 170px;"></svg>
-                    </div>
-                    <div id="qrCodeBox" style="margin-right:5px;"></div>
+                <!-- الهيدر: اللوجو والباركود متمركز تحت اللوجو -->
+                <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="font-size: 24px; font-weight: 900; margin-bottom: 5px;">ModyStore <i class="fas fa-bolt"></i></div>
+                    <svg id="topBarcode" style="height: 50px !important; width: 80%; max-width: 250px; margin: 0 auto;"></svg>
                 </div>
 
-                <div class="bosta-row bosta-flex" style="display: flex; border-bottom: 2px solid black;">
-                    <div class="bosta-flex-item" style="flex: 1; padding: 8px; text-align: center;">
-                        <strong>السماح بفتح الشحنة:</strong> <span id="printAllowOpen">نعم</span>
+                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1; border-left: 1px solid black; padding-left: 5px;">
+                        <strong>من:</strong> مودي ستور<br>
+                        <strong>السماح بالفتح:</strong> <span id="printAllowOpen">نعم</span>
                     </div>
-                    <div class="bosta-flex-item" style="flex: 1; border-right: 2px solid black; padding: 8px; text-align: center;">
-                        <strong>عدد القطع:</strong> <span id="printQty">1</span>
-                    </div>
+                    <div style="flex: 1; padding-right: 5px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
                 </div>
 
-                <!-- بيانات العميل والمكان -->
-                <div class="bosta-row" style="display:flex; border-bottom: 2px solid black;">
-                    <div style="flex:1; padding: 8px;">
-                        <div style="font-weight:bold; font-size:14px; margin-bottom:10px;">من: ModyStore</div>
-                        <div>
-                            <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:15px;"></span>
-                        </div>
+                <!-- بيانات العميل والتفاصيل الجديدة -->
+                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 14px;">
+                    <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:16px;"></span><br>
+                    <strong>المدينة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
+                    <strong>العنوان:</strong> <span id="printAddress"></span><br>
+                    <strong>مبنى:</strong> <span id="printBuilding">-</span> | <strong>دور:</strong> <span id="printFloor">-</span> | <strong>شقة:</strong> <span id="printApartment">-</span><br>
+                    <strong>علامة مميزة:</strong> <span id="printLandmark">-</span>
+                </div>
+
+                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1; border-left: 1px solid black;">
+                        <strong>تليفون:</strong> <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:16px;"></span>
                     </div>
-                    <div style="flex:1; border-right: 2px solid black; padding: 8px; text-align: right; font-size:14px;">
-                        <div style="margin-bottom:5px;">
-                            <strong>المدينة:</strong> <span id="printCity"></span>
-                        </div>
-                        <div>
-                            <strong>المنطقة:</strong> <span id="printRegion"></span>
-                        </div>
+                    <div style="flex: 1; padding-right: 5px;">
+                        <strong>تليفون آخر:</strong> <span id="printPhone2" dir="ltr">-</span>
                     </div>
                 </div>
 
-                <div class="bosta-row" style="padding: 8px; font-size:14px; border-bottom: 2px solid black;">
-                    <strong>العنوان بالتفصيل:</strong> <br>
-                    <span id="printAddress"></span>
+                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 13px;">
+                    <strong>الوصف:</strong> <span id="printProductsDesc"></span><br>
+                    <strong>ملاحظات:</strong> <span id="printNotes"></span>
                 </div>
 
-                <div class="bosta-row" style="display:flex; border-bottom: 2px solid black;">
-                    <div style="flex:1; padding: 8px;">
-                        <strong>تليفون:</strong> <br>
-                        <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:18px;"></span>
-                    </div>
-                    <div style="flex:1; border-right: 2px solid black; padding: 8px;">
-                        <strong>تليفون آخر:</strong> <br>
-                        -
-                    </div>
+                <!-- مربع التحصيل (تم تصغيره وتوسيعه بناء على الطلب) -->
+                <div id="codAmountContainer" style="text-align: center; border: 2px solid black; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
+                    <strong style="font-size:14px;">المبلغ المطلوب تحصيله (COD)</strong><br>
+                    <span id="printCodAmount" style="font-size:24px; font-weight:900;"></span>
                 </div>
 
-                <div class="bosta-row" style="padding: 8px; border-bottom: 2px solid black;">
-                    <strong>وصف الشحنة (المنتجات):</strong><br>
-                    <span id="printProductsDesc" style="font-size:14px; font-weight:bold;"></span>
-                </div>
-
-                <div class="bosta-row" style="padding: 8px; border-bottom: 2px solid black;">
-                    <strong>ملاحظات:</strong><br>
-                    <span id="printNotes" style="font-size:14px;"></span>
-                </div>
-
-                <!-- الفوتر الديناميكي للمبلغ (يظهر حسب طريقة الدفع) -->
-                <div id="codAmountContainer" style="padding: 15px; text-align: center; display:none;">
-                    <strong style="font-size:16px;">المبلغ المطلوب تحصيله (COD):</strong><br>
-                    <span id="printCodAmount" style="font-size:35px; font-weight:900;"></span>
-                </div>
-
-                <div id="paidAmountContainer" style="padding: 15px; text-align: center; font-size: 16px; display:none; background-color: #f8fafc;">
-                    <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> &nbsp;&nbsp;|&nbsp;&nbsp; 
+                <div id="paidAmountContainer" style="text-align: center; font-size: 16px; display:none; background-color: #f8fafc; padding: 10px; border: 2px solid black; border-radius: 8px; margin-bottom: 10px;">
+                    <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> <br>
                     <strong>القيمة:</strong> <span id="printPaidAmount" style="font-weight:bold;"></span>
+                </div>
+
+                <div style="text-align: center; font-weight: bold; margin-top: 15px; font-size: 14px;">
+                    شكراً لثقتكم بنا <span style="color: red; font-size: 18px;">❤️</span>
                 </div>
             </div>
         </div>
@@ -495,7 +508,7 @@
         
         <!-- إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
-            <div class="modal">
+            <div class="modal animate__animated animate__zoomIn">
                 <h3 id="productModalTitle">إضافة منتج جديد</h3>
                 <div class="input-group">
                     <label>اسم المنتج</label>
@@ -516,7 +529,7 @@
                     <select id="prodCategory"></select>
                 </div>
                 <div class="input-group">
-                    <label>الوصف التفصيلي (يظهر للعميل)</label>
+                    <label>الوصف التفصيلي</label>
                     <textarea id="prodDesc" rows="4"></textarea>
                 </div>
                 <div class="input-group">
@@ -532,7 +545,7 @@
         
         <!-- إضافة/تعديل قسم -->
         <div class="modal-overlay" id="categoryModal">
-            <div class="modal">
+            <div class="modal animate__animated animate__zoomIn">
                 <h3 id="catModalTitle">إضافة قسم</h3>
                 <div class="input-group">
                     <label>الاسم</label>
@@ -545,9 +558,9 @@
             </div>
         </div>
         
-        <!-- إنشاء/تعديل كوبون -->
+        <!-- إنشاء/تعديل كوبون (مع التعديلات الجديدة) -->
         <div class="modal-overlay" id="voucherModal">
-            <div class="modal">
+            <div class="modal animate__animated animate__zoomIn">
                 <h3 id="voucherModalTitle">إنشاء كود</h3>
                 <div class="grid-2">
                     <div class="input-group">
@@ -568,8 +581,9 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label>حد الاستخدام</label>
+                        <label>حد الاستخدام (عدد الأشخاص)</label>
                         <input type="number" id="voucherLimit" value="1" min="1">
+                        <small style="color:var(--text-light); font-size:11px;">الكود هيقف أوتوماتيك بعد العدد ده</small>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -581,7 +595,7 @@
 
         <!-- عرض مستخدمي الكوبون -->
         <div class="modal-overlay" id="voucherUsersModal">
-            <div class="modal">
+            <div class="modal animate__animated animate__zoomIn">
                 <h3 id="vuTitle">سجل استخدام الكوبون</h3>
                 <div id="vuList" style="max-height: 300px; overflow-y: auto; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);"></div>
                 <div class="modal-actions">
@@ -590,10 +604,10 @@
             </div>
         </div>
 
-        <!-- إضافة/تعديل موظف -->
+        <!-- إضافة/تعديل موظف (مع نظام الصلاحيات الجديد) -->
         <div class="modal-overlay" id="employeeModal">
-            <div class="modal">
-                <h3 id="empModalTitle">إضافة موظف</h3>
+            <div class="modal animate__animated animate__zoomIn" style="width: 600px;">
+                <h3 id="empModalTitle">إضافة موظف / مشرف</h3>
                 <div class="input-group">
                     <label>الاسم</label>
                     <input type="text" id="empName">
@@ -604,27 +618,45 @@
                         <input type="tel" id="empPhone">
                     </div>
                     <div class="input-group">
+                        <label>الرقم القومي</label>
+                        <input type="text" id="empNationalId" maxlength="14">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
                         <label>تاريخ الميلاد</label>
                         <input type="date" id="empDob">
                     </div>
-                </div>
-                <div class="input-group">
-                    <label>الرقم القومي</label>
-                    <input type="text" id="empNationalId" maxlength="14">
-                </div>
-                <div class="grid-2">
                     <div class="input-group">
                         <label>المنطقة</label>
                         <input type="text" id="empArea">
                     </div>
-                    <div class="input-group">
-                        <label>الصلاحية</label>
-                        <select id="empRole">
-                            <option value="Admin">مدير</option>
-                            <option value="Support">دعم فني</option>
-                        </select>
-                    </div>
                 </div>
+                
+                <div class="input-group">
+                    <label>الدور الوظيفي (الصلاحية)</label>
+                    <select id="empRole" onchange="toggleEmployeePermissionsUI()">
+                        <option value="Admin">مدير (Admin)</option>
+                        <option value="Supervisor">مشرف (Supervisor)</option>
+                    </select>
+                </div>
+
+                <!-- واجهة تحديد الصلاحيات للمشرف -->
+                <div id="permissionsUI" style="display:none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">التبويبات المسموح برؤيتها:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                        <label><input type="checkbox" class="perm-tab" value="analytics-view"> الإحصائيات</label>
+                        <label><input type="checkbox" class="perm-tab" value="orders-view"> الطلبات</label>
+                        <label><input type="checkbox" class="perm-tab" value="products-view"> المنتجات</label>
+                        <label><input type="checkbox" class="perm-tab" value="categories-view"> الأقسام</label>
+                        <label><input type="checkbox" class="perm-tab" value="vouchers-view"> الكوبونات</label>
+                        <label><input type="checkbox" class="perm-tab" value="logs-view"> سجل النشاطات</label>
+                    </div>
+                    <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">صلاحيات إضافية:</label>
+                    <label><input type="checkbox" id="permChangeOrderStatus"> السماح بتغيير حالة الطلبات</label>
+                </div>
+
                 <div class="input-group">
                     <label>ملاحظات</label>
                     <textarea id="empNotes" rows="2"></textarea>
@@ -637,6 +669,14 @@
         </div>
 
     </main>
+
+    <!-- سكربت بسيط لتبديل واجهة الصلاحيات -->
+    <script>
+        function toggleEmployeePermissionsUI() {
+            const role = document.getElementById('empRole').value;
+            document.getElementById('permissionsUI').style.display = (role === 'Supervisor') ? 'block' : 'none';
+        }
+    </script>
 
     <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
