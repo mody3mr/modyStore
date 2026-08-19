@@ -170,7 +170,7 @@
 <!-- مكتبات فايربيز (النسخة الحديثة) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child, remove, update } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+        import { getDatabase, ref, set, get, child, remove, update, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
         // شيل البيانات اللي هنا وحط الـ firebaseConfig بتاعك اللي نسخته من الموقع
 const firebaseConfig = {
@@ -237,6 +237,67 @@ const firebaseConfig = {
                 saveBtn.innerText = "حفظ المنتج";
             });
         });
+        // --------------------------------------------------
+        // كود جلب المنتجات وعرضها في الجدول لحظياً
+        // --------------------------------------------------
+        const tableBody = document.getElementById("productsTableBody");
+        const productsRef = ref(db, 'products');
+
+        onValue(productsRef, (snapshot) => {
+            tableBody.innerHTML = ""; // تفريغ الجدول من كلمة "جاري التحميل"
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                
+                // هنلف على كل منتج في قاعدة البيانات ونعمله سطر
+                for (const productId in data) {
+                    const product = data[productId];
+                    
+                    // تحديد الألوان حسب حالة المنتج (نشط ولا مخفي)
+                    const badgeClass = product.isActive ? "badge-active" : "badge-inactive";
+                    const badgeText = product.isActive ? "معروض للعملاء" : "مخفي";
+                    const hideIcon = product.isActive ? "fa-eye-slash" : "fa-eye";
+                    const hideBg = product.isActive ? "#64748b" : "#22c55e";
+
+                    // ترجمة اسم القسم عشان يظهر بالعربي
+                    let catName = "";
+                    if(product.category === "electronics") catName = "إلكترونيات";
+                    else if(product.category === "toys") catName = "لعب أطفال";
+                    else if(product.category === "offers") catName = "عروض وتخفيضات";
+
+                    // تصميم السطر الخاص بالمنتج
+                    const row = `
+                        <tr>
+                            <td>
+                                <div class="product-info">
+                                    <img src="${product.imageUrl}" class="product-img" alt="صورة">
+                                    <span>${product.name}</span>
+                                </div>
+                            </td>
+                            <td>${product.price} ج.م</td>
+                            <td>${catName}</td>
+                            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action btn-edit" onclick="editProduct('${productId}')" title="تعديل"><i class="fas fa-pen"></i></button>
+                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleStatus('${productId}', ${product.isActive})" title="إخفاء/إظهار"><i class="fas ${hideIcon}"></i></button>
+                                    <button class="btn-action btn-delete" onclick="deleteProduct('${productId}')" title="حذف نهائي"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                }
+            } else {
+                // لو مفيش منتجات خالص
+                tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; font-weight:bold;'>مفيش منتجات لسه، ضيف أول منتج ليك!</td></tr>";
+            }
+        });
+
+        // دوال مؤقتة لزراير الإجراءات (هنبرمجها الخطوة الجاية)
+        window.deleteProduct = (id) => alert("هنبرمج الحذف الخطوة الجاية للمنتج: " + id);
+        window.toggleStatus = (id, status) => alert("هنبرمج الإخفاء الخطوة الجاية للمنتج: " + id);
+        window.editProduct = (id) => alert("هنبرمج التعديل الخطوة الجاية للمنتج: " + id);
         // --------------------------------------------------
         // هنا هنبدأ نكتب الأكواد بتاعة زراير الإضافة والحذف 
         // --------------------------------------------------
