@@ -273,7 +273,7 @@ window.filterReportProducts = () => {
 };
 
 // ==========================================
-// إدارة الطلبات (مع إصلاح الفلاتر والبحث لتظهر كل الطلبات)
+// إدارة الطلبات (شاملة فلاتر البحث)
 // ==========================================
 let allOrders = [];
 let currentOrderTab = 'active';
@@ -282,56 +282,40 @@ window.switchOrderTab = (tab) => {
     currentOrderTab = tab;
     document.getElementById('tabActiveOrders').classList.toggle('active', tab === 'active');
     document.getElementById('tabArchivedOrders').classList.toggle('active', tab === 'archived');
-    window.renderOrdersTable();
+    renderOrdersTable();
 };
 
 window.renderOrdersTable = () => {
     const table = document.getElementById("ordersTableBody");
     table.innerHTML = "";
     
-    const searchInput = document.getElementById("searchOrders");
-    const search = searchInput ? searchInput.value.toLowerCase() : "";
-    
-    const dateInput = document.getElementById("filterOrderDate");
-    const dateFilter = dateInput ? dateInput.value : "";
-    
-    const paymentInput = document.getElementById("filterOrderPayment");
-    const paymentFilter = paymentInput ? paymentInput.value : "";
+    const search = document.getElementById("searchOrders").value.toLowerCase();
+    const dateFilter = document.getElementById("filterOrderDate").value;
+    const paymentFilter = document.getElementById("filterOrderPayment").value;
 
     let filteredOrders = allOrders.filter(order => {
         let tabMatch = false;
-        
-        // دمج "تم الاستلام" القديمة مع "تم تسليمه" الجديدة عشان مفيش حاجة تختفي
         if (currentOrderTab === 'active') {
             tabMatch = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن'].includes(order.status);
         } else {
-            tabMatch = ['تم تسليمه', 'تم الاستلام', 'ملغي'].includes(order.status);
+            tabMatch = ['تم تسليمه', 'ملغي'].includes(order.status);
         }
             
-        // حماية المتغيرات لو הדاتا قديمة ومفيهاش اسم أو رقم عشان ميعملش Error
-        let orderIdStr = order.orderId ? String(order.orderId).toLowerCase() : "";
-        let custName = (order.customer && order.customer.name) ? String(order.customer.name).toLowerCase() : "";
-        let custPhone = (order.customer && order.customer.phone) ? String(order.customer.phone).toLowerCase() : "";
-
-        let searchMatch = orderIdStr.includes(search) || custName.includes(search) || custPhone.includes(search);
+        let searchMatch = order.orderId.includes(search) || 
+                          order.customer.name.toLowerCase().includes(search) || 
+                          order.customer.phone.includes(search);
                           
         let dateMatch = true;
-        if (dateFilter && order.createdAt) {
-            let oDateObj = new Date(order.createdAt);
-            let y = oDateObj.getFullYear();
-            let m = String(oDateObj.getMonth() + 1).padStart(2, '0');
-            let d = String(oDateObj.getDate()).padStart(2, '0');
-            let formattedDate = `${y}-${m}-${d}`;
-            
-            if (formattedDate !== dateFilter) {
+        if (dateFilter) {
+            let oDate = new Date(order.createdAt).toISOString().split('T')[0];
+            if (oDate !== dateFilter) {
                 dateMatch = false;
             }
         }
 
         let payMatch = true;
         if (paymentFilter) {
-            let pMethod = order.paymentMethod ? String(order.paymentMethod) : "";
-            if (!pMethod.includes(paymentFilter)) {
+            if (!(order.paymentMethod || "").includes(paymentFilter)) {
                 payMatch = false;
             }
         }
@@ -352,28 +336,26 @@ window.renderOrdersTable = () => {
             statusClass = 'status-processing';
         } else if (order.status === 'تم الشحن') {
             statusClass = 'status-shipped';
-        } else if (order.status === 'تم تسليمه' || order.status === 'تم الاستلام') {
+        } else if (order.status === 'تم تسليمه') {
             statusClass = 'status-delivered';
         }
         
-        let displayStatus = (order.status === 'تم الاستلام') ? 'تم تسليمه' : order.status;
-
         table.innerHTML += `
             <tr>
-                <td style="font-weight:900; color:var(--primary);">#${order.orderId || "غير محدد"}</td>
+                <td style="font-weight:900; color:var(--primary);">#${order.orderId}</td>
                 <td>
-                    <b>${(order.customer && order.customer.name) ? order.customer.name : "غير معروف"}</b><br>
+                    <b>${order.customer.name}</b><br>
                     <span class="meta-info">${order.paymentMethod || "الدفع عند الاستلام"}</span>
                 </td>
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
-                <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total || 0)} ج.م</td>
+                <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total)} ج.م</td>
                 <td>
                     <select class="status-select ${statusClass}" onchange="updateOrderStatus('${order.dbId}', this)">
-                        <option value="قيد المراجعة" ${displayStatus === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
-                        <option value="جاري التجهيز" ${displayStatus === 'جاري التجهيز' ? 'selected' : ''}>📦 جاري التجهيز</option>
-                        <option value="تم الشحن" ${displayStatus === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
-                        <option value="تم تسليمه" ${displayStatus === 'تم تسليمه' ? 'selected' : ''}>✅ تم تسليمه</option>
-                        <option value="ملغي" ${displayStatus === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
+                        <option value="قيد المراجعة" ${order.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
+                        <option value="جاري التجهيز" ${order.status === 'جاري التجهيز' ? 'selected' : ''}>📦 جاري التجهيز</option>
+                        <option value="تم الشحن" ${order.status === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
+                        <option value="تم تسليمه" ${order.status === 'تم تسليمه' ? 'selected' : ''}>✅ تم تسليمه</option>
+                        <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
                     </select>
                 </td>
                 <td>
@@ -409,7 +391,7 @@ window.updateOrderStatus = (orderId, selectElement) => {
 };
 
 // ==========================================
-// تجهيز بوليصة الشحن Bosta
+// تجهيز بوليصة الشحن Bosta (التعديل الجديد)
 // ==========================================
 let currentPrintOrder = null;
 
@@ -422,34 +404,32 @@ window.viewOrderDetails = (orderDbId) => {
     currentPrintOrder = order;
 
     document.getElementById("orderModalTitle").innerText = `تفاصيل الطلب: #${order.orderId}`;
-    document.getElementById("oName").innerText = (order.customer && order.customer.name) ? order.customer.name : "غير معروف";
-    document.getElementById("oPhone").innerText = (order.customer && order.customer.phone) ? order.customer.phone : "";
-    document.getElementById("oAddress").innerText = (order.customer && order.customer.address) ? order.customer.address : "";
+    document.getElementById("oName").innerText = order.customer.name;
+    document.getElementById("oPhone").innerText = order.customer.phone;
+    document.getElementById("oAddress").innerText = order.customer.address;
     document.getElementById("oPayment").innerText = order.paymentMethod || "دفع عند الاستلام";
 
     const list = document.getElementById("oItemsList");
     list.innerHTML = "";
     
-    if (order.items && Array.isArray(order.items)) {
-        order.items.forEach(item => {
-            list.innerHTML += `
-                <div class="order-item-row">
-                    <span>${item.qty}x ${item.name}</span>
-                    <span>${item.qty * item.price} ج.م</span>
-                </div>`;
-        });
-    }
+    order.items.forEach(item => {
+        list.innerHTML += `
+            <div class="order-item-row">
+                <span>${item.qty}x ${item.name}</span>
+                <span>${item.qty * item.price} ج.م</span>
+            </div>`;
+    });
 
-    document.getElementById("oSubtotal").innerText = `${order.subtotal || 0} ج.م`;
+    document.getElementById("oSubtotal").innerText = `${order.subtotal} ج.م`;
     
-    if (order.discount && order.discount > 0) {
+    if (order.discount > 0) {
         document.getElementById("oDiscountDiv").style.display = "block";
         document.getElementById("oDiscount").innerText = `-${Math.round(order.discount)} ج.م`;
     } else {
         document.getElementById("oDiscountDiv").style.display = "none";
     }
     
-    document.getElementById("oTotal").innerText = `${Math.round(order.total || 0)} ج.م`;
+    document.getElementById("oTotal").innerText = `${Math.round(order.total)} ج.م`;
 
     let tlHtml = `
         <div class="tl-step done">
@@ -490,40 +470,43 @@ window.viewOrderDetails = (orderDbId) => {
     document.getElementById("orderDetailsModal").style.display = "flex";
 };
 
+// ==========================================
+// دالة الطباعة باللوجيك الجديد للبوليصة
+// ==========================================
 window.printDocument = (type) => {
     if (type === 'waybill') {
         const order = currentPrintOrder;
         
+        // ضبط الباركود والـ QR Code
         JsBarcode("#topBarcode", order.orderId, { 
             format: "CODE128", 
             width: 2, 
-            height: 50, 
+            height: 45, 
             displayValue: true 
         });
         
         document.getElementById("qrCodeBox").innerHTML = "";
         new QRCode(document.getElementById("qrCodeBox"), { 
             text: "https://mody3mr.github.io/modytech/store", 
-            width: 80, 
-            height: 80 
+            width: 55, 
+            height: 55 
         });
 
         const allowOpenSelect = document.getElementById("wbAllowOpen");
         if (allowOpenSelect) {
-             document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
+            document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
         }
-       
-        document.getElementById("printCustName").innerText = (order.customer && order.customer.name) ? order.customer.name : "";
+        
+        document.getElementById("printCustName").innerText = order.customer.name || "";
         
         let addrParts = [];
         if (order.customer && order.customer.address) {
-             addrParts = order.customer.address.split('-');
+            addrParts = order.customer.address.split('-');
         }
-        
         document.getElementById("printCity").innerText = addrParts[0] || "غير محدد";
         document.getElementById("printRegion").innerText = addrParts[1] || "";
-        document.getElementById("printAddress").innerText = (order.customer && order.customer.address) ? order.customer.address : "";
-        document.getElementById("printPhone1").innerText = (order.customer && order.customer.phone) ? order.customer.phone : "";
+        document.getElementById("printAddress").innerText = order.customer.address || "";
+        document.getElementById("printPhone1").innerText = order.customer.phone || "";
         
         let descParts = [];
         if (order.items && Array.isArray(order.items)) {
@@ -539,15 +522,33 @@ window.printDocument = (type) => {
             notesText = "لا يوجد";
         }
         document.getElementById("printNotes").innerText = notesText;
-        document.getElementById("printOrderRef").innerText = order.orderId;
         
-        let cod = 0;
-        if (order.paymentMethod && order.paymentMethod !== "الدفع عند الاستلام (COD)") {
-            cod = 0;
-        } else {
-            cod = Math.round(order.total || 0);
+        // المنطق الجديد للتحكم في ظهور المبلغ في البوليصة
+        const codContainer = document.getElementById("codAmountContainer");
+        const paidContainer = document.getElementById("paidAmountContainer");
+        let payMethod = order.paymentMethod || "الدفع عند الاستلام (COD)";
+        
+        // لو الدفع كاش أو عند الاستلام
+        if (payMethod.includes("عند الاستلام") || payMethod.includes("COD")) {
+            if (codContainer) codContainer.style.display = "block";
+            if (paidContainer) paidContainer.style.display = "none";
+            
+            let codAmountEl = document.getElementById("printCodAmount");
+            if (codAmountEl) {
+                codAmountEl.innerText = Math.round(order.total || 0) + " ج.م";
+            }
+        } 
+        // لو الدفع فيزا أو محفظة
+        else {
+            if (codContainer) codContainer.style.display = "none";
+            if (paidContainer) paidContainer.style.display = "block";
+            
+            let payMethodLabel = document.getElementById("printPaymentMethodLabel");
+            if (payMethodLabel) payMethodLabel.innerText = payMethod;
+            
+            let paidAmountEl = document.getElementById("printPaidAmount");
+            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total || 0) + " ج.م (مدفوع)";
         }
-        document.getElementById("printCodAmount").innerText = cod + " EGP";
 
         document.body.className = 'print-mode-waybill';
     } else {
@@ -575,7 +576,7 @@ onValue(ref(db, 'orders'), (snapshot) => {
             ordersCount++;
             
             if (o.status !== 'ملغي') {
-                totalRev += (o.total || 0);
+                totalRev += o.total;
             }
             if (o.status === 'قيد المراجعة') {
                 pending++;
