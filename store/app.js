@@ -338,6 +338,11 @@ ${orderItemsText}
             })
         });
 
+        // إذا اخترت دفع إلكتروني (غير الدفع عند الاستلام)
+        if(paymentMethod !== "الدفع عند الاستلام (COD)") {
+            alert("تم تسجيل طلبك بنجاح. سيتم توجيهك لبوابة الدفع الإلكتروني (Paymob).");
+        }
+
         document.getElementById("checkoutForm").style.display = "none";
         document.getElementById("successScreen").style.display = "block";
         document.getElementById("successOrderId").innerText = orderId;
