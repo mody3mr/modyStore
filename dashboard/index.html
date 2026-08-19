@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المتجر | Dashboard</title>
-    <!-- خط كايرو الاحترافي من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- مكتبة الأيقونات -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -37,15 +35,18 @@
         .user-profile { display: flex; align-items: center; gap: 10px; font-weight: 700; }
         .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
 
-        /* مساحة العمل */
-        .workspace { padding: 30px; overflow-y: auto; }
+        /* مساحة العمل والتنقل بين الصفحات */
+        .workspace { padding: 30px; overflow-y: auto; position: relative; }
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .page-title { font-size: 24px; font-weight: 700; color: var(--primary); }
         
-        .header-actions { display: flex; gap: 10px; }
         .btn-add { background-color: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
         .btn-add:hover { background-color: #2563eb; transform: translateY(-2px); }
-        .btn-cat { background-color: #8b5cf6; }
+        .btn-cat { background-color: #8b5cf6; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.2); }
         .btn-cat:hover { background-color: #7c3aed; }
 
         /* الكارت والجدول */
@@ -73,7 +74,7 @@
         .btn-delete { background-color: #ef4444; } 
         .btn-delete:hover { background-color: #dc2626; }
         
-        /* تصميم نافذة إضافة/تعديل منتج (Popup) */
+        /* تصميم النوافذ (Modals) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal h3 { margin-bottom: 20px; color: var(--primary); font-weight: 700; }
@@ -92,15 +93,15 @@
     <aside class="sidebar">
         <div class="brand">لوحة التحكم</div>
         <ul class="nav-links">
-            <li class="active"><i class="fas fa-box-open"></i> المنتجات</li>
-            <li><i class="fas fa-shopping-cart"></i> الطلبات</li>
-            <li><i class="fas fa-cog"></i> الإعدادات</li>
+            <li class="nav-item active" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
+            <li class="nav-item" data-target="categories-view"><i class="fas fa-tags"></i> الأقسام</li>
+            <li class="nav-item"><i class="fas fa-shopping-cart"></i> الطلبات</li>
+            <li class="nav-item"><i class="fas fa-cog"></i> الإعدادات</li>
         </ul>
     </aside>
 
     <!-- المحتوى الرئيسي -->
     <main class="main-content">
-        <!-- الشريط العلوي -->
         <header class="topbar">
             <div style="color: #64748b; font-weight: 600;"><i class="fas fa-bars"></i></div>
             <div class="user-profile">
@@ -109,36 +110,57 @@
             </div>
         </header>
 
-        <!-- مساحة العمل -->
         <div class="workspace">
-            <div class="page-header">
-                <h2 class="page-title">إدارة المنتجات والأقسام</h2>
-                <div class="header-actions">
-                    <button class="btn-add btn-cat" id="addCategoryBtn"><i class="fas fa-tags"></i> إضافة قسم جديد</button>
+            
+            <!-- ================= شاشة المنتجات ================= -->
+            <div id="products-view" class="view-section active">
+                <div class="page-header">
+                    <h2 class="page-title">إدارة المنتجات</h2>
                     <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>السعر</th>
+                                <th>القسم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل المنتجات...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- جدول المنتجات -->
-            <div class="card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>المنتج</th>
-                            <th>السعر</th>
-                            <th>القسم</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productsTableBody">
-                        <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل المنتجات...</td></tr>
-                    </tbody>
-                </table>
+            <!-- ================= شاشة الأقسام ================= -->
+            <div id="categories-view" class="view-section">
+                <div class="page-header">
+                    <h2 class="page-title">إدارة الأقسام</h2>
+                    <button class="btn-add btn-cat" id="openCatModalBtn"><i class="fas fa-plus"></i> إضافة قسم جديد</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>اسم القسم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoriesTableBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 20px;">جاري تحميل الأقسام...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
         </div>
 
-        <!-- نافذة إضافة وتعديل منتج (Popup) -->
+        <!-- ================= نافذة المنتجات (Modal) ================= -->
         <div class="modal-overlay" id="productModal">
             <div class="modal">
                 <h3 id="modalTitle">إضافة منتج جديد</h3>
@@ -152,7 +174,6 @@
                 </div>
                 <div class="input-group">
                     <label>القسم</label>
-                    <!-- الأقسام هتظهر هنا أوتوماتيك -->
                     <select id="prodCategory">
                         <option value="">جاري تحميل الأقسام...</option>
                     </select>
@@ -162,19 +183,34 @@
                     <input type="text" id="prodImage" placeholder="https://...">
                 </div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" id="closeModalBtn">إلغاء</button>
+                    <button class="btn-cancel" onclick="document.getElementById('productModal').style.display='none'">إلغاء</button>
                     <button class="btn-save" id="saveProductBtn">حفظ المنتج</button>
                 </div>
             </div>
         </div>
+
+        <!-- ================= نافذة الأقسام (Modal) ================= -->
+        <div class="modal-overlay" id="categoryModal">
+            <div class="modal">
+                <h3 id="catModalTitle">إضافة قسم جديد</h3>
+                <div class="input-group">
+                    <label>اسم القسم</label>
+                    <input type="text" id="catNameInput" placeholder="مثال: إلكترونيات، ملابس، شواحن...">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="document.getElementById('categoryModal').style.display='none'">إلغاء</button>
+                    <button class="btn-save" id="saveCategoryBtn">حفظ القسم</button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
-    <!-- مكتبات فايربيز (النسخة الحديثة) -->
+    <!-- مكتبات فايربيز -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
         import { getDatabase, ref, set, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
-        // إعدادات الاتصال الخاصة بيك
         const firebaseConfig = {
             apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
             authDomain: "modytech-850c2.firebaseapp.com",
@@ -188,182 +224,189 @@
         const db = getDatabase(app);
 
         // --------------------------------------------------
-        // جلب الأقسام الديناميكية وإضافة قسم جديد
+        // نظام التنقل بين الصفحات (SPA Navigation)
         // --------------------------------------------------
+        const navItems = document.querySelectorAll('.nav-item');
+        const viewSections = document.querySelectorAll('.view-section');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if(!item.dataset.target) return; // للتابات اللي لسه مبرمجناهاش زي الطلبات
+                
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+
+                viewSections.forEach(view => view.classList.remove('active'));
+                document.getElementById(item.dataset.target).classList.add('active');
+            });
+        });
+
+        // --------------------------------------------------
+        // إدارة الأقسام (Categories)
+        // --------------------------------------------------
+        let editingCatId = null;
+        const categoryModal = document.getElementById("categoryModal");
         const catSelect = document.getElementById("prodCategory");
-        onValue(ref(db, 'categories'), (snapshot) => {
-            catSelect.innerHTML = "";
-            if(snapshot.exists()){
-                snapshot.forEach(child => {
-                    catSelect.innerHTML += `<option value="${child.val().name}">${child.val().name}</option>`;
+        const catTableBody = document.getElementById("categoriesTableBody");
+
+        // فتح نافذة الأقسام
+        document.getElementById("openCatModalBtn").addEventListener("click", () => {
+            editingCatId = null;
+            document.getElementById("catModalTitle").innerText = "إضافة قسم جديد";
+            document.getElementById("catNameInput").value = "";
+            categoryModal.style.display = "flex";
+        });
+
+        // حفظ القسم (إضافة أو تعديل)
+        document.getElementById("saveCategoryBtn").addEventListener("click", () => {
+            const catName = document.getElementById("catNameInput").value.trim();
+            if (!catName) return alert("لازم تكتب اسم القسم!");
+
+            if (editingCatId) {
+                update(ref(db, `categories/${editingCatId}`), { name: catName }).then(() => {
+                    categoryModal.style.display = "none";
                 });
             } else {
-                catSelect.innerHTML = `<option value="">اضغط على 'إضافة قسم جديد' أولاً</option>`;
+                push(ref(db, 'categories'), { name: catName, isActive: true }).then(() => {
+                    categoryModal.style.display = "none";
+                });
             }
         });
 
-        document.getElementById("addCategoryBtn").addEventListener("click", () => {
-            const catName = prompt("اكتب اسم القسم الجديد (مثال: شواحن، ملابس):");
-            if(catName && catName.trim() !== "") {
-                push(ref(db, 'categories'), { name: catName.trim() })
-                .then(() => alert("تم إضافة القسم بنجاح!"));
+        // جلب الأقسام للجدول وللقائمة المنسدلة بتاعت المنتجات
+        onValue(ref(db, 'categories'), (snapshot) => {
+            catTableBody.innerHTML = "";
+            catSelect.innerHTML = "";
+            
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    const id = child.key;
+                    const cat = child.val();
+                    
+                    // إضافة القسم لجدول الأقسام
+                    const badgeClass = cat.isActive ? "badge-active" : "badge-inactive";
+                    const hideIcon = cat.isActive ? "fa-eye-slash" : "fa-eye";
+                    const hideBg = cat.isActive ? "#64748b" : "#22c55e";
+                    
+                    catTableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold;">${cat.name}</td>
+                            <td><span class="badge ${badgeClass}">${cat.isActive ? 'مفعل' : 'مخفي'}</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action btn-edit" onclick="editCategory('${id}', '${cat.name}')"><i class="fas fa-pen"></i></button>
+                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleCategory('${id}', ${cat.isActive})"><i class="fas ${hideIcon}"></i></button>
+                                    <button class="btn-action btn-delete" onclick="deleteCategory('${id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+
+                    // إضافة القسم لقائمة إضافة المنتج (حتى لو مخفي نخليه يظهر للآدمن، ممكن نكتب جنبه مخفي)
+                    const statusText = cat.isActive ? "" : " (مخفي)";
+                    catSelect.innerHTML += `<option value="${cat.name}">${cat.name}${statusText}</option>`;
+                });
+            } else {
+                catTableBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>لا توجد أقسام حتى الآن.</td></tr>";
+                catSelect.innerHTML = `<option value="">اضف أقسام أولاً</option>`;
             }
         });
+
+        // دوال التحكم في الأقسام
+        window.deleteCategory = (id) => confirm("حذف القسم نهائياً؟") && remove(ref(db, `categories/${id}`));
+        window.toggleCategory = (id, status) => update(ref(db, `categories/${id}`), { isActive: !status });
+        window.editCategory = (id, currentName) => {
+            editingCatId = id;
+            document.getElementById("catNameInput").value = currentName;
+            document.getElementById("catModalTitle").innerText = "تعديل القسم";
+            categoryModal.style.display = "flex";
+        };
 
         // --------------------------------------------------
-        // التحكم في النافذة والحفظ والتعديل
+        // إدارة المنتجات (Products)
         // --------------------------------------------------
         let editingProductId = null; 
-        const modal = document.getElementById("productModal");
-        const openAddModalBtn = document.getElementById("openAddModalBtn"); 
-        const closeBtn = document.getElementById("closeModalBtn");
-        const saveBtn = document.getElementById("saveProductBtn");
+        const productModal = document.getElementById("productModal");
+        const saveProductBtn = document.getElementById("saveProductBtn");
 
-        function closePopup() {
-            modal.style.display = "none";
-            saveBtn.innerText = "حفظ المنتج";
-            document.getElementById("prodName").value = "";
-            document.getElementById("prodPrice").value = "";
-            document.getElementById("prodImage").value = "";
-            editingProductId = null; 
-        }
-
-        openAddModalBtn.addEventListener("click", () => {
+        document.getElementById("openAddModalBtn").addEventListener("click", () => {
             editingProductId = null; 
             document.getElementById("modalTitle").innerText = "إضافة منتج جديد";
-            saveBtn.innerText = "حفظ المنتج";
             document.getElementById("prodName").value = "";
             document.getElementById("prodPrice").value = "";
             document.getElementById("prodImage").value = "";
-            modal.style.display = "flex";
+            productModal.style.display = "flex";
         });
 
-        closeBtn.addEventListener("click", closePopup);
-
-        saveBtn.addEventListener("click", () => {
+        saveProductBtn.addEventListener("click", () => {
             const name = document.getElementById("prodName").value;
             const price = document.getElementById("prodPrice").value;
             const category = document.getElementById("prodCategory").value;
             const image = document.getElementById("prodImage").value;
 
-            if(!name || !price || !category) {
-                alert("لازم تكتب الاسم والسعر وتختار القسم!");
-                return;
-            }
-
-            saveBtn.innerText = "جاري الحفظ...";
+            if(!name || !price || !category) return alert("الاسم والسعر والقسم مطلوبين!");
 
             if (editingProductId) {
-                // تعديل
                 update(ref(db, `products/${editingProductId}`), {
-                    name: name,
-                    price: price,
-                    category: category,
-                    imageUrl: image || "https://via.placeholder.com/100"
-                }).then(() => {
-                    alert("تم التعديل بنجاح!");
-                    closePopup();
-                }).catch((error) => {
-                    alert("حصل خطأ: " + error);
-                    saveBtn.innerText = "حفظ التعديلات";
-                });
+                    name, price, category, imageUrl: image || "https://via.placeholder.com/100"
+                }).then(() => productModal.style.display = "none");
             } else {
-                // إضافة
                 push(ref(db, 'products'), {
-                    name: name,
-                    price: price,
-                    category: category,
-                    imageUrl: image || "https://via.placeholder.com/100",
-                    isActive: true
-                }).then(() => {
-                    alert("تم الإضافة بنجاح!");
-                    closePopup();
-                }).catch((error) => {
-                    alert("حصل خطأ: " + error);
-                    saveBtn.innerText = "حفظ المنتج";
-                });
+                    name, price, category, imageUrl: image || "https://via.placeholder.com/100", isActive: true
+                }).then(() => productModal.style.display = "none");
             }
         });
 
-        // --------------------------------------------------
-        // جلب المنتجات وعرضها في الجدول
-        // --------------------------------------------------
-        const tableBody = document.getElementById("productsTableBody");
+        const prodTableBody = document.getElementById("productsTableBody");
         onValue(ref(db, 'products'), (snapshot) => {
-            tableBody.innerHTML = ""; 
-            
+            prodTableBody.innerHTML = ""; 
             if (snapshot.exists()) {
-                const data = snapshot.val();
-                for (const productId in data) {
-                    const product = data[productId];
+                snapshot.forEach(child => {
+                    const id = child.key;
+                    const p = child.val();
                     
-                    const badgeClass = product.isActive ? "badge-active" : "badge-inactive";
-                    const badgeText = product.isActive ? "معروض للعملاء" : "مخفي";
-                    const hideIcon = product.isActive ? "fa-eye-slash" : "fa-eye";
-                    const hideBg = product.isActive ? "#64748b" : "#22c55e";
+                    const badgeClass = p.isActive ? "badge-active" : "badge-inactive";
+                    const hideIcon = p.isActive ? "fa-eye-slash" : "fa-eye";
+                    const hideBg = p.isActive ? "#64748b" : "#22c55e";
 
-                    const row = `
+                    prodTableBody.innerHTML += `
                         <tr>
                             <td>
                                 <div class="product-info">
-                                    <img src="${product.imageUrl}" class="product-img" alt="صورة">
-                                    <span>${product.name}</span>
+                                    <img src="${p.imageUrl}" class="product-img" alt="صورة">
+                                    <span>${p.name}</span>
                                 </div>
                             </td>
-                            <td>${product.price} ج.م</td>
-                            <td>${product.category}</td>
-                            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                            <td>${p.price} ج.م</td>
+                            <td>${p.category}</td>
+                            <td><span class="badge ${badgeClass}">${p.isActive ? 'معروض' : 'مخفي'}</span></td>
                             <td>
                                 <div class="actions">
-                                    <button class="btn-action btn-edit" onclick="editProduct('${productId}')" title="تعديل"><i class="fas fa-pen"></i></button>
-                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleStatus('${productId}', ${product.isActive})" title="إخفاء/إظهار"><i class="fas ${hideIcon}"></i></button>
-                                    <button class="btn-action btn-delete" onclick="deleteProduct('${productId}')" title="حذف نهائي"><i class="fas fa-trash"></i></button>
+                                    <button class="btn-action btn-edit" onclick="editProduct('${id}')"><i class="fas fa-pen"></i></button>
+                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleProduct('${id}', ${p.isActive})"><i class="fas ${hideIcon}"></i></button>
+                                    <button class="btn-action btn-delete" onclick="deleteProduct('${id}')"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                     `;
-                    tableBody.innerHTML += row;
-                }
+                });
             } else {
-                tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; font-weight:bold;'>مفيش منتجات لسه، ضيف أول منتج ليك!</td></tr>";
+                prodTableBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>لا توجد منتجات حتى الآن.</td></tr>";
             }
         });
 
-        // --------------------------------------------------
-        // زراير الإجراءات
-        // --------------------------------------------------
-        window.deleteProduct = (id) => {
-            if (confirm("متأكد إنك عايز تحذف المنتج ده نهائياً؟")) {
-                remove(ref(db, `products/${id}`))
-                    .then(() => alert("تم الحذف بنجاح!"))
-                    .catch((error) => alert("حصل خطأ أثناء الحذف: " + error));
-            }
-        };
-
-        window.toggleStatus = (id, currentStatus) => {
-            update(ref(db, `products/${id}`), { isActive: !currentStatus })
-                .then(() => console.log("تم تغيير حالة المنتج بنجاح."))
-                .catch((error) => alert("حصل خطأ: " + error));
-        };
-
+        window.deleteProduct = (id) => confirm("حذف المنتج؟") && remove(ref(db, `products/${id}`));
+        window.toggleProduct = (id, status) => update(ref(db, `products/${id}`), { isActive: !status });
         window.editProduct = (id) => {
             editingProductId = id; 
-            get(child(ref(db), `products/${id}`)).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const product = snapshot.val();
-                    document.getElementById("prodName").value = product.name;
-                    document.getElementById("prodPrice").value = product.price;
-                    document.getElementById("prodImage").value = product.imageUrl === "https://via.placeholder.com/100" ? "" : product.imageUrl;
-                    
-                    // اختيار القسم أوتوماتيك
-                    setTimeout(() => {
-                        document.getElementById("prodCategory").value = product.category;
-                    }, 100);
-                    
-                    document.getElementById("modalTitle").innerText = "تعديل المنتج";
-                    saveBtn.innerText = "حفظ التعديلات";
-                    modal.style.display = "flex";
-                }
+            get(child(ref(db), `products/${id}`)).then(s => {
+                const p = s.val();
+                document.getElementById("prodName").value = p.name;
+                document.getElementById("prodPrice").value = p.price;
+                document.getElementById("prodImage").value = p.imageUrl === "https://via.placeholder.com/100" ? "" : p.imageUrl;
+                setTimeout(() => document.getElementById("prodCategory").value = p.category, 100);
+                document.getElementById("modalTitle").innerText = "تعديل المنتج";
+                productModal.style.display = "flex";
             });
         };
     </script>
