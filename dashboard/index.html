@@ -4,29 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المتجر | Dashboard</title>
+    <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar">
         <div class="brand">متجري <i class="fas fa-shopping-bag"></i></div>
         <ul class="nav-links">
-            <!-- التاب الجديدة للإحصائيات -->
-            <li class="nav-item active" data-target="analytics-view"><i class="fas fa-chart-pie"></i> الإحصائيات</li>
-            <li class="nav-item" data-target="orders-view"><i class="fas fa-shopping-cart"></i> الطلبات</li>
-            <li class="nav-item" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
-            <li class="nav-item" data-target="categories-view"><i class="fas fa-tags"></i> الأقسام</li>
-            <li class="nav-item" data-target="vouchers-view"><i class="fas fa-ticket-alt"></i> الكوبونات</li>
-            <li class="nav-item" data-target="employees-view"><i class="fas fa-users"></i> الموظفين</li>
-            <li class="nav-item" data-target="logs-view"><i class="fas fa-history"></i> سجل النشاطات</li>
+            <li class="nav-item active" data-target="analytics-view">
+                <i class="fas fa-chart-pie"></i> الإحصائيات
+            </li>
+            <li class="nav-item" data-target="orders-view">
+                <i class="fas fa-shopping-cart"></i> الطلبات
+            </li>
+            <li class="nav-item" data-target="products-view">
+                <i class="fas fa-box-open"></i> المنتجات
+            </li>
+            <li class="nav-item" data-target="categories-view">
+                <i class="fas fa-tags"></i> الأقسام
+            </li>
+            <li class="nav-item" data-target="vouchers-view">
+                <i class="fas fa-ticket-alt"></i> الكوبونات
+            </li>
+            <li class="nav-item" data-target="employees-view">
+                <i class="fas fa-users"></i> الموظفين
+            </li>
+            <li class="nav-item" data-target="logs-view">
+                <i class="fas fa-history"></i> سجل النشاطات
+            </li>
         </ul>
     </aside>
 
+    <!-- ================= المحتوى الرئيسي ================= -->
     <main class="main-content">
         <header class="topbar">
-            <div style="color: #64748b; font-weight: 600; cursor: pointer;"><i class="fas fa-bars"></i></div>
+            <div style="color: #64748b; font-weight: 600; cursor: pointer;">
+                <i class="fas fa-bars"></i>
+            </div>
             <div class="user-profile">
                 <span>محمد عمرو</span>
                 <img src="https://ui-avatars.com/api/?name=Mohamed+Amr&background=3b82f6&color=fff" alt="المدير">
@@ -35,9 +54,11 @@
 
         <div class="workspace">
             
-            <!-- ================= شاشة الإحصائيات ================= -->
+            <!-- 1. شاشة الإحصائيات -->
             <div id="analytics-view" class="view-section active">
-                <div class="page-header"><h2 class="page-title">نظرة عامة وإحصائيات</h2></div>
+                <div class="page-header">
+                    <h2 class="page-title">نظرة عامة وإحصائيات</h2>
+                </div>
                 <div class="stat-cards">
                     <div class="stat-card">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
@@ -63,25 +84,42 @@
                     <div class="stat-card">
                         <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
                         <div class="stat-info">
-                            <h3>المنتجات المعروضة</h3>
+                            <h3>المنتجات النشطة</h3>
                             <p id="statTotalProducts">0</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ================= شاشة الطلبات ================= -->
+            <!-- 2. شاشة الطلبات -->
             <div id="orders-view" class="view-section">
-                <div class="page-header"><h2 class="page-title">إدارة الطلبات</h2></div>
+                <div class="page-header">
+                    <h2 class="page-title">إدارة الطلبات</h2>
+                </div>
+                <div class="order-tabs">
+                    <button class="order-tab-btn active" id="tabActiveOrders" onclick="switchOrderTab('active')">الطلبات الحالية</button>
+                    <button class="order-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived')">أرشيف الطلبات</button>
+                </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>رقم الطلب</th><th>العميل / الدفع</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
-                        <tbody id="ordersTableBody"><tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr></tbody>
+                        <thead>
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>العميل / الدفع</th>
+                                <th>التاريخ</th>
+                                <th>الإجمالي</th>
+                                <th>الحالة</th>
+                                <th>التفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ================= شاشة المنتجات ================= -->
+            <!-- 3. شاشة المنتجات -->
             <div id="products-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
@@ -89,13 +127,21 @@
                 </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>المنتج</th><th>السعر / العرض</th><th>القسم</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>السعر / العرض</th>
+                                <th>القسم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
                         <tbody id="productsTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- شاشة الأقسام -->
+            <!-- 4. شاشة الأقسام -->
             <div id="categories-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الأقسام</h2>
@@ -103,13 +149,19 @@
                 </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>اسم القسم</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>اسم القسم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
                         <tbody id="categoriesTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- شاشة الكوبونات -->
+            <!-- 5. شاشة الكوبونات -->
             <div id="vouchers-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الكوبونات</h2>
@@ -117,13 +169,20 @@
                 </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>كود الخصم</th><th>النوع والقيمة</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>كود الخصم</th>
+                                <th>النوع والقيمة</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
                         <tbody id="vouchersTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- شاشة الموظفين -->
+            <!-- 6. شاشة الموظفين -->
             <div id="employees-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الموظفين</h2>
@@ -131,18 +190,35 @@
                 </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>الموظف</th><th>الاتصال</th><th>الصلاحية</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>الموظف</th>
+                                <th>الاتصال</th>
+                                <th>الصلاحية</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
                         <tbody id="employeesTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- سجل النشاطات -->
+            <!-- 7. سجل النشاطات -->
             <div id="logs-view" class="view-section">
-                <div class="page-header"><h2 class="page-title">سجل النشاطات</h2></div>
+                <div class="page-header">
+                    <h2 class="page-title">سجل النشاطات</h2>
+                </div>
                 <div class="card">
                     <table>
-                        <thead><tr><th>الحدث</th><th>التفاصيل</th><th>بواسطة</th><th>الوقت</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>الحدث</th>
+                                <th>التفاصيل</th>
+                                <th>بواسطة</th>
+                                <th>الوقت</th>
+                            </tr>
+                        </thead>
                         <tbody id="logsTableBody"></tbody>
                     </table>
                 </div>
@@ -150,24 +226,39 @@
 
         </div>
 
-        <!-- ================= النوافذ (Modals) ================= -->
+        <!-- ================= النوافذ المنبثقة (Modals) ================= -->
         
-        <!-- تفاصيل الطلب -->
+        <!-- نافذة تفاصيل الطلب -->
         <div class="modal-overlay" id="orderDetailsModal">
-            <div class="modal">
+            <div class="modal" style="width: 700px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
-                <div style="margin-bottom: 15px;">
-                    <strong>العميل:</strong> <span id="oName"></span><br>
-                    <strong>التليفون:</strong> <span id="oPhone" dir="ltr"></span><br>
-                    <strong>العنوان:</strong> <span id="oAddress"></span><br>
-                    <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span>
+                
+                <div class="grid-2">
+                    <div>
+                        <div style="margin-bottom: 15px;">
+                            <strong>العميل:</strong> <span id="oName"></span><br>
+                            <strong>التليفون:</strong> <span id="oPhone" dir="ltr"></span><br>
+                            <strong>العنوان:</strong> <span id="oAddress"></span><br>
+                            <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span>
+                        </div>
+                        
+                        <strong>المنتجات:</strong>
+                        <div class="order-items-list" id="oItemsList"></div>
+                        
+                        <div style="text-align: right; font-size: 16px; margin-top: 15px;">
+                            <div>الإجمالي الفرعي: <span id="oSubtotal"></span></div>
+                            <div id="oDiscountDiv" style="color: var(--accent); display:none;">الخصم: <span id="oDiscount"></span></div>
+                            <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 5px;">الإجمالي: <span id="oTotal"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- التايم لاين -->
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                        <strong style="color: var(--primary); margin-bottom: 15px; display: block;">مسار الطلب:</strong>
+                        <div class="order-timeline" id="oTimeline"></div>
+                    </div>
                 </div>
-                <strong>المنتجات:</strong><div class="order-items-list" id="oItemsList"></div>
-                <div style="text-align: left; font-size: 16px; margin-top: 15px;">
-                    <div>الإجمالي الفرعي: <span id="oSubtotal"></span></div>
-                    <div id="oDiscountDiv" style="color: var(--accent); display:none;">الخصم: <span id="oDiscount"></span></div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 5px;">الإجمالي: <span id="oTotal"></span></div>
-                </div>
+
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
                     <button class="btn-save" style="background-color: var(--success);" onclick="window.print()"><i class="fas fa-print"></i> طباعة الفاتورة</button>
@@ -175,18 +266,36 @@
             </div>
         </div>
 
-        <!-- إضافة منتج -->
+        <!-- نافذة إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal">
                 <h3 id="productModalTitle">إضافة منتج جديد</h3>
-                <div class="input-group"><label>اسم المنتج</label><input type="text" id="prodName"></div>
-                <div class="grid-2">
-                    <div class="input-group"><label>السعر الأساسي</label><input type="number" id="prodPrice"></div>
-                    <div class="input-group"><label style="color: var(--accent);">سعر العرض (اختياري)</label><input type="number" id="prodDiscountPrice"></div>
+                <div class="input-group">
+                    <label>اسم المنتج</label>
+                    <input type="text" id="prodName">
                 </div>
-                <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
-                <div class="input-group"><label>الوصف التفصيلي (يظهر للعميل)</label><textarea id="prodDesc" rows="4"></textarea></div>
-                <div class="input-group"><label>رابط الصورة</label><input type="text" id="prodImage"></div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>السعر الأساسي</label>
+                        <input type="number" id="prodPrice">
+                    </div>
+                    <div class="input-group">
+                        <label style="color: var(--accent);">سعر العرض (اختياري)</label>
+                        <input type="number" id="prodDiscountPrice">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>القسم</label>
+                    <select id="prodCategory"></select>
+                </div>
+                <div class="input-group">
+                    <label>الوصف التفصيلي (يظهر للعميل)</label>
+                    <textarea id="prodDesc" rows="4"></textarea>
+                </div>
+                <div class="input-group">
+                    <label>رابط الصورة</label>
+                    <input type="text" id="prodImage">
+                </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveProduct()">حفظ المنتج</button>
@@ -194,11 +303,14 @@
             </div>
         </div>
 
-        <!-- إضافة قسم -->
+        <!-- نافذة إضافة قسم -->
         <div class="modal-overlay" id="categoryModal">
             <div class="modal">
                 <h3 id="catModalTitle">إضافة قسم</h3>
-                <div class="input-group"><label>الاسم</label><input type="text" id="catNameInput"></div>
+                <div class="input-group">
+                    <label>الاسم</label>
+                    <input type="text" id="catNameInput">
+                </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('categoryModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveCategory()">حفظ</button>
@@ -206,15 +318,27 @@
             </div>
         </div>
         
-        <!-- إضافة كوبون -->
+        <!-- نافذة إنشاء كوبون -->
         <div class="modal-overlay" id="voucherModal">
             <div class="modal">
                 <h3 id="voucherModalTitle">إنشاء كود</h3>
                 <div class="grid-2">
-                    <div class="input-group"><label>الكود</label><input type="text" id="voucherCode" style="text-transform: uppercase;"></div>
-                    <div class="input-group"><label>القيمة</label><input type="number" id="voucherValue"></div>
+                    <div class="input-group">
+                        <label>الكود</label>
+                        <input type="text" id="voucherCode" style="text-transform: uppercase;">
+                    </div>
+                    <div class="input-group">
+                        <label>القيمة</label>
+                        <input type="number" id="voucherValue">
+                    </div>
                 </div>
-                <div class="input-group"><label>النوع</label><select id="voucherType"><option value="percentage">نسبة (%)</option><option value="fixed">مبلغ ثابت</option></select></div>
+                <div class="input-group">
+                    <label>النوع</label>
+                    <select id="voucherType">
+                        <option value="percentage">نسبة (%)</option>
+                        <option value="fixed">مبلغ ثابت</option>
+                    </select>
+                </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveVoucher()">حفظ</button>
@@ -222,21 +346,45 @@
             </div>
         </div>
 
-        <!-- إضافة موظف -->
+        <!-- نافذة إضافة موظف -->
         <div class="modal-overlay" id="employeeModal">
             <div class="modal">
                 <h3 id="empModalTitle">إضافة موظف</h3>
-                <div class="input-group"><label>الاسم</label><input type="text" id="empName"></div>
-                <div class="grid-2">
-                    <div class="input-group"><label>تليفون</label><input type="tel" id="empPhone"></div>
-                    <div class="input-group"><label>تاريخ الميلاد</label><input type="date" id="empDob"></div>
+                <div class="input-group">
+                    <label>الاسم</label>
+                    <input type="text" id="empName">
                 </div>
-                <div class="input-group"><label>الرقم القومي</label><input type="text" id="empNationalId" maxlength="14"></div>
                 <div class="grid-2">
-                    <div class="input-group"><label>المنطقة</label><input type="text" id="empArea"></div>
-                    <div class="input-group"><label>الصلاحية</label><select id="empRole"><option value="Admin">مدير</option><option value="Support">دعم فني</option></select></div>
+                    <div class="input-group">
+                        <label>تليفون</label>
+                        <input type="tel" id="empPhone">
+                    </div>
+                    <div class="input-group">
+                        <label>تاريخ الميلاد</label>
+                        <input type="date" id="empDob">
+                    </div>
                 </div>
-                <div class="input-group"><label>ملاحظات</label><textarea id="empNotes" rows="2"></textarea></div>
+                <div class="input-group">
+                    <label>الرقم القومي</label>
+                    <input type="text" id="empNationalId" maxlength="14">
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>المنطقة</label>
+                        <input type="text" id="empArea">
+                    </div>
+                    <div class="input-group">
+                        <label>الصلاحية</label>
+                        <select id="empRole">
+                            <option value="Admin">مدير</option>
+                            <option value="Support">دعم فني</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>ملاحظات</label>
+                    <textarea id="empNotes" rows="2"></textarea>
+                </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveEmployee()">حفظ</button>
@@ -246,6 +394,7 @@
 
     </main>
 
+    <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
