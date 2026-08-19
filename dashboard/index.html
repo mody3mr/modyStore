@@ -235,7 +235,56 @@ const firebaseConfig = {
         const db = getDatabase(app);
 
         console.log("تم الاتصال بقاعدة البيانات بنجاح يا ريس!");
+// استدعاء دالة push لو مش موجودة فوق ضيفها
+        import { push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
+        // التحكم في النافذة (الفتح والقفل)
+        const modal = document.getElementById("productModal");
+        const openBtn = document.querySelector(".btn-add"); 
+        const closeBtn = document.getElementById("closeModalBtn");
+        const saveBtn = document.getElementById("saveProductBtn");
+
+        openBtn.addEventListener("click", () => modal.style.display = "flex");
+        closeBtn.addEventListener("click", () => modal.style.display = "none");
+
+        // كود حفظ المنتج في Firebase
+        saveBtn.addEventListener("click", () => {
+            const name = document.getElementById("prodName").value;
+            const price = document.getElementById("prodPrice").value;
+            const category = document.getElementById("prodCategory").value;
+            const image = document.getElementById("prodImage").value;
+
+            if(!name || !price) {
+                alert("لازم تكتب اسم وسعر المنتج على الأقل!");
+                return;
+            }
+
+            // زرار الحفظ بيكتب "جاري الحفظ..." عشان يديك إحساس احترافي
+            saveBtn.innerText = "جاري الحفظ...";
+
+            // إنشاء مكان لمنتج جديد في قاعدة البيانات
+            const newProductRef = push(ref(db, 'products'));
+            
+            set(newProductRef, {
+                name: name,
+                price: price,
+                category: category,
+                imageUrl: image || "https://via.placeholder.com/100", // صورة افتراضية لو مكتبتش رابط
+                isActive: true // المنتج بيكون شغال (متاح) افتراضياً أول ما تضيفه
+            }).then(() => {
+                alert("تم إضافة المنتج بنجاح يا مدير! 🚀");
+                modal.style.display = "none"; 
+                saveBtn.innerText = "حفظ المنتج"; // نرجع الزرار لأصله
+                
+                // تفريغ الخانات عشان لو حبيت تضيف منتج غيره
+                document.getElementById("prodName").value = "";
+                document.getElementById("prodPrice").value = "";
+                document.getElementById("prodImage").value = "";
+            }).catch((error) => {
+                alert("حصل خطأ: " + error);
+                saveBtn.innerText = "حفظ المنتج";
+            });
+        });
         // --------------------------------------------------
         // هنا هنبدأ نكتب الأكواد بتاعة زراير الإضافة والحذف 
         // --------------------------------------------------
