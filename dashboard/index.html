@@ -4,117 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المتجر | Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        :root {
-            --primary: #1e293b; 
-            --secondary: #3b82f6; 
-            --bg: #f1f5f9; 
-            --card-bg: #ffffff;
-            --text-dark: #334155;
-            --border: #e2e8f0;
-            --accent: #f59e0b; 
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-        body { background-color: var(--bg); color: var(--text-dark); display: flex; min-height: 100vh; }
-
-        /* القائمة الجانبية */
-        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
-        .brand { padding: 25px 20px; font-size: 22px; font-weight: 700; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); letter-spacing: 1px; }
-        .nav-links { list-style: none; padding: 20px 0; margin-top: 10px; }
-        .nav-links li { padding: 15px 25px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 15px; color: #cbd5e1; font-weight: 600; }
-        .nav-links li:hover, .nav-links li.active { background-color: var(--secondary); color: white; border-right: 4px solid white; }
-        .nav-links li i { font-size: 18px; width: 25px; text-align: center; }
-
-        /* المحتوى الرئيسي */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .topbar { background-color: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-        .user-profile { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
-
-        /* مساحة العمل والتنقل */
-        .workspace { padding: 30px; overflow-y: auto; position: relative; }
-        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .page-title { font-size: 24px; font-weight: 700; color: var(--primary); }
-        
-        .header-actions { display: flex; gap: 10px; }
-        .btn-add { background-color: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
-        .btn-add:hover { background-color: #2563eb; transform: translateY(-2px); }
-        .btn-cat { background-color: #8b5cf6; }
-        .btn-cat:hover { background-color: #7c3aed; }
-        .btn-voucher { background-color: var(--accent); }
-        .btn-voucher:hover { background-color: #d97706; }
-        .btn-emp { background-color: #10b981; }
-
-        /* الكارت والجدول */
-        .card { background-color: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; text-align: right; }
-        th { background-color: #f8fafc; padding: 18px 20px; font-size: 14px; font-weight: 700; color: #64748b; border-bottom: 2px solid var(--border); }
-        td { padding: 15px 20px; vertical-align: middle; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; }
-        tr:hover { background-color: #f8fafc; }
-        
-        .product-info { display: flex; align-items: center; gap: 15px; }
-        .product-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
-        
-        .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .badge-active { background-color: #dcfce7; color: #166534; }
-        .badge-inactive { background-color: #fee2e2; color: #991b1b; }
-        .badge-discount { background-color: #fef3c7; color: #b45309; margin-right: 5px; }
-        
-        /* تفاصيل النشر والموظفين */
-        .meta-info { font-size: 11px; color: #94a3b8; margin-top: 5px; font-weight: normal; }
-        .emp-details { font-size: 12px; color: #64748b; margin-top: 5px; }
-
-        /* زراير الإجراءات السريعة */
-        .actions { display: flex; gap: 10px; }
-        .btn-action { width: 35px; height: 35px; border: none; border-radius: 8px; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; transition: 0.3s; font-size: 14px; }
-        .btn-edit { background-color: #f59e0b; } 
-        .btn-hide { background-color: #64748b; } 
-        .btn-delete { background-color: #ef4444; } 
-        
-        /* سجل النشاطات */
-        .log-time { color: #64748b; font-size: 12px; direction: ltr; display: inline-block; }
-        .log-user { font-weight: bold; color: var(--primary); }
-
-        /* النوافذ (Modals) */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal { background: white; padding: 30px; border-radius: 12px; width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
-        .modal h3 { margin-bottom: 20px; color: var(--primary); font-weight: 700; }
-        .input-group { margin-bottom: 15px; text-align: right; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Cairo'; outline: none; }
-        .input-group input:focus, .input-group textarea:focus { border-color: var(--secondary); }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
-        .btn-save { background: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
-        .btn-cancel { background: #94a3b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
-        
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    </style>
+    <!-- استدعاء ملف الـ CSS الخارجي -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="brand">لوحة التحكم</div>
+        <div class="brand">متجري <i class="fas fa-shopping-bag"></i></div>
         <ul class="nav-links">
-            <li class="nav-item active" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
+            <li class="nav-item active" data-target="orders-view"><i class="fas fa-shopping-cart"></i> الطلبات</li>
+            <li class="nav-item" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
             <li class="nav-item" data-target="categories-view"><i class="fas fa-tags"></i> الأقسام</li>
             <li class="nav-item" data-target="vouchers-view"><i class="fas fa-ticket-alt"></i> الكوبونات</li>
             <li class="nav-item" data-target="employees-view"><i class="fas fa-users"></i> الموظفين</li>
             <li class="nav-item" data-target="logs-view"><i class="fas fa-history"></i> سجل النشاطات</li>
-            <li class="nav-item"><i class="fas fa-shopping-cart"></i> الطلبات</li>
         </ul>
     </aside>
 
     <main class="main-content">
         <header class="topbar">
-            <div style="color: #64748b; font-weight: 600;"><i class="fas fa-bars"></i></div>
+            <div style="color: #64748b; font-weight: 600; cursor: pointer;"><i class="fas fa-bars"></i></div>
             <div class="user-profile">
                 <span>محمد عمرو</span>
                 <img src="https://ui-avatars.com/api/?name=Mohamed+Amr&background=3b82f6&color=fff" alt="المدير">
@@ -123,23 +34,26 @@
 
         <div class="workspace">
             
+            <!-- شاشة الطلبات -->
+            <div id="orders-view" class="view-section active">
+                <div class="page-header"><h2 class="page-title">إدارة الطلبات</h2></div>
+                <div class="card">
+                    <table>
+                        <thead><tr><th>رقم الطلب</th><th>العميل / الدفع</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
+                        <tbody id="ordersTableBody"><tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- شاشة المنتجات -->
-            <div id="products-view" class="view-section active">
+            <div id="products-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
-                    <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
+                    <button class="btn-add" onclick="openProductModal()"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
                 </div>
                 <div class="card">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>المنتج</th>
-                                <th>السعر / العرض</th>
-                                <th>القسم</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>المنتج</th><th>السعر / العرض</th><th>القسم</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
                         <tbody id="productsTableBody"></tbody>
                     </table>
                 </div>
@@ -149,17 +63,11 @@
             <div id="categories-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الأقسام</h2>
-                    <button class="btn-add btn-cat" id="openCatModalBtn"><i class="fas fa-plus"></i> إضافة قسم جديد</button>
+                    <button class="btn-add btn-cat" onclick="openCategoryModal()"><i class="fas fa-plus"></i> إضافة قسم جديد</button>
                 </div>
                 <div class="card">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>اسم القسم</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>اسم القسم</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
                         <tbody id="categoriesTableBody"></tbody>
                     </table>
                 </div>
@@ -168,19 +76,12 @@
             <!-- شاشة الكوبونات -->
             <div id="vouchers-view" class="view-section">
                 <div class="page-header">
-                    <h2 class="page-title">إدارة كوبونات الخصم</h2>
-                    <button class="btn-add btn-voucher" id="openVoucherModalBtn"><i class="fas fa-ticket-alt"></i> إنشاء كود خصم</button>
+                    <h2 class="page-title">إدارة الكوبونات</h2>
+                    <button class="btn-add btn-voucher" onclick="openVoucherModal()"><i class="fas fa-ticket-alt"></i> إنشاء كود خصم</button>
                 </div>
                 <div class="card">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>كود الخصم</th>
-                                <th>النوع والقيمة</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>كود الخصم</th><th>النوع والقيمة</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
                         <tbody id="vouchersTableBody"></tbody>
                     </table>
                 </div>
@@ -189,40 +90,23 @@
             <!-- شاشة الموظفين -->
             <div id="employees-view" class="view-section">
                 <div class="page-header">
-                    <h2 class="page-title">إدارة الموظفين والصلاحيات</h2>
-                    <button class="btn-add btn-emp" id="openEmpModalBtn"><i class="fas fa-user-plus"></i> إضافة موظف</button>
+                    <h2 class="page-title">إدارة الموظفين</h2>
+                    <button class="btn-add btn-emp" onclick="openEmployeeModal()"><i class="fas fa-user-plus"></i> إضافة موظف</button>
                 </div>
                 <div class="card">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>الموظف</th>
-                                <th>بيانات الاتصال</th>
-                                <th>الصلاحية</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>الموظف</th><th>الاتصال</th><th>الصلاحية</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
                         <tbody id="employeesTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- شاشة سجل النشاطات (Audit Trail) -->
+            <!-- سجل النشاطات -->
             <div id="logs-view" class="view-section">
-                <div class="page-header">
-                    <h2 class="page-title">سجل النشاطات (مراقبة النظام)</h2>
-                </div>
+                <div class="page-header"><h2 class="page-title">سجل النشاطات</h2></div>
                 <div class="card">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>الحدث</th>
-                                <th>التفاصيل</th>
-                                <th>بواسطة</th>
-                                <th>التاريخ والوقت</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>الحدث</th><th>التفاصيل</th><th>بواسطة</th><th>الوقت</th></tr></thead>
                         <tbody id="logsTableBody"></tbody>
                     </table>
                 </div>
@@ -230,560 +114,103 @@
 
         </div>
 
-        <!-- النوافذ (Modals) -->
+        <!-- ================= النوافذ (Modals) ================= -->
         
-        <!-- نافذة المنتجات -->
+        <!-- تفاصيل الطلب -->
+        <div class="modal-overlay" id="orderDetailsModal">
+            <div class="modal">
+                <h3 id="orderModalTitle">تفاصيل الطلب</h3>
+                <div style="margin-bottom: 15px;">
+                    <strong>العميل:</strong> <span id="oName"></span><br>
+                    <strong>التليفون:</strong> <span id="oPhone" dir="ltr"></span><br>
+                    <strong>العنوان:</strong> <span id="oAddress"></span><br>
+                    <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span>
+                </div>
+                <strong>المنتجات:</strong><div class="order-items-list" id="oItemsList"></div>
+                <div style="text-align: left; font-size: 16px; margin-top: 15px;">
+                    <div>الإجمالي الفرعي: <span id="oSubtotal"></span></div>
+                    <div id="oDiscountDiv" style="color: var(--accent); display:none;">الخصم: <span id="oDiscount"></span></div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 5px;">الإجمالي: <span id="oTotal"></span></div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
+                    <button class="btn-save" style="background-color: var(--success);" onclick="window.print()"><i class="fas fa-print"></i> طباعة الفاتورة</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- إضافة منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal">
-                <h3 id="modalTitle">إضافة منتج جديد</h3>
-                <div class="input-group">
-                    <label>اسم المنتج</label>
-                    <input type="text" id="prodName">
-                </div>
+                <h3 id="productModalTitle">إضافة منتج جديد</h3>
+                <div class="input-group"><label>اسم المنتج</label><input type="text" id="prodName"></div>
                 <div class="grid-2">
-                    <div class="input-group">
-                        <label>السعر الأساسي</label>
-                        <input type="number" id="prodPrice">
-                    </div>
-                    <div class="input-group">
-                        <label style="color: var(--accent);">سعر العرض (اختياري)</label>
-                        <input type="number" id="prodDiscountPrice">
-                    </div>
+                    <div class="input-group"><label>السعر الأساسي</label><input type="number" id="prodPrice"></div>
+                    <div class="input-group"><label style="color: var(--accent);">سعر العرض (اختياري)</label><input type="number" id="prodDiscountPrice"></div>
                 </div>
-                <div class="input-group">
-                    <label>القسم</label>
-                    <select id="prodCategory"></select>
-                </div>
-                <div class="input-group">
-                    <label>رابط الصورة</label>
-                    <input type="text" id="prodImage">
-                </div>
+                <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
+                <div class="input-group"><label>الوصف التفصيلي (يظهر للعميل)</label><textarea id="prodDesc" rows="4"></textarea></div>
+                <div class="input-group"><label>رابط الصورة</label><input type="text" id="prodImage"></div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" onclick="document.getElementById('productModal').style.display='none'">إلغاء</button>
-                    <button class="btn-save" id="saveProductBtn">حفظ</button>
+                    <button class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button>
+                    <button class="btn-save" onclick="saveProduct()">حفظ المنتج</button>
                 </div>
             </div>
         </div>
 
-        <!-- نافذة الأقسام -->
+        <!-- إضافة قسم -->
         <div class="modal-overlay" id="categoryModal">
             <div class="modal">
-                <h3 id="catModalTitle">إضافة قسم جديد</h3>
-                <div class="input-group">
-                    <label>اسم القسم</label>
-                    <input type="text" id="catNameInput">
-                </div>
+                <h3 id="catModalTitle">إضافة قسم</h3>
+                <div class="input-group"><label>الاسم</label><input type="text" id="catNameInput"></div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" onclick="document.getElementById('categoryModal').style.display='none'">إلغاء</button>
-                    <button class="btn-save" id="saveCategoryBtn">حفظ</button>
+                    <button class="btn-cancel" onclick="closeModal('categoryModal')">إلغاء</button>
+                    <button class="btn-save" onclick="saveCategory()">حفظ</button>
                 </div>
             </div>
         </div>
-
-        <!-- نافذة الكوبونات -->
+        
+        <!-- إضافة كوبون -->
         <div class="modal-overlay" id="voucherModal">
             <div class="modal">
-                <h3 id="voucherModalTitle">إنشاء كود خصم</h3>
+                <h3 id="voucherModalTitle">إنشاء كود</h3>
                 <div class="grid-2">
-                    <div class="input-group">
-                        <label>الكود (انجليزي)</label>
-                        <input type="text" id="voucherCode" style="text-transform: uppercase;">
-                    </div>
-                    <div class="input-group">
-                        <label>القيمة</label>
-                        <input type="number" id="voucherValue">
-                    </div>
+                    <div class="input-group"><label>الكود</label><input type="text" id="voucherCode" style="text-transform: uppercase;"></div>
+                    <div class="input-group"><label>القيمة</label><input type="number" id="voucherValue"></div>
                 </div>
-                <div class="input-group">
-                    <label>النوع</label>
-                    <select id="voucherType">
-                        <option value="percentage">نسبة مئوية (%)</option>
-                        <option value="fixed">مبلغ ثابت (ج.م)</option>
-                    </select>
-                </div>
+                <div class="input-group"><label>النوع</label><select id="voucherType"><option value="percentage">نسبة (%)</option><option value="fixed">مبلغ ثابت</option></select></div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" onclick="document.getElementById('voucherModal').style.display='none'">إلغاء</button>
-                    <button class="btn-save" id="saveVoucherBtn">حفظ</button>
+                    <button class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
+                    <button class="btn-save" onclick="saveVoucher()">حفظ</button>
                 </div>
             </div>
         </div>
 
-        <!-- نافذة الموظفين (المحدثة والموسعة) -->
+        <!-- إضافة موظف -->
         <div class="modal-overlay" id="employeeModal">
             <div class="modal">
-                <h3 id="empModalTitle">إضافة موظف جديد</h3>
-                <div class="input-group">
-                    <label>الاسم الرباعي</label>
-                    <input type="text" id="empName">
-                </div>
+                <h3 id="empModalTitle">إضافة موظف</h3>
+                <div class="input-group"><label>الاسم</label><input type="text" id="empName"></div>
                 <div class="grid-2">
-                    <div class="input-group">
-                        <label>رقم التليفون</label>
-                        <input type="tel" id="empPhone">
-                    </div>
-                    <div class="input-group">
-                        <label>تاريخ الميلاد</label>
-                        <input type="date" id="empDob">
-                    </div>
+                    <div class="input-group"><label>تليفون</label><input type="tel" id="empPhone"></div>
+                    <div class="input-group"><label>تاريخ الميلاد</label><input type="date" id="empDob"></div>
                 </div>
-                <div class="input-group">
-                    <label>الرقم القومي (14 رقم)</label>
-                    <input type="text" id="empNationalId" maxlength="14">
-                </div>
+                <div class="input-group"><label>الرقم القومي</label><input type="text" id="empNationalId" maxlength="14"></div>
                 <div class="grid-2">
-                    <div class="input-group">
-                        <label>المنطقة / السكن</label>
-                        <input type="text" id="empArea">
-                    </div>
-                    <div class="input-group">
-                        <label>الصلاحية</label>
-                        <select id="empRole">
-                            <option value="Admin">مدير عام (Admin)</option>
-                            <option value="Editor">مدخل بيانات (Editor)</option>
-                            <option value="Support">خدمة عملاء (Support)</option>
-                        </select>
-                    </div>
+                    <div class="input-group"><label>المنطقة</label><input type="text" id="empArea"></div>
+                    <div class="input-group"><label>الصلاحية</label><select id="empRole"><option value="Admin">مدير</option><option value="Support">دعم فني</option></select></div>
                 </div>
-                <div class="input-group">
-                    <label>وصف / ملاحظات (اختياري)</label>
-                    <textarea id="empNotes" rows="2"></textarea>
-                </div>
+                <div class="input-group"><label>ملاحظات</label><textarea id="empNotes" rows="2"></textarea></div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" onclick="document.getElementById('employeeModal').style.display='none'">إلغاء</button>
-                    <button class="btn-save" id="saveEmpBtn">حفظ</button>
+                    <button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button>
+                    <button class="btn-save" onclick="saveEmployee()">حفظ</button>
                 </div>
             </div>
         </div>
 
     </main>
 
-    <!-- فايربيز -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
-            authDomain: "modytech-850c2.firebaseapp.com",
-            projectId: "modytech-850c2",
-            storageBucket: "modytech-850c2.firebasestorage.app",
-            messagingSenderId: "909293461306",
-            appId: "1:909293461306:web:48e5492107ad32ceec7a03"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        const currentUser = "محمد عمرو";
-
-        // ==========================================
-        // السجل (Audit Trail) ووظائفه
-        // ==========================================
-        function logAction(actionName, details) {
-            push(ref(db, 'logs'), {
-                action: actionName,
-                details: details,
-                user: currentUser,
-                timestamp: Date.now()
-            });
-        }
-
-        function formatDateTime(ms) {
-            if(!ms) return "";
-            return new Date(ms).toLocaleString('ar-EG', { 
-                year: 'numeric', month: 'short', day: 'numeric', 
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
-        }
-
-        function formatDateOnly(dateString) {
-            if(!dateString) return "";
-            return new Date(dateString).toLocaleDateString('ar-EG');
-        }
-
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                if(!item.dataset.target) return;
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-                document.getElementById(item.dataset.target).classList.add('active');
-            });
-        });
-
-        onValue(ref(db, 'logs'), (snapshot) => {
-            const logsTable = document.getElementById("logsTableBody");
-            logsTable.innerHTML = "";
-            if (snapshot.exists()) {
-                const logs = [];
-                snapshot.forEach(child => { logs.push(child.val()); });
-                logs.reverse();
-                
-                logs.forEach(log => {
-                    logsTable.innerHTML += `
-                        <tr>
-                            <td style="font-weight:bold; color:var(--primary);">${log.action}</td>
-                            <td>${log.details}</td>
-                            <td class="log-user">${log.user}</td>
-                            <td class="log-time" dir="ltr">${formatDateTime(log.timestamp)}</td>
-                        </tr>
-                    `;
-                });
-            } else {
-                logsTable.innerHTML = "<tr><td colspan='4' style='text-align:center;'>لا توجد نشاطات مسجلة.</td></tr>";
-            }
-        });
-
-        // ==========================================
-        // إدارة المنتجات مع تفاصيل التعديل
-        // ==========================================
-        let editingProductId = null;
-        let oldProductData = null; // عشان نقارن التعديلات
-
-        document.getElementById("openAddModalBtn").addEventListener("click", () => {
-            editingProductId = null; oldProductData = null;
-            document.getElementById("modalTitle").innerText = "إضافة منتج جديد";
-            document.getElementById("prodName").value = "";
-            document.getElementById("prodPrice").value = "";
-            document.getElementById("prodDiscountPrice").value = ""; 
-            document.getElementById("prodImage").value = "";
-            document.getElementById("productModal").style.display = "flex";
-        });
-
-        document.getElementById("saveProductBtn").addEventListener("click", () => {
-            const name = document.getElementById("prodName").value;
-            const price = document.getElementById("prodPrice").value;
-            const discountPrice = document.getElementById("prodDiscountPrice").value;
-            const category = document.getElementById("prodCategory").value;
-            const image = document.getElementById("prodImage").value;
-
-            if(!name || !price || !category) return alert("الاسم والسعر والقسم مطلوبين!");
-
-            const productData = { 
-                name, price: Number(price), 
-                discountPrice: discountPrice ? Number(discountPrice) : null,
-                category, imageUrl: image || "https://via.placeholder.com/100",
-            };
-
-            if (editingProductId) {
-                // مقارنة التعديلات للسجل
-                let changes = [];
-                if(oldProductData.name !== name) changes.push(`الاسم من [${oldProductData.name}] لـ [${name}]`);
-                if(oldProductData.price != price) changes.push(`السعر من [${oldProductData.price}] لـ [${price}]`);
-                if(oldProductData.discountPrice != discountPrice) changes.push(`الخصم لـ [${discountPrice || 'بدون'}]`);
-                if(oldProductData.category !== category) changes.push(`القسم لـ [${category}]`);
-                
-                const changeString = changes.length > 0 ? changes.join(' و ') : "لم يتم تغيير بيانات رئيسية";
-
-                productData.updatedAt = Date.now();
-                productData.updatedBy = currentUser;
-                update(ref(db, `products/${editingProductId}`), productData).then(() => {
-                    logAction("تعديل منتج", `تعديل (${name}): ${changeString}`);
-                    document.getElementById('productModal').style.display = "none";
-                });
-            } else {
-                productData.isActive = true;
-                productData.createdAt = Date.now();
-                productData.createdBy = currentUser;
-                push(ref(db, 'products'), productData).then(() => {
-                    logAction("إضافة منتج", `تم إضافة منتج جديد: ${name} بسعر ${price}`);
-                    document.getElementById('productModal').style.display = "none";
-                });
-            }
-        });
-
-        onValue(ref(db, 'products'), (snapshot) => {
-            const prodTableBody = document.getElementById("productsTableBody");
-            prodTableBody.innerHTML = ""; 
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const id = child.key;
-                    const p = child.val();
-                    const badgeClass = p.isActive ? "badge-active" : "badge-inactive";
-                    const hideIcon = p.isActive ? "fa-eye-slash" : "fa-eye";
-                    const hideBg = p.isActive ? "#64748b" : "#22c55e";
-
-                    let priceDisplay = `${p.price} ج.م`;
-                    let discountBadge = "";
-                    if (p.discountPrice) {
-                        priceDisplay = `<del style="color:#94a3b8; font-size:13px;">${p.price}</del> <span style="color:var(--accent); font-weight:bold;">${p.discountPrice} ج.م</span>`;
-                        discountBadge = `<span class="badge badge-discount">عرض</span>`;
-                    }
-
-                    const createdInfo = p.createdAt ? `نُشر بواسطة ${p.createdBy} في ${formatDateTime(p.createdAt)}` : "";
-
-                    prodTableBody.innerHTML += `
-                        <tr>
-                            <td>
-                                <div class="product-info">
-                                    <img src="${p.imageUrl}" class="product-img">
-                                    <div>
-                                        <span>${p.name} ${discountBadge}</span>
-                                        <div class="meta-info">${createdInfo}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>${priceDisplay}</td>
-                            <td>${p.category}</td>
-                            <td><span class="badge ${badgeClass}">${p.isActive ? 'معروض' : 'مخفي'}</span></td>
-                            <td>
-                                <div class="actions">
-                                    <button class="btn-action btn-edit" onclick="editProduct('${id}')"><i class="fas fa-pen"></i></button>
-                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleProduct('${id}', ${p.isActive}, '${p.name}')"><i class="fas ${hideIcon}"></i></button>
-                                    <button class="btn-action btn-delete" onclick="deleteProduct('${id}', '${p.name}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            }
-        });
-
-        window.deleteProduct = (id, name) => confirm("حذف المنتج؟") && remove(ref(db, `products/${id}`)).then(() => logAction("حذف منتج", `حذف نهائي للمنتج: ${name}`));
-        window.toggleProduct = (id, status, name) => update(ref(db, `products/${id}`), { isActive: !status }).then(() => logAction(status ? "إخفاء منتج" : "إظهار منتج", `تغيير حالة المنتج: ${name}`));
-        window.editProduct = (id) => {
-            editingProductId = id; 
-            get(child(ref(db), `products/${id}`)).then(s => {
-                oldProductData = s.val();
-                document.getElementById("prodName").value = oldProductData.name;
-                document.getElementById("prodPrice").value = oldProductData.price;
-                document.getElementById("prodDiscountPrice").value = oldProductData.discountPrice || ""; 
-                document.getElementById("prodImage").value = oldProductData.imageUrl === "https://via.placeholder.com/100" ? "" : oldProductData.imageUrl;
-                setTimeout(() => document.getElementById("prodCategory").value = oldProductData.category, 100);
-                document.getElementById("modalTitle").innerText = "تعديل المنتج";
-                document.getElementById('productModal').style.display = "flex";
-            });
-        };
-
-        // ==========================================
-        // إدارة الأقسام
-        // ==========================================
-        let editingCatId = null;
-        let oldCatName = "";
-        document.getElementById("openCatModalBtn").addEventListener("click", () => {
-            editingCatId = null; oldCatName = "";
-            document.getElementById("catModalTitle").innerText = "إضافة قسم جديد";
-            document.getElementById("catNameInput").value = "";
-            document.getElementById('categoryModal').style.display = "flex";
-        });
-        document.getElementById("saveCategoryBtn").addEventListener("click", () => {
-            const name = document.getElementById("catNameInput").value.trim();
-            if(!name) return;
-            if(editingCatId){
-                update(ref(db, `categories/${editingCatId}`), { name }).then(() => {
-                    logAction("تعديل قسم", `تعديل اسم القسم من [${oldCatName}] إلى [${name}]`);
-                    document.getElementById('categoryModal').style.display = "none";
-                });
-            } else {
-                push(ref(db, 'categories'), { name, isActive: true, createdAt: Date.now(), createdBy: currentUser }).then(() => {
-                    logAction("إضافة قسم", `إضافة قسم جديد: ${name}`);
-                    document.getElementById('categoryModal').style.display = "none";
-                });
-            }
-        });
-        onValue(ref(db, 'categories'), (snapshot) => {
-            const catTable = document.getElementById("categoriesTableBody");
-            const catSelect = document.getElementById("prodCategory");
-            catTable.innerHTML = ""; catSelect.innerHTML = "";
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const id = child.key;
-                    const c = child.val();
-                    const createdInfo = c.createdAt ? `<div class="meta-info">أضيف بواسطة ${c.createdBy} في ${formatDateTime(c.createdAt)}</div>` : "";
-                    const hideIcon = c.isActive ? "fa-eye-slash" : "fa-eye";
-                    const hideBg = c.isActive ? "#64748b" : "#22c55e";
-
-                    catTable.innerHTML += `<tr>
-                        <td><b>${c.name}</b>${createdInfo}</td>
-                        <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'مفعل' : 'مخفي'}</span></td>
-                        <td>
-                            <div class="actions">
-                                <button class="btn-action btn-edit" onclick="editCategory('${id}', '${c.name}')"><i class="fas fa-pen"></i></button>
-                                <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleCategory('${id}', ${c.isActive}, '${c.name}')"><i class="fas ${hideIcon}"></i></button>
-                                <button class="btn-action btn-delete" onclick="deleteCategory('${id}', '${c.name}')"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-                    catSelect.innerHTML += `<option value="${c.name}">${c.name}</option>`;
-                });
-            }
-        });
-        window.deleteCategory = (id, name) => confirm("حذف القسم؟") && remove(ref(db, `categories/${id}`)).then(() => logAction("حذف قسم", `حذف القسم: ${name}`));
-        window.toggleCategory = (id, status, name) => update(ref(db, `categories/${id}`), { isActive: !status }).then(() => logAction(status ? "إخفاء قسم" : "إظهار قسم", `تغيير حالة القسم: ${name}`));
-        window.editCategory = (id, name) => {
-            editingCatId = id; oldCatName = name;
-            document.getElementById("catNameInput").value = name;
-            document.getElementById("catModalTitle").innerText = "تعديل القسم";
-            document.getElementById('categoryModal').style.display = "flex";
-        };
-
-        // ==========================================
-        // إدارة الكوبونات
-        // ==========================================
-        let editingVoucherId = null;
-        let oldVoucherCode = "";
-        document.getElementById("openVoucherModalBtn").addEventListener("click", () => {
-            editingVoucherId = null; oldVoucherCode = "";
-            document.getElementById("voucherModalTitle").innerText = "إنشاء كود خصم";
-            document.getElementById("voucherCode").value = "";
-            document.getElementById("voucherValue").value = "";
-            document.getElementById('voucherModal').style.display = "flex";
-        });
-        document.getElementById("saveVoucherBtn").addEventListener("click", () => {
-            const code = document.getElementById("voucherCode").value.trim().toUpperCase();
-            const type = document.getElementById("voucherType").value;
-            const value = document.getElementById("voucherValue").value;
-            if(!code || !value) return;
-
-            const voucherData = { code, type, value: Number(value) };
-            if(editingVoucherId){
-                update(ref(db, `vouchers/${editingVoucherId}`), voucherData).then(() => {
-                    logAction("تعديل كوبون", `تعديل الكود [${oldVoucherCode}] إلى [${code}]`);
-                    document.getElementById('voucherModal').style.display = "none";
-                });
-            } else {
-                voucherData.isActive = true;
-                voucherData.createdAt = Date.now();
-                voucherData.createdBy = currentUser;
-                push(ref(db, 'vouchers'), voucherData).then(() => {
-                    logAction("إنشاء كوبون", `إنشاء كود جديد: ${code} بخصم ${value}`);
-                    document.getElementById('voucherModal').style.display = "none";
-                });
-            }
-        });
-        onValue(ref(db, 'vouchers'), (snapshot) => {
-            const vouchTable = document.getElementById("vouchersTableBody");
-            vouchTable.innerHTML = "";
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const id = child.key;
-                    const v = child.val();
-                    const createdInfo = v.createdAt ? `<div class="meta-info">أنشأه ${v.createdBy} في ${formatDateTime(v.createdAt)}</div>` : "";
-                    const valDisplay = v.type === 'percentage' ? `${v.value}%` : `${v.value} ج.م`;
-                    const hideIcon = v.isActive ? "fa-eye-slash" : "fa-eye";
-                    const hideBg = v.isActive ? "#64748b" : "#22c55e";
-
-                    vouchTable.innerHTML += `<tr>
-                        <td><b>${v.code}</b>${createdInfo}</td>
-                        <td style="color:var(--accent); font-weight:bold;">${valDisplay}</td>
-                        <td><span class="badge ${v.isActive ? 'badge-active' : 'badge-inactive'}">${v.isActive ? 'مفعل' : 'معطل'}</span></td>
-                        <td>
-                            <div class="actions">
-                                <button class="btn-action btn-edit" onclick="editVoucher('${id}')"><i class="fas fa-pen"></i></button>
-                                <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleVoucher('${id}', ${v.isActive}, '${v.code}')"><i class="fas ${hideIcon}"></i></button>
-                                <button class="btn-action btn-delete" onclick="deleteVoucher('${id}', '${v.code}')"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-                });
-            }
-        });
-        window.deleteVoucher = (id, code) => confirm("حذف الكوبون؟") && remove(ref(db, `vouchers/${id}`)).then(() => logAction("حذف كوبون", `حذف الكوبون: ${code}`));
-        window.toggleVoucher = (id, status, code) => update(ref(db, `vouchers/${id}`), { isActive: !status }).then(() => logAction(status ? "تعطيل كوبون" : "تفعيل كوبون", `تغيير حالة الكوبون: ${code}`));
-        window.editVoucher = (id) => {
-            editingVoucherId = id; 
-            get(child(ref(db), `vouchers/${id}`)).then(s => {
-                const v = s.val();
-                oldVoucherCode = v.code;
-                document.getElementById("voucherCode").value = v.code;
-                document.getElementById("voucherType").value = v.type;
-                document.getElementById("voucherValue").value = v.value;
-                document.getElementById("voucherModalTitle").innerText = "تعديل الكوبون";
-                document.getElementById('voucherModal').style.display = "flex";
-            });
-        };
-
-        // ==========================================
-        // إدارة الموظفين
-        // ==========================================
-        let editingEmpId = null;
-        document.getElementById("openEmpModalBtn").addEventListener("click", () => {
-            editingEmpId = null;
-            document.getElementById("empModalTitle").innerText = "إضافة موظف جديد";
-            document.getElementById("empName").value = "";
-            document.getElementById("empPhone").value = "";
-            document.getElementById("empDob").value = "";
-            document.getElementById("empNationalId").value = "";
-            document.getElementById("empArea").value = "";
-            document.getElementById("empNotes").value = "";
-            document.getElementById('employeeModal').style.display = "flex";
-        });
-        document.getElementById("saveEmpBtn").addEventListener("click", () => {
-            const empData = {
-                name: document.getElementById("empName").value,
-                phone: document.getElementById("empPhone").value,
-                dob: document.getElementById("empDob").value,
-                nationalId: document.getElementById("empNationalId").value,
-                area: document.getElementById("empArea").value,
-                role: document.getElementById("empRole").value,
-                notes: document.getElementById("empNotes").value
-            };
-            
-            if(!empData.name || !empData.phone) return alert("الاسم ورقم التليفون مطلوبين!");
-
-            if(editingEmpId){
-                update(ref(db, `employees/${editingEmpId}`), empData).then(() => {
-                    logAction("تعديل موظف", `تم تعديل بيانات الموظف: ${empData.name}`);
-                    document.getElementById('employeeModal').style.display = "none";
-                });
-            } else {
-                empData.isActive = true;
-                empData.createdAt = Date.now(); // تاريخ التعيين أوتوماتيك
-                push(ref(db, 'employees'), empData).then(() => {
-                    logAction("تعيين موظف", `تم إضافة الموظف: ${empData.name}`);
-                    document.getElementById('employeeModal').style.display = "none";
-                });
-            }
-        });
-        onValue(ref(db, 'employees'), (snapshot) => {
-            const empTable = document.getElementById("employeesTableBody");
-            empTable.innerHTML = "";
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    const id = child.key;
-                    const e = child.val();
-                    const hideIcon = e.isActive ? "fa-user-slash" : "fa-user-check";
-                    const hideBg = e.isActive ? "#64748b" : "#22c55e";
-
-                    empTable.innerHTML += `<tr>
-                        <td>
-                            <b>${e.name}</b>
-                            <div class="emp-details">تاريخ التعيين: ${formatDateOnly(e.createdAt)}</div>
-                            ${e.notes ? `<div class="meta-info">ملاحظة: ${e.notes}</div>` : ""}
-                        </td>
-                        <td>
-                            <div class="emp-details"><i class="fas fa-phone"></i> ${e.phone}</div>
-                            <div class="emp-details"><i class="fas fa-map-marker-alt"></i> ${e.area}</div>
-                            <div class="emp-details"><i class="fas fa-id-card"></i> ${e.nationalId}</div>
-                        </td>
-                        <td><b>${e.role}</b></td>
-                        <td><span class="badge ${e.isActive ? 'badge-active' : 'badge-inactive'}">${e.isActive ? 'على قوة العمل' : 'موقوف'}</span></td>
-                        <td>
-                            <div class="actions">
-                                <button class="btn-action btn-edit" onclick="editEmp('${id}')"><i class="fas fa-pen"></i></button>
-                                <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleEmp('${id}', ${e.isActive}, '${e.name}')"><i class="fas ${hideIcon}"></i></button>
-                                <button class="btn-action btn-delete" onclick="deleteEmp('${id}', '${e.name}')"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-                });
-            }
-        });
-        window.deleteEmp = (id, name) => confirm("حذف الموظف نهائياً؟") && remove(ref(db, `employees/${id}`)).then(() => logAction("حذف موظف", `تم إزالة الموظف: ${name}`));
-        window.toggleEmp = (id, status, name) => update(ref(db, `employees/${id}`), { isActive: !status }).then(() => logAction(status ? "إيقاف موظف" : "تفعيل موظف", `تغيير حالة الموظف: ${name}`));
-        window.editEmp = (id) => {
-            editingEmpId = id; 
-            get(child(ref(db), `employees/${id}`)).then(s => {
-                const e = s.val();
-                document.getElementById("empName").value = e.name || "";
-                document.getElementById("empPhone").value = e.phone || "";
-                document.getElementById("empDob").value = e.dob || "";
-                document.getElementById("empNationalId").value = e.nationalId || "";
-                document.getElementById("empArea").value = e.area || "";
-                document.getElementById("empRole").value = e.role || "Support";
-                document.getElementById("empNotes").value = e.notes || "";
-                document.getElementById("empModalTitle").innerText = "تعديل بيانات موظف";
-                document.getElementById('employeeModal').style.display = "flex";
-            });
-        };
-    </script>
+    <!-- استدعاء ملف الـ JS الخارجي -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
