@@ -184,7 +184,36 @@
                 </table>
             </div>
         </div>
-
+<!-- نافذة إضافة منتج (Popup) -->
+<div class="modal-overlay" id="productModal">
+    <div class="modal">
+        <h3>إضافة منتج جديد</h3>
+        <div class="input-group">
+            <label>اسم المنتج</label>
+            <input type="text" id="prodName" placeholder="مثال: شاحن آيفون أصلي">
+        </div>
+        <div class="input-group">
+            <label>السعر (ج.م)</label>
+            <input type="number" id="prodPrice" placeholder="مثال: 450">
+        </div>
+        <div class="input-group">
+            <label>القسم</label>
+            <select id="prodCategory">
+                <option value="electronics">إلكترونيات</option>
+                <option value="toys">لعب أطفال</option>
+                <option value="offers">عروض وتخفيضات</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>رابط الصورة (مؤقتاً لحين عمل رفع للصور)</label>
+            <input type="text" id="prodImage" placeholder="https://...">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="closeModalBtn">إلغاء</button>
+            <button class="btn-save" id="saveProductBtn">حفظ المنتج</button>
+        </div>
+    </div>
+</div>
     </main>
 <!-- مكتبات فايربيز (النسخة الحديثة) -->
     <script type="module">
