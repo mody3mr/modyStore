@@ -41,7 +41,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ==========================================
-// إدارة الطلبات (Orders Management)
+// إدارة الطلبات والإحصائيات
 // ==========================================
 let allOrders = [];
 
@@ -94,12 +94,22 @@ onValue(ref(db, 'orders'), (snapshot) => {
     const table = document.getElementById("ordersTableBody");
     table.innerHTML = "";
     allOrders = [];
+    
+    // متغيرات الإحصائيات
+    let totalRevenue = 0;
+    let pendingCount = 0;
+    let ordersCount = 0;
 
     if (snapshot.exists()) {
         snapshot.forEach(child => {
             let order = child.val();
             order.dbId = child.key;
             allOrders.push(order);
+            
+            // حساب الإحصائيات
+            ordersCount++;
+            if (order.status !== 'ملغي') totalRevenue += order.total;
+            if (order.status === 'قيد المراجعة') pendingCount++;
         });
         
         allOrders.reverse(); 
@@ -137,6 +147,11 @@ onValue(ref(db, 'orders'), (snapshot) => {
     } else {
         table.innerHTML = "<tr><td colspan='6' style='text-align:center;'>لا توجد طلبات حتى الآن.</td></tr>";
     }
+
+    // عرض الإحصائيات في الشاشة
+    document.getElementById('statTotalOrders').innerText = ordersCount;
+    document.getElementById('statTotalRevenue').innerText = totalRevenue + " ج.م";
+    document.getElementById('statPendingOrders').innerText = pendingCount;
 });
 
 // ==========================================
@@ -193,10 +208,15 @@ window.saveProduct = () => {
 onValue(ref(db, 'products'), (snapshot) => {
     const table = document.getElementById("productsTableBody");
     table.innerHTML = ""; 
+    let activeProductsCount = 0; // لعد المنتجات النشطة
+
     if (snapshot.exists()) {
         snapshot.forEach(child => {
             const id = child.key;
             const p = child.val();
+            
+            if(p.isActive) activeProductsCount++; // زيادة العداد
+
             const badgeClass = p.isActive ? "badge-active" : "badge-inactive";
             const hideIcon = p.isActive ? "fa-eye-slash" : "fa-eye";
             const hideBg = p.isActive ? "#64748b" : "#22c55e";
@@ -229,6 +249,9 @@ onValue(ref(db, 'products'), (snapshot) => {
     } else {
         table.innerHTML = "<tr><td colspan='5' style='text-align:center;'>لا توجد منتجات</td></tr>";
     }
+
+    // عرض عدد المنتجات في الإحصائيات
+    document.getElementById('statTotalProducts').innerText = activeProductsCount;
 });
 
 window.deleteProduct = (id, name) => confirm("حذف المنتج؟") && remove(ref(db, `products/${id}`)).then(() => logAction("حذف منتج", `حذف المنتج: ${name}`));
@@ -249,7 +272,7 @@ window.editProduct = (id) => {
 };
 
 // ==========================================
-// باقي الأقسام والكوبونات والموظفين والسجل
+// الأقسام والكوبونات والموظفين والسجل
 // ==========================================
 let editingCatId = null;
 window.openCategoryModal = () => { editingCatId = null; document.getElementById("catNameInput").value = ""; document.getElementById('categoryModal').style.display = "flex"; };
