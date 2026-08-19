@@ -15,10 +15,10 @@
             --card-bg: #ffffff;
             --text-dark: #334155;
             --border: #e2e8f0;
+            --accent: #f59e0b; /* لون مميز للعروض */
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-        
         body { background-color: var(--bg); color: var(--text-dark); display: flex; min-height: 100vh; }
 
         /* القائمة الجانبية */
@@ -35,7 +35,7 @@
         .user-profile { display: flex; align-items: center; gap: 10px; font-weight: 700; }
         .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
 
-        /* مساحة العمل والتنقل بين الصفحات */
+        /* مساحة العمل والتنقل */
         .workspace { padding: 30px; overflow-y: auto; position: relative; }
         .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
         .view-section.active { display: block; }
@@ -44,10 +44,13 @@
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .page-title { font-size: 24px; font-weight: 700; color: var(--primary); }
         
+        .header-actions { display: flex; gap: 10px; }
         .btn-add { background-color: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
         .btn-add:hover { background-color: #2563eb; transform: translateY(-2px); }
-        .btn-cat { background-color: #8b5cf6; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.2); }
+        .btn-cat { background-color: #8b5cf6; }
         .btn-cat:hover { background-color: #7c3aed; }
+        .btn-voucher { background-color: var(--accent); }
+        .btn-voucher:hover { background-color: #d97706; }
 
         /* الكارت والجدول */
         .card { background-color: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; border: 1px solid var(--border); }
@@ -59,24 +62,21 @@
         .product-info { display: flex; align-items: center; gap: 15px; }
         .product-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
         
-        /* الحالات (Badges) */
         .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
         .badge-active { background-color: #dcfce7; color: #166534; }
         .badge-inactive { background-color: #fee2e2; color: #991b1b; }
+        .badge-discount { background-color: #fef3c7; color: #b45309; margin-right: 5px; } /* شارة الخصم */
 
         /* زراير الإجراءات السريعة */
         .actions { display: flex; gap: 10px; }
         .btn-action { width: 35px; height: 35px; border: none; border-radius: 8px; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; transition: 0.3s; font-size: 14px; }
         .btn-edit { background-color: #f59e0b; } 
-        .btn-edit:hover { background-color: #d97706; }
         .btn-hide { background-color: #64748b; } 
-        .btn-hide:hover { background-color: #475569; }
         .btn-delete { background-color: #ef4444; } 
-        .btn-delete:hover { background-color: #dc2626; }
         
-        /* تصميم النوافذ (Modals) */
+        /* النوافذ (Modals) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
         .modal h3 { margin-bottom: 20px; color: var(--primary); font-weight: 700; }
         .input-group { margin-bottom: 15px; text-align: right; }
         .input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
@@ -85,6 +85,9 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
         .btn-save { background: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
         .btn-cancel { background: #94a3b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
+        
+        .price-discount-container { display: flex; gap: 10px;}
+        .price-discount-container .input-group { flex: 1;}
     </style>
 </head>
 <body>
@@ -95,6 +98,7 @@
         <ul class="nav-links">
             <li class="nav-item active" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
             <li class="nav-item" data-target="categories-view"><i class="fas fa-tags"></i> الأقسام</li>
+            <li class="nav-item" data-target="vouchers-view"><i class="fas fa-ticket-alt"></i> كوبونات الخصم</li>
             <li class="nav-item"><i class="fas fa-shopping-cart"></i> الطلبات</li>
             <li class="nav-item"><i class="fas fa-cog"></i> الإعدادات</li>
         </ul>
@@ -123,7 +127,7 @@
                         <thead>
                             <tr>
                                 <th>المنتج</th>
-                                <th>السعر</th>
+                                <th>السعر / العرض</th>
                                 <th>القسم</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
@@ -158,6 +162,30 @@
                 </div>
             </div>
 
+            <!-- ================= شاشة كوبونات الخصم ================= -->
+            <div id="vouchers-view" class="view-section">
+                <div class="page-header">
+                    <h2 class="page-title">إدارة كوبونات الخصم</h2>
+                    <button class="btn-add btn-voucher" id="openVoucherModalBtn"><i class="fas fa-ticket-alt"></i> إنشاء كود خصم</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>كود الخصم (Promo Code)</th>
+                                <th>نوع الخصم</th>
+                                <th>القيمة</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vouchersTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل الكوبونات...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
         <!-- ================= نافذة المنتجات (Modal) ================= -->
@@ -168,10 +196,19 @@
                     <label>اسم المنتج</label>
                     <input type="text" id="prodName" placeholder="مثال: شاحن آيفون أصلي">
                 </div>
-                <div class="input-group">
-                    <label>السعر (ج.م)</label>
-                    <input type="number" id="prodPrice" placeholder="مثال: 450">
+                
+                <!-- التعديل الجديد: السعر والسعر بعد الخصم -->
+                <div class="price-discount-container">
+                    <div class="input-group">
+                        <label>السعر الأساسي (ج.م)</label>
+                        <input type="number" id="prodPrice" placeholder="مثال: 450">
+                    </div>
+                    <div class="input-group">
+                        <label style="color: var(--accent);">سعر العرض (اختياري)</label>
+                        <input type="number" id="prodDiscountPrice" placeholder="مثال: 350">
+                    </div>
                 </div>
+
                 <div class="input-group">
                     <label>القسم</label>
                     <select id="prodCategory">
@@ -204,6 +241,32 @@
             </div>
         </div>
 
+        <!-- ================= نافذة الكوبونات (Modal) ================= -->
+        <div class="modal-overlay" id="voucherModal">
+            <div class="modal">
+                <h3 id="voucherModalTitle">إنشاء كود خصم جديد</h3>
+                <div class="input-group">
+                    <label>كود الخصم (انجليزي فقط)</label>
+                    <input type="text" id="voucherCode" placeholder="مثال: SALE20, MODY50" style="text-transform: uppercase;">
+                </div>
+                <div class="input-group">
+                    <label>نوع الخصم</label>
+                    <select id="voucherType">
+                        <option value="percentage">نسبة مئوية (%) من الإجمالي</option>
+                        <option value="fixed">مبلغ ثابت (ج.م)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>قيمة الخصم</label>
+                    <input type="number" id="voucherValue" placeholder="مثال: 20">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="document.getElementById('voucherModal').style.display='none'">إلغاء</button>
+                    <button class="btn-save" id="saveVoucherBtn">حفظ الكود</button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- مكتبات فايربيز -->
@@ -224,14 +287,14 @@
         const db = getDatabase(app);
 
         // --------------------------------------------------
-        // نظام التنقل بين الصفحات (SPA Navigation)
+        // نظام التنقل (SPA Navigation)
         // --------------------------------------------------
         const navItems = document.querySelectorAll('.nav-item');
         const viewSections = document.querySelectorAll('.view-section');
 
         navItems.forEach(item => {
             item.addEventListener('click', () => {
-                if(!item.dataset.target) return; // للتابات اللي لسه مبرمجناهاش زي الطلبات
+                if(!item.dataset.target) return;
                 
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
@@ -241,15 +304,12 @@
             });
         });
 
-        // --------------------------------------------------
-        // إدارة الأقسام (Categories)
-        // --------------------------------------------------
+        // ==================================================
+        // إدارة الأقسام
+        // ==================================================
         let editingCatId = null;
         const categoryModal = document.getElementById("categoryModal");
-        const catSelect = document.getElementById("prodCategory");
-        const catTableBody = document.getElementById("categoriesTableBody");
-
-        // فتح نافذة الأقسام
+        
         document.getElementById("openCatModalBtn").addEventListener("click", () => {
             editingCatId = null;
             document.getElementById("catModalTitle").innerText = "إضافة قسم جديد";
@@ -257,24 +317,20 @@
             categoryModal.style.display = "flex";
         });
 
-        // حفظ القسم (إضافة أو تعديل)
         document.getElementById("saveCategoryBtn").addEventListener("click", () => {
             const catName = document.getElementById("catNameInput").value.trim();
             if (!catName) return alert("لازم تكتب اسم القسم!");
 
             if (editingCatId) {
-                update(ref(db, `categories/${editingCatId}`), { name: catName }).then(() => {
-                    categoryModal.style.display = "none";
-                });
+                update(ref(db, `categories/${editingCatId}`), { name: catName }).then(() => categoryModal.style.display = "none");
             } else {
-                push(ref(db, 'categories'), { name: catName, isActive: true }).then(() => {
-                    categoryModal.style.display = "none";
-                });
+                push(ref(db, 'categories'), { name: catName, isActive: true }).then(() => categoryModal.style.display = "none");
             }
         });
 
-        // جلب الأقسام للجدول وللقائمة المنسدلة بتاعت المنتجات
+        const catSelect = document.getElementById("prodCategory");
         onValue(ref(db, 'categories'), (snapshot) => {
+            const catTableBody = document.getElementById("categoriesTableBody");
             catTableBody.innerHTML = "";
             catSelect.innerHTML = "";
             
@@ -283,7 +339,6 @@
                     const id = child.key;
                     const cat = child.val();
                     
-                    // إضافة القسم لجدول الأقسام
                     const badgeClass = cat.isActive ? "badge-active" : "badge-inactive";
                     const hideIcon = cat.isActive ? "fa-eye-slash" : "fa-eye";
                     const hideBg = cat.isActive ? "#64748b" : "#22c55e";
@@ -301,10 +356,7 @@
                             </td>
                         </tr>
                     `;
-
-                    // إضافة القسم لقائمة إضافة المنتج (حتى لو مخفي نخليه يظهر للآدمن، ممكن نكتب جنبه مخفي)
-                    const statusText = cat.isActive ? "" : " (مخفي)";
-                    catSelect.innerHTML += `<option value="${cat.name}">${cat.name}${statusText}</option>`;
+                    catSelect.innerHTML += `<option value="${cat.name}">${cat.name}${cat.isActive ? "" : " (مخفي)"}</option>`;
                 });
             } else {
                 catTableBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>لا توجد أقسام حتى الآن.</td></tr>";
@@ -312,7 +364,6 @@
             }
         });
 
-        // دوال التحكم في الأقسام
         window.deleteCategory = (id) => confirm("حذف القسم نهائياً؟") && remove(ref(db, `categories/${id}`));
         window.toggleCategory = (id, status) => update(ref(db, `categories/${id}`), { isActive: !status });
         window.editCategory = (id, currentName) => {
@@ -322,43 +373,49 @@
             categoryModal.style.display = "flex";
         };
 
-        // --------------------------------------------------
-        // إدارة المنتجات (Products)
-        // --------------------------------------------------
+        // ==================================================
+        // إدارة المنتجات (مع الخصم)
+        // ==================================================
         let editingProductId = null; 
         const productModal = document.getElementById("productModal");
-        const saveProductBtn = document.getElementById("saveProductBtn");
 
         document.getElementById("openAddModalBtn").addEventListener("click", () => {
             editingProductId = null; 
             document.getElementById("modalTitle").innerText = "إضافة منتج جديد";
             document.getElementById("prodName").value = "";
             document.getElementById("prodPrice").value = "";
+            document.getElementById("prodDiscountPrice").value = ""; // تفريغ حقل الخصم
             document.getElementById("prodImage").value = "";
             productModal.style.display = "flex";
         });
 
-        saveProductBtn.addEventListener("click", () => {
+        document.getElementById("saveProductBtn").addEventListener("click", () => {
             const name = document.getElementById("prodName").value;
             const price = document.getElementById("prodPrice").value;
+            const discountPrice = document.getElementById("prodDiscountPrice").value; // السعر بعد الخصم
             const category = document.getElementById("prodCategory").value;
             const image = document.getElementById("prodImage").value;
 
-            if(!name || !price || !category) return alert("الاسم والسعر والقسم مطلوبين!");
+            if(!name || !price || !category) return alert("الاسم والسعر الأساسي والقسم مطلوبين!");
+
+            const productData = { 
+                name, 
+                price: Number(price), 
+                discountPrice: discountPrice ? Number(discountPrice) : null, // نحفظ الخصم لو موجود
+                category, 
+                imageUrl: image || "https://via.placeholder.com/100" 
+            };
 
             if (editingProductId) {
-                update(ref(db, `products/${editingProductId}`), {
-                    name, price, category, imageUrl: image || "https://via.placeholder.com/100"
-                }).then(() => productModal.style.display = "none");
+                update(ref(db, `products/${editingProductId}`), productData).then(() => productModal.style.display = "none");
             } else {
-                push(ref(db, 'products'), {
-                    name, price, category, imageUrl: image || "https://via.placeholder.com/100", isActive: true
-                }).then(() => productModal.style.display = "none");
+                productData.isActive = true;
+                push(ref(db, 'products'), productData).then(() => productModal.style.display = "none");
             }
         });
 
-        const prodTableBody = document.getElementById("productsTableBody");
         onValue(ref(db, 'products'), (snapshot) => {
+            const prodTableBody = document.getElementById("productsTableBody");
             prodTableBody.innerHTML = ""; 
             if (snapshot.exists()) {
                 snapshot.forEach(child => {
@@ -369,15 +426,23 @@
                     const hideIcon = p.isActive ? "fa-eye-slash" : "fa-eye";
                     const hideBg = p.isActive ? "#64748b" : "#22c55e";
 
+                    // عرض السعر والخصم بشكل شيك في الجدول
+                    let priceDisplay = `${p.price} ج.م`;
+                    let discountBadge = "";
+                    if (p.discountPrice) {
+                        priceDisplay = `<del style="color:#94a3b8; font-size:13px;">${p.price}</del> <span style="color:var(--accent); font-weight:bold;">${p.discountPrice} ج.م</span>`;
+                        discountBadge = `<span class="badge badge-discount">عرض</span>`;
+                    }
+
                     prodTableBody.innerHTML += `
                         <tr>
                             <td>
                                 <div class="product-info">
                                     <img src="${p.imageUrl}" class="product-img" alt="صورة">
-                                    <span>${p.name}</span>
+                                    <span>${p.name} ${discountBadge}</span>
                                 </div>
                             </td>
-                            <td>${p.price} ج.م</td>
+                            <td>${priceDisplay}</td>
                             <td>${p.category}</td>
                             <td><span class="badge ${badgeClass}">${p.isActive ? 'معروض' : 'مخفي'}</span></td>
                             <td>
@@ -403,10 +468,93 @@
                 const p = s.val();
                 document.getElementById("prodName").value = p.name;
                 document.getElementById("prodPrice").value = p.price;
+                document.getElementById("prodDiscountPrice").value = p.discountPrice || ""; // لو مفيش خصم يسيبه فاضي
                 document.getElementById("prodImage").value = p.imageUrl === "https://via.placeholder.com/100" ? "" : p.imageUrl;
                 setTimeout(() => document.getElementById("prodCategory").value = p.category, 100);
                 document.getElementById("modalTitle").innerText = "تعديل المنتج";
                 productModal.style.display = "flex";
+            });
+        };
+
+        // ==================================================
+        // إدارة الكوبونات (Vouchers)
+        // ==================================================
+        let editingVoucherId = null;
+        const voucherModal = document.getElementById("voucherModal");
+        
+        document.getElementById("openVoucherModalBtn").addEventListener("click", () => {
+            editingVoucherId = null;
+            document.getElementById("voucherModalTitle").innerText = "إنشاء كود خصم جديد";
+            document.getElementById("voucherCode").value = "";
+            document.getElementById("voucherValue").value = "";
+            voucherModal.style.display = "flex";
+        });
+
+        document.getElementById("saveVoucherBtn").addEventListener("click", () => {
+            const code = document.getElementById("voucherCode").value.trim().toUpperCase(); // الكود دايماً حروف كابيتال
+            const type = document.getElementById("voucherType").value;
+            const value = document.getElementById("voucherValue").value;
+
+            if (!code || !value) return alert("الرجاء إدخال الكود وقيمة الخصم!");
+
+            const voucherData = { code, type, value: Number(value) };
+
+            if (editingVoucherId) {
+                update(ref(db, `vouchers/${editingVoucherId}`), voucherData).then(() => voucherModal.style.display = "none");
+            } else {
+                voucherData.isActive = true;
+                push(ref(db, 'vouchers'), voucherData).then(() => voucherModal.style.display = "none");
+            }
+        });
+
+        onValue(ref(db, 'vouchers'), (snapshot) => {
+            const vouchersTableBody = document.getElementById("vouchersTableBody");
+            vouchersTableBody.innerHTML = "";
+            
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    const id = child.key;
+                    const v = child.val();
+                    
+                    const badgeClass = v.isActive ? "badge-active" : "badge-inactive";
+                    const hideIcon = v.isActive ? "fa-eye-slash" : "fa-eye";
+                    const hideBg = v.isActive ? "#64748b" : "#22c55e";
+                    
+                    let displayValue = v.type === 'percentage' ? `${v.value}%` : `${v.value} ج.م`;
+                    let displayType = v.type === 'percentage' ? "نسبة مئوية" : "مبلغ ثابت";
+
+                    vouchersTableBody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold; color:var(--primary); letter-spacing:1px;">${v.code}</td>
+                            <td>${displayType}</td>
+                            <td style="font-weight:bold; color:var(--accent);">${displayValue}</td>
+                            <td><span class="badge ${badgeClass}">${v.isActive ? 'مفعل' : 'معطل'}</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action btn-edit" onclick="editVoucher('${id}')"><i class="fas fa-pen"></i></button>
+                                    <button class="btn-action btn-hide" style="background-color: ${hideBg}" onclick="toggleVoucher('${id}', ${v.isActive})"><i class="fas ${hideIcon}"></i></button>
+                                    <button class="btn-action btn-delete" onclick="deleteVoucher('${id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                vouchersTableBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>لا توجد كوبونات خصم.</td></tr>";
+            }
+        });
+
+        window.deleteVoucher = (id) => confirm("حذف الكوبون نهائياً؟") && remove(ref(db, `vouchers/${id}`));
+        window.toggleVoucher = (id, status) => update(ref(db, `vouchers/${id}`), { isActive: !status });
+        window.editVoucher = (id) => {
+            editingVoucherId = id;
+            get(child(ref(db), `vouchers/${id}`)).then(s => {
+                const v = s.val();
+                document.getElementById("voucherCode").value = v.code;
+                document.getElementById("voucherType").value = v.type;
+                document.getElementById("voucherValue").value = v.value;
+                document.getElementById("voucherModalTitle").innerText = "تعديل كود الخصم";
+                voucherModal.style.display = "flex";
             });
         };
     </script>
