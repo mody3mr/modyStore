@@ -129,58 +129,10 @@
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- منتج مفعل -->
-                        <tr>
-                            <td>
-                                <div class="product-info">
-                                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=100&q=80" class="product-img" alt="سماعة">
-                                    <span>سماعة بلوتوث احترافية</span>
-                                </div>
-                            </td>
-                            <td>750 ج.م</td>
-                            <td>
-                                <select class="category-select">
-                                    <option value="electronics" selected>إلكترونيات</option>
-                                    <option value="offers">عروض وتخفيضات</option>
-                                    <option value="accessories">إكسسوارات</option>
-                                </select>
-                            </td>
-                            <td><span class="badge badge-active">معروض للعملاء</span></td>
-                            <td>
-                                <div class="actions">
-                                    <button class="btn-action btn-edit" title="تعديل"><i class="fas fa-pen"></i></button>
-                                    <button class="btn-action btn-hide" title="تعطيل/إخفاء"><i class="fas fa-eye-slash"></i></button>
-                                    <button class="btn-action btn-delete" title="حذف نهائي"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- منتج مخفي -->
-                        <tr>
-                            <td>
-                                <div class="product-info">
-                                    <img src="https://images.unsplash.com/photo-1585366119957-e9730b6d0f60?auto=format&fit=crop&w=100&q=80" class="product-img" alt="باور بانك">
-                                    <span>باور بانك 10000 مللي أمبير</span>
-                                </div>
-                            </td>
-                            <td>450 ج.م</td>
-                            <td>
-                                <select class="category-select">
-                                    <option value="electronics" selected>إلكترونيات</option>
-                                    <option value="offers">عروض وتخفيضات</option>
-                                </select>
-                            </td>
-                            <td><span class="badge badge-inactive">مخفي (خلصان)</span></td>
-                            <td>
-                                <div class="actions">
-                                    <button class="btn-action btn-edit" title="تعديل"><i class="fas fa-pen"></i></button>
-                                    <button class="btn-action btn-hide" style="background-color: #22c55e;" title="تفعيل/إظهار"><i class="fas fa-eye"></i></button>
-                                    <button class="btn-action btn-delete" title="حذف نهائي"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="productsTableBody">
+            <!-- المنتجات هتظهر هنا أوتوماتيك من قاعدة البيانات -->
+            <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل المنتجات...</td></tr>
+        </tbody>
                 </table>
             </div>
         </div>
