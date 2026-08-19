@@ -6,7 +6,6 @@
     <title>لوحة تحكم المتجر | Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- استدعاء ملف الـ CSS الخارجي -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,7 +13,9 @@
     <aside class="sidebar">
         <div class="brand">متجري <i class="fas fa-shopping-bag"></i></div>
         <ul class="nav-links">
-            <li class="nav-item active" data-target="orders-view"><i class="fas fa-shopping-cart"></i> الطلبات</li>
+            <!-- التاب الجديدة للإحصائيات -->
+            <li class="nav-item active" data-target="analytics-view"><i class="fas fa-chart-pie"></i> الإحصائيات</li>
+            <li class="nav-item" data-target="orders-view"><i class="fas fa-shopping-cart"></i> الطلبات</li>
             <li class="nav-item" data-target="products-view"><i class="fas fa-box-open"></i> المنتجات</li>
             <li class="nav-item" data-target="categories-view"><i class="fas fa-tags"></i> الأقسام</li>
             <li class="nav-item" data-target="vouchers-view"><i class="fas fa-ticket-alt"></i> الكوبونات</li>
@@ -34,8 +35,43 @@
 
         <div class="workspace">
             
-            <!-- شاشة الطلبات -->
-            <div id="orders-view" class="view-section active">
+            <!-- ================= شاشة الإحصائيات ================= -->
+            <div id="analytics-view" class="view-section active">
+                <div class="page-header"><h2 class="page-title">نظرة عامة وإحصائيات</h2></div>
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-info">
+                            <h3>إجمالي الطلبات</h3>
+                            <p id="statTotalOrders">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="stat-info">
+                            <h3>إجمالي المبيعات</h3>
+                            <p id="statTotalRevenue">0 ج.م</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <h3>قيد المراجعة</h3>
+                            <p id="statPendingOrders">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
+                        <div class="stat-info">
+                            <h3>المنتجات المعروضة</h3>
+                            <p id="statTotalProducts">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= شاشة الطلبات ================= -->
+            <div id="orders-view" class="view-section">
                 <div class="page-header"><h2 class="page-title">إدارة الطلبات</h2></div>
                 <div class="card">
                     <table>
@@ -45,7 +81,7 @@
                 </div>
             </div>
 
-            <!-- شاشة المنتجات -->
+            <!-- ================= شاشة المنتجات ================= -->
             <div id="products-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
@@ -210,7 +246,6 @@
 
     </main>
 
-    <!-- استدعاء ملف الـ JS الخارجي -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
