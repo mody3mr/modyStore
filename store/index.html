@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر محمد عمرو | أحدث المنتجات</title>
+    <!-- خط كايرو -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة الأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #2563eb; /* أزرق رئيسي يدي ثقة للعميل */
+            --dark: #1e293b;
+            --bg: #f8fafc;
+            --white: #ffffff;
+            --gray: #e2e8f0;
+            --text: #334155;
+            --accent: #f59e0b; /* لون برتقالي مميز للعروض */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); }
+
+        /* الهيدر (الشريط العلوي) */
+        header { background-color: var(--white); box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 24px; font-weight: 900; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+        .logo i { font-size: 28px; }
+        
+        .cart-icon { position: relative; font-size: 22px; color: var(--dark); cursor: pointer; transition: 0.3s; }
+        .cart-icon:hover { color: var(--primary); }
+        .cart-count { position: absolute; top: -8px; right: -8px; background-color: #ef4444; color: white; font-size: 12px; font-weight: bold; height: 20px; width: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+
+        /* البانر الترحيبي */
+        .hero { background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%); color: white; text-align: center; padding: 50px 20px; margin-bottom: 30px; }
+        .hero h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
+        .hero p { font-size: 16px; color: #cbd5e1; }
+
+        /* شريط الأقسام */
+        .categories-bar { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; display: flex; gap: 15px; overflow-x: auto; scrollbar-width: none; }
+        .categories-bar::-webkit-scrollbar { display: none; }
+        .cat-btn { background-color: var(--white); border: 1px solid var(--gray); padding: 8px 20px; border-radius: 20px; font-weight: 700; color: var(--text); cursor: pointer; white-space: nowrap; transition: 0.3s; }
+        .cat-btn.active, .cat-btn:hover { background-color: var(--primary); color: white; border-color: var(--primary); }
+
+        /* شبكة المنتجات */
+        .products-container { max-width: 1200px; margin: 0 auto; padding: 0 20px 50px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        
+        /* كارت المنتج */
+        .product-card { background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: 0.3s; border: 1px solid var(--gray); display: flex; flex-direction: column; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .product-img { width: 100%; height: 200px; object-fit: cover; }
+        .product-details { padding: 15px; flex: 1; display: flex; flex-direction: column; }
+        .product-cat { font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 5px; }
+        .product-title { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 10px; line-height: 1.4; }
+        .product-price { font-size: 18px; font-weight: 900; color: var(--primary); margin-top: auto; margin-bottom: 15px; }
+        
+        .add-to-cart { background-color: var(--dark); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-family: 'Cairo'; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
+        .add-to-cart:hover { background-color: var(--primary); }
+
+        /* رسالة التحميل */
+        .loading { grid-column: 1 / -1; text-align: center; padding: 50px; font-size: 18px; font-weight: bold; color: var(--primary); }
+
+    </style>
+</head>
+<body>
+
+    <!-- الهيدر -->
+    <header>
+        <div class="nav-container">
+            <a href="#" class="logo"><i class="fas fa-store"></i> مودك ستور</a>
+            <div class="cart-icon" id="openCartBtn">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- البانر -->
+    <section class="hero">
+        <h1>اكتشف أحدث العروض والمنتجات</h1>
+        <p>جودة عالية، أسعار مميزة، وتوصيل لحد باب البيت</p>
+    </section>
+
+    <!-- شريط الأقسام (تصفية) -->
+    <div class="categories-bar">
+        <button class="cat-btn active">الكل</button>
+        <button class="cat-btn">إلكترونيات</button>
+        <button class="cat-btn">لعب أطفال</button>
+        <button class="cat-btn">عروض وتخفيضات</button>
+    </div>
+
+    <!-- شبكة المنتجات -->
+    <div class="products-container" id="productsGrid">
+        <div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل المنتجات...</div>
+    </div>
+
+    <!-- مكتبات فايربيز -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
+            authDomain: "modytech-850c2.firebaseapp.com",
+            projectId: "modytech-850c2",
+            storageBucket: "modytech-850c2.firebasestorage.app",
+            messagingSenderId: "909293461306",
+            appId: "1:909293461306:web:48e5492107ad32ceec7a03"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const productsGrid = document.getElementById("productsGrid");
+        const productsRef = ref(db, 'products');
+
+        // سحب المنتجات من قاعدة البيانات
+        onValue(productsRef, (snapshot) => {
+            productsGrid.innerHTML = ""; // تفريغ علامة التحميل
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                let hasActiveProducts = false;
+
+                for (const productId in data) {
+                    const product = data[productId];
+                    
+                    // الأهم: هنعرض بس المنتجات اللي الـ isActive بتاعها true
+                    if (product.isActive) {
+                        hasActiveProducts = true;
+                        
+                        let catName = "";
+                        if(product.category === "electronics") catName = "إلكترونيات";
+                        else if(product.category === "toys") catName = "لعب أطفال";
+                        else if(product.category === "offers") catName = "عروض";
+
+                        // تصميم كارت المنتج
+                        const card = `
+                            <div class="product-card">
+                                <img src="${product.imageUrl}" alt="${product.name}" class="product-img">
+                                <div class="product-details">
+                                    <div class="product-cat">${catName}</div>
+                                    <h3 class="product-title">${product.name}</h3>
+                                    <div class="product-price">${product.price} ج.م</div>
+                                    <button class="add-to-cart" onclick="alert('هنبرمج السلة الخطوة الجاية!')">
+                                        <i class="fas fa-cart-plus"></i> أضف للسلة
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        productsGrid.innerHTML += card;
+                    }
+                }
+
+                if (!hasActiveProducts) {
+                    productsGrid.innerHTML = "<div class="loading">لا توجد منتجات متاحة حالياً.</div>";
+                }
+            } else {
+                productsGrid.innerHTML = "<div class="loading">لا توجد منتجات في المتجر.</div>";
+            }
+        });
+    </script>
+
+</body>
+</html>
