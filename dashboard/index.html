@@ -1,1 +1,66 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المتجر</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #2c3e50; color: white; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; margin: 2px; font-size: 13px; font-weight: bold; }
+        .btn-add { background-color: #27ae60; font-size: 16px; padding: 10px 15px; }
+        .btn-edit { background-color: #3498db; }
+        .btn-disable { background-color: #f39c12; }
+        .btn-delete { background-color: #e74c3c; }
+        select { padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <div class="header">
+        <h2>إدارة المنتجات والأقسام</h2>
+        <button class="btn btn-add">+ إضافة منتج جديد</button>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>صورة</th>
+                <th>اسم المنتج</th>
+                <th>السعر</th>
+                <th>القسم الحالي</th>
+                <th>الحالة</th>
+                <th>إجراءات سريعة</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- ده مثال لمنتج عشان تشوف الشكل -->
+            <tr>
+                <td><img src="https://via.placeholder.com/50" width="50" alt="صورة المنتج"></td>
+                <td>سماعة بلوتوث أصلية</td>
+                <td>500 ج.م</td>
+                <td>
+                    <select>
+                        <option value="cat_1" selected>إلكترونيات</option>
+                        <option value="cat_2">لعب أطفال</option>
+                        <option value="cat_3">عروض</option>
+                    </select>
+                </td>
+                <td><span style="color: green; font-weight: bold;">متاح</span></td>
+                <td>
+                    <button class="btn btn-edit">تعديل</button>
+                    <button class="btn btn-disable">تعطيل</button>
+                    <button class="btn btn-delete">حذف</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
