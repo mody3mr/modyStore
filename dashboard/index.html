@@ -72,17 +72,18 @@
         .btn-hide:hover { background-color: #475569; }
         .btn-delete { background-color: #ef4444; } /* أحمر للحذف */
         .btn-delete:hover { background-color: #dc2626; }
-        /* تصميم نافذة إضافة منتج (Popup) */
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
-.modal { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-.modal h3 { margin-bottom: 20px; color: var(--primary); font-weight: 700; }
-.input-group { margin-bottom: 15px; text-align: right; }
-.input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-.input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Cairo'; outline: none; }
-.input-group input:focus { border-color: var(--secondary); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
-.btn-save { background: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
-.btn-cancel { background: #94a3b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
+        
+        /* تصميم نافذة إضافة/تعديل منتج (Popup) */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h3 { margin-bottom: 20px; color: var(--primary); font-weight: 700; }
+        .input-group { margin-bottom: 15px; text-align: right; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Cairo'; outline: none; }
+        .input-group input:focus { border-color: var(--secondary); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .btn-save { background: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
+        .btn-cancel { background: #94a3b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; }
     </style>
 </head>
 <body>
@@ -100,7 +101,6 @@
 
     <!-- المحتوى الرئيسي -->
     <main class="main-content">
-        
         <!-- الشريط العلوي -->
         <header class="topbar">
             <div style="color: #64748b; font-weight: 600;"><i class="fas fa-bars"></i></div>
@@ -114,7 +114,7 @@
         <div class="workspace">
             <div class="page-header">
                 <h2 class="page-title">إدارة المنتجات</h2>
-                <button class="btn-add"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
+                <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus"></i> إضافة منتج جديد</button>
             </div>
 
             <!-- جدول المنتجات -->
@@ -124,82 +124,111 @@
                         <tr>
                             <th>المنتج</th>
                             <th>السعر</th>
-                            <th>نقل لقسم آخر</th>
+                            <th>القسم</th>
                             <th>الحالة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-            <!-- المنتجات هتظهر هنا أوتوماتيك من قاعدة البيانات -->
-            <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل المنتجات...</td></tr>
-        </tbody>
+                        <!-- المنتجات هتظهر هنا أوتوماتيك من قاعدة البيانات -->
+                        <tr><td colspan="5" style="text-align: center; padding: 20px;">جاري تحميل المنتجات...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
-<!-- نافذة إضافة منتج (Popup) -->
-<div class="modal-overlay" id="productModal">
-    <div class="modal">
-        <h3>إضافة منتج جديد</h3>
-        <div class="input-group">
-            <label>اسم المنتج</label>
-            <input type="text" id="prodName" placeholder="مثال: شاحن آيفون أصلي">
+
+        <!-- نافذة إضافة وتعديل منتج (Popup) -->
+        <div class="modal-overlay" id="productModal">
+            <div class="modal">
+                <h3 id="modalTitle">إضافة منتج جديد</h3>
+                <div class="input-group">
+                    <label>اسم المنتج</label>
+                    <input type="text" id="prodName" placeholder="مثال: شاحن آيفون أصلي">
+                </div>
+                <div class="input-group">
+                    <label>السعر (ج.م)</label>
+                    <input type="number" id="prodPrice" placeholder="مثال: 450">
+                </div>
+                <div class="input-group">
+                    <label>القسم</label>
+                    <select id="prodCategory">
+                        <option value="electronics">إلكترونيات</option>
+                        <option value="toys">لعب أطفال</option>
+                        <option value="offers">عروض وتخفيضات</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>رابط الصورة (مؤقتاً لحين عمل رفع للصور)</label>
+                    <input type="text" id="prodImage" placeholder="https://...">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" id="closeModalBtn">إلغاء</button>
+                    <button class="btn-save" id="saveProductBtn">حفظ المنتج</button>
+                </div>
+            </div>
         </div>
-        <div class="input-group">
-            <label>السعر (ج.م)</label>
-            <input type="number" id="prodPrice" placeholder="مثال: 450">
-        </div>
-        <div class="input-group">
-            <label>القسم</label>
-            <select id="prodCategory">
-                <option value="electronics">إلكترونيات</option>
-                <option value="toys">لعب أطفال</option>
-                <option value="offers">عروض وتخفيضات</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <label>رابط الصورة (مؤقتاً لحين عمل رفع للصور)</label>
-            <input type="text" id="prodImage" placeholder="https://...">
-        </div>
-        <div class="modal-actions">
-            <button class="btn-cancel" id="closeModalBtn">إلغاء</button>
-            <button class="btn-save" id="saveProductBtn">حفظ المنتج</button>
-        </div>
-    </div>
-</div>
     </main>
-<!-- مكتبات فايربيز (النسخة الحديثة) -->
+
+    <!-- مكتبات فايربيز (النسخة الحديثة) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child, remove, update, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+        import { getDatabase, ref, set, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
-        // شيل البيانات اللي هنا وحط الـ firebaseConfig بتاعك اللي نسخته من الموقع
-const firebaseConfig = {
-  	apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
- 	authDomain: "modytech-850c2.firebaseapp.com",
-  	projectId: "modytech-850c2",
-  	storageBucket: "modytech-850c2.firebasestorage.app",
-  	messagingSenderId: "909293461306",
-  	appId: "1:909293461306:web:48e5492107ad32ceec7a03"
-};
+        // إعدادات الاتصال الخاصة بيك
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
+            authDomain: "modytech-850c2.firebaseapp.com",
+            projectId: "modytech-850c2",
+            storageBucket: "modytech-850c2.firebasestorage.app",
+            messagingSenderId: "909293461306",
+            appId: "1:909293461306:web:48e5492107ad32ceec7a03"
+        };
 
         // تهيئة الاتصال
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         console.log("تم الاتصال بقاعدة البيانات بنجاح يا ريس!");
-// استدعاء دالة push لو مش موجودة فوق ضيفها
-        import { push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
-        // التحكم في النافذة (الفتح والقفل)
+        // متغير لتحديد هل إحنا بنضيف منتج جديد ولا بنعدل واحد موجود
+        let editingProductId = null; 
+
+        // عناصر النافذة
         const modal = document.getElementById("productModal");
-        const openBtn = document.querySelector(".btn-add"); 
+        const openAddModalBtn = document.getElementById("openAddModalBtn"); 
         const closeBtn = document.getElementById("closeModalBtn");
         const saveBtn = document.getElementById("saveProductBtn");
 
-        openBtn.addEventListener("click", () => modal.style.display = "flex");
-        closeBtn.addEventListener("click", () => modal.style.display = "none");
+        // دالة لغلق وتفريغ النافذة
+        function closePopup() {
+            modal.style.display = "none";
+            saveBtn.innerText = "حفظ المنتج";
+            document.getElementById("prodName").value = "";
+            document.getElementById("prodPrice").value = "";
+            document.getElementById("prodCategory").value = "electronics";
+            document.getElementById("prodImage").value = "";
+            editingProductId = null; // نرجع المتغير لصفر
+        }
 
-        // كود حفظ المنتج في Firebase
+        // فتح نافذة الإضافة
+        openAddModalBtn.addEventListener("click", () => {
+            editingProductId = null; 
+            document.getElementById("modalTitle").innerText = "إضافة منتج جديد";
+            saveBtn.innerText = "حفظ المنتج";
+            
+            // تفريغ الخانات تحسباً لو كان فيها حاجة قديمة
+            document.getElementById("prodName").value = "";
+            document.getElementById("prodPrice").value = "";
+            document.getElementById("prodCategory").value = "electronics";
+            document.getElementById("prodImage").value = "";
+            
+            modal.style.display = "flex";
+        });
+
+        // قفل النافذة من زرار الإلغاء
+        closeBtn.addEventListener("click", closePopup);
+
+        // كود الحفظ (شغال للإضافة والتعديل مع بعض)
         saveBtn.addEventListener("click", () => {
             const name = document.getElementById("prodName").value;
             const price = document.getElementById("prodPrice").value;
@@ -211,32 +240,42 @@ const firebaseConfig = {
                 return;
             }
 
-            // زرار الحفظ بيكتب "جاري الحفظ..." عشان يديك إحساس احترافي
             saveBtn.innerText = "جاري الحفظ...";
 
-            // إنشاء مكان لمنتج جديد في قاعدة البيانات
-            const newProductRef = push(ref(db, 'products'));
-            
-            set(newProductRef, {
-                name: name,
-                price: price,
-                category: category,
-                imageUrl: image || "https://via.placeholder.com/100", // صورة افتراضية لو مكتبتش رابط
-                isActive: true // المنتج بيكون شغال (متاح) افتراضياً أول ما تضيفه
-            }).then(() => {
-                alert("تم إضافة المنتج بنجاح يا مدير! 🚀");
-                modal.style.display = "none"; 
-                saveBtn.innerText = "حفظ المنتج"; // نرجع الزرار لأصله
-                
-                // تفريغ الخانات عشان لو حبيت تضيف منتج غيره
-                document.getElementById("prodName").value = "";
-                document.getElementById("prodPrice").value = "";
-                document.getElementById("prodImage").value = "";
-            }).catch((error) => {
-                alert("حصل خطأ: " + error);
-                saveBtn.innerText = "حفظ المنتج";
-            });
+            if (editingProductId) {
+                // لو في ID بنعمل (تعديل)
+                const productRef = ref(db, `products/${editingProductId}`);
+                update(productRef, {
+                    name: name,
+                    price: price,
+                    category: category,
+                    imageUrl: image || "https://via.placeholder.com/100"
+                }).then(() => {
+                    alert("تم التعديل بنجاح!");
+                    closePopup();
+                }).catch((error) => {
+                    alert("حصل خطأ: " + error);
+                    saveBtn.innerText = "حفظ التعديلات";
+                });
+            } else {
+                // لو مفيش ID بنعمل (إضافة جديدة)
+                const newProductRef = push(ref(db, 'products'));
+                set(newProductRef, {
+                    name: name,
+                    price: price,
+                    category: category,
+                    imageUrl: image || "https://via.placeholder.com/100",
+                    isActive: true
+                }).then(() => {
+                    alert("تم الإضافة بنجاح!");
+                    closePopup();
+                }).catch((error) => {
+                    alert("حصل خطأ: " + error);
+                    saveBtn.innerText = "حفظ المنتج";
+                });
+            }
         });
+
         // --------------------------------------------------
         // كود جلب المنتجات وعرضها في الجدول لحظياً
         // --------------------------------------------------
@@ -244,28 +283,24 @@ const firebaseConfig = {
         const productsRef = ref(db, 'products');
 
         onValue(productsRef, (snapshot) => {
-            tableBody.innerHTML = ""; // تفريغ الجدول من كلمة "جاري التحميل"
+            tableBody.innerHTML = ""; 
             
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 
-                // هنلف على كل منتج في قاعدة البيانات ونعمله سطر
                 for (const productId in data) {
                     const product = data[productId];
                     
-                    // تحديد الألوان حسب حالة المنتج (نشط ولا مخفي)
                     const badgeClass = product.isActive ? "badge-active" : "badge-inactive";
                     const badgeText = product.isActive ? "معروض للعملاء" : "مخفي";
                     const hideIcon = product.isActive ? "fa-eye-slash" : "fa-eye";
                     const hideBg = product.isActive ? "#64748b" : "#22c55e";
 
-                    // ترجمة اسم القسم عشان يظهر بالعربي
                     let catName = "";
                     if(product.category === "electronics") catName = "إلكترونيات";
                     else if(product.category === "toys") catName = "لعب أطفال";
                     else if(product.category === "offers") catName = "عروض وتخفيضات";
 
-                    // تصميم السطر الخاص بالمنتج
                     const row = `
                         <tr>
                             <td>
@@ -289,20 +324,49 @@ const firebaseConfig = {
                     tableBody.innerHTML += row;
                 }
             } else {
-                // لو مفيش منتجات خالص
                 tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; font-weight:bold;'>مفيش منتجات لسه، ضيف أول منتج ليك!</td></tr>";
             }
         });
 
-        // دوال مؤقتة لزراير الإجراءات (هنبرمجها الخطوة الجاية)
-        window.deleteProduct = (id) => alert("هنبرمج الحذف الخطوة الجاية للمنتج: " + id);
-        window.toggleStatus = (id, status) => alert("هنبرمج الإخفاء الخطوة الجاية للمنتج: " + id);
-        window.editProduct = (id) => alert("هنبرمج التعديل الخطوة الجاية للمنتج: " + id);
         // --------------------------------------------------
-        // هنا هنبدأ نكتب الأكواد بتاعة زراير الإضافة والحذف 
+        // برمجة زراير الإجراءات (حذف، إخفاء، تعديل)
         // --------------------------------------------------
 
+        window.deleteProduct = (id) => {
+            if (confirm("متأكد إنك عايز تحذف المنتج ده نهائياً؟")) {
+                const productRef = ref(db, `products/${id}`);
+                remove(productRef)
+                    .then(() => alert("تم الحذف بنجاح!"))
+                    .catch((error) => alert("حصل خطأ أثناء الحذف: " + error));
+            }
+        };
+
+        window.toggleStatus = (id, currentStatus) => {
+            const productRef = ref(db, `products/${id}`);
+            update(productRef, { isActive: !currentStatus })
+                .then(() => console.log("تم تغيير حالة المنتج بنجاح."))
+                .catch((error) => alert("حصل خطأ أثناء تغيير الحالة: " + error));
+        };
+
+        window.editProduct = (id) => {
+            editingProductId = id; 
+            
+            get(child(ref(db), `products/${id}`)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const product = snapshot.val();
+                    
+                    document.getElementById("prodName").value = product.name;
+                    document.getElementById("prodPrice").value = product.price;
+                    document.getElementById("prodCategory").value = product.category;
+                    document.getElementById("prodImage").value = product.imageUrl === "https://via.placeholder.com/100" ? "" : product.imageUrl;
+                    
+                    document.getElementById("modalTitle").innerText = "تعديل المنتج";
+                    saveBtn.innerText = "حفظ التعديلات";
+                    
+                    modal.style.display = "flex";
+                }
+            });
+        };
     </script>
-    
 </body>
 </html>
