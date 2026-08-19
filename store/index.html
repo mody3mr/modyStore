@@ -6,6 +6,7 @@
     <title>متجر محمد عمرو | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -31,8 +32,10 @@
         <p>جودة لا تقارن، وتوصيل سريع لباب بيتك</p>
     </section>
 
+    <!-- شريط الأقسام -->
     <div class="categories-bar" id="catBar"></div>
 
+    <!-- شبكة المنتجات -->
     <div class="products-container" id="productsGrid">
         <div style="text-align: center; width: 100%; padding: 50px; font-weight: bold; color: #94a3b8; font-size: 18px;">
             <i class="fas fa-circle-notch fa-spin" style="margin-bottom: 15px; font-size: 30px; color: var(--secondary);"></i><br>
@@ -121,22 +124,35 @@
         </div>
     </div>
 
-    <!-- نافذة تتبع الطلب -->
-    <div class="checkout-modal" id="trackingModal">
+    <!-- نافذة تتبع الطلب بالفاتورة المصغرة -->
+    <div class="checkout-modal" id="trackingModal" style="max-height: 90vh; overflow-y: auto;">
         <h3>تتبع طلبك</h3>
-        <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم الطلب ورقم الموبايل لمعرفة حالة طلبك الحالية.</p>
-        <div class="input-wrapper"><input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم الطلب (مثال: ORD-1234)"><i class="fas fa-hashtag"></i></div>
-        <div class="input-wrapper"><input type="tel" id="trackPhone" class="checkout-input" placeholder="رقم الموبايل المكتوب في الطلب"><i class="fas fa-phone"></i></div>
+        <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم الطلب ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
         
-        <div id="trackingResult" style="display: none; margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--gray); text-align: center;">
-            <div style="font-weight: bold; color: var(--text-light); margin-bottom: 5px;">حالة الطلب:</div>
-            <div id="trackingStatusText" style="font-size: 20px; font-weight: 900; color: var(--secondary);"></div>
+        <div class="input-wrapper">
+            <input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم الطلب (مثال: 12345678)">
+            <i class="fas fa-hashtag"></i>
+        </div>
+        <div class="input-wrapper">
+            <input type="tel" id="trackPhone" class="checkout-input" placeholder="رقم الموبايل المكتوب في الطلب">
+            <i class="fas fa-phone"></i>
+        </div>
+        
+        <div id="trackingResult" style="display: none; margin: 20px 0; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--gray); text-align: right;">
+            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+                <div style="font-weight: bold; color: var(--text-light); margin-bottom: 5px;">حالة الطلب:</div>
+                <div id="trackingStatusText" style="font-size: 22px; font-weight: 900; color: var(--secondary);"></div>
+            </div>
+            
+            <!-- تفاصيل الأوردر (الفاتورة) هتظهر هنا -->
+            <div id="trackingOrderDetails" style="font-size: 14px; color: var(--text);"></div>
         </div>
 
         <button class="confirm-btn" onclick="trackOrder()">تتبع الآن <i class="fas fa-search"></i></button>
         <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'">إغلاق</div>
     </div>
 
+    <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
