@@ -20,7 +20,9 @@ let allActiveProducts = [];
 let cart = [];
 let appliedVoucher = null; 
 
+// ==========================================
 // 1. الأقسام
+// ==========================================
 onValue(ref(db, 'categories'), (snapshot) => {
     const catBar = document.getElementById("catBar");
     catBar.innerHTML = `
@@ -37,7 +39,9 @@ onValue(ref(db, 'categories'), (snapshot) => {
     }
 });
 
+// ==========================================
 // 2. المنتجات
+// ==========================================
 onValue(ref(db, 'products'), (snapshot) => {
     allActiveProducts = [];
     if (snapshot.exists()) {
@@ -105,7 +109,7 @@ window.filterBy = (catName, btn) => {
     renderProducts(catName);
 };
 
-// تفاصيل المنتج
+// تفاصيل المنتج (النافذة المنبثقة)
 window.openProductDetails = (id) => {
     const p = allActiveProducts.find(prod => prod.id === id);
     if(!p) return;
@@ -138,7 +142,9 @@ window.closeProductModal = () => {
     document.getElementById('productDetailsModal').style.display = 'none';
 };
 
+// ==========================================
 // 3. السلة
+// ==========================================
 window.toggleCart = () => {
     document.getElementById("cartSidebar").classList.toggle("open");
     document.getElementById("overlay").classList.toggle("show");
@@ -249,7 +255,9 @@ function calculateFinalTotal(subtotal) {
     document.getElementById("finalTotalPrice").innerText = Math.round(subtotal - discount) + " ج.م";
 }
 
-// 4. الإرسال للـ Firebase والتليجرام
+// ==========================================
+// 4. إتمام الطلب وإرساله لـ Firebase وتليجرام
+// ==========================================
 window.openCheckoutModal = () => {
     if(cart.length === 0) return alert("سلة المشتريات فارغة!");
     document.getElementById("checkoutModal").style.display = "block";
@@ -289,7 +297,8 @@ window.sendOrder = async () => {
         discountText = `\n🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
     }
 
-    const orderId = "ORD-" + Math.floor(1000 + Math.random() * 9000); 
+    // رقم الأوردر: 8 أرقام عشوائية
+    const orderId = Math.floor(10000000 + Math.random() * 90000000).toString(); 
 
     const telegramMessage = `
 🛍️ *طلب جديد #${orderId}*
@@ -297,7 +306,7 @@ window.sendOrder = async () => {
 👤 *الاسم:* ${name}
 📞 *التليفون:* ${phone}
 📍 *العنوان:* ${address}
-💳 *طريقة الدفع:* ${paymentMethod}
+💳 *الدفع:* ${paymentMethod}
 
 📦 *المنتجات:*
 ${orderItemsText}
@@ -346,7 +355,7 @@ ${orderItemsText}
 };
 
 // ==========================================
-// 5. ميزة تتبع الطلب للعميل
+// 5. ميزة تتبع الطلب مع التفاصيل (الفاتورة المصغرة)
 // ==========================================
 window.openTrackingModal = () => {
     document.getElementById('trackingModal').style.display = 'block';
@@ -360,6 +369,7 @@ window.trackOrder = () => {
     const phoneInput = document.getElementById('trackPhone').value.trim();
     const resultBox = document.getElementById('trackingResult');
     const statusText = document.getElementById('trackingStatusText');
+    const detailsBox = document.getElementById('trackingOrderDetails');
 
     if(!orderIdInput || !phoneInput) return alert("الرجاء إدخال رقم الطلب ورقم الموبايل");
 
@@ -383,9 +393,34 @@ window.trackOrder = () => {
             
             statusText.style.color = statusColor;
             statusText.innerText = foundOrder.status;
+
+            // بناء تفاصيل الطلب لتظهر للعميل (شكل فاتورة مصغرة)
+            let itemsHtml = '<ul style="list-style:none; margin: 15px 0; padding:0; border-top:1px solid #e2e8f0; padding-top:10px;">';
+            foundOrder.items.forEach(item => {
+                itemsHtml += `<li style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #e2e8f0; padding-bottom:8px;">
+                    <span style="font-weight:bold;">${item.qty}x ${item.name}</span>
+                    <span style="color:var(--secondary); font-weight:bold;">${item.price * item.qty} ج.م</span>
+                </li>`;
+            });
+            itemsHtml += '</ul>';
+
+            const orderDate = new Date(foundOrder.createdAt).toLocaleDateString('ar-EG');
+            let discountHtml = foundOrder.discount > 0 ? `<div style="color:var(--accent); display:flex; justify-content:space-between; margin-bottom:5px;"><span>الخصم:</span> <span>-${Math.round(foundOrder.discount)} ج.م</span></div>` : "";
+
+            detailsBox.innerHTML = `
+                <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>تاريخ الطلب:</strong> ${orderDate}</div>
+                <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'الدفع عند الاستلام'}</div>
+                ${itemsHtml}
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الإجمالي الفرعي:</span> <span>${foundOrder.subtotal} ج.م</span></div>
+                ${discountHtml}
+                <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:18px; font-weight:900; color:var(--primary); background:#e2e8f0; padding:10px; border-radius:8px;">
+                    <span>الإجمالي النهائي:</span> <span>${Math.round(foundOrder.total)} ج.م</span>
+                </div>
+            `;
         } else {
             statusText.style.color = "var(--accent)";
             statusText.innerText = "لم يتم العثور على طلب بهذه البيانات.";
+            detailsBox.innerHTML = "";
         }
     });
 };
