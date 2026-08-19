@@ -175,6 +175,32 @@
         </div>
 
     </main>
+<!-- مكتبات فايربيز (النسخة الحديثة) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+        import { getDatabase, ref, set, get, child, remove, update } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
+        // شيل البيانات اللي هنا وحط الـ firebaseConfig بتاعك اللي نسخته من الموقع
+const firebaseConfig = {
+  	apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
+ 	authDomain: "modytech-850c2.firebaseapp.com",
+  	projectId: "modytech-850c2",
+  	storageBucket: "modytech-850c2.firebasestorage.app",
+  	messagingSenderId: "909293461306",
+  	appId: "1:909293461306:web:48e5492107ad32ceec7a03"
+};
+
+        // تهيئة الاتصال
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        console.log("تم الاتصال بقاعدة البيانات بنجاح يا ريس!");
+
+        // --------------------------------------------------
+        // هنا هنبدأ نكتب الأكواد بتاعة زراير الإضافة والحذف 
+        // --------------------------------------------------
+
+    </script>
+    
 </body>
 </html>
