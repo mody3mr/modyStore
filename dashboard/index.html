@@ -13,29 +13,31 @@
 <body>
 
     <!-- ================= القائمة الجانبية ================= -->
-    <aside class="sidebar">
-        <div class="brand">متجري <i class="fas fa-shopping-bag"></i></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <i class="fas fa-shopping-bag"></i> <span class="nav-text">متجري</span>
+        </div>
         <ul class="nav-links">
             <li class="nav-item active" data-target="analytics-view">
-                <i class="fas fa-chart-pie"></i> الإحصائيات
+                <i class="fas fa-chart-pie"></i> <span class="nav-text">الإحصائيات</span>
             </li>
             <li class="nav-item" data-target="orders-view">
-                <i class="fas fa-shopping-cart"></i> الطلبات
+                <i class="fas fa-shopping-cart"></i> <span class="nav-text">الطلبات</span>
             </li>
             <li class="nav-item" data-target="products-view">
-                <i class="fas fa-box-open"></i> المنتجات
+                <i class="fas fa-box-open"></i> <span class="nav-text">المنتجات</span>
             </li>
             <li class="nav-item" data-target="categories-view">
-                <i class="fas fa-tags"></i> الأقسام
+                <i class="fas fa-tags"></i> <span class="nav-text">الأقسام</span>
             </li>
             <li class="nav-item" data-target="vouchers-view">
-                <i class="fas fa-ticket-alt"></i> الكوبونات
+                <i class="fas fa-ticket-alt"></i> <span class="nav-text">الكوبونات</span>
             </li>
             <li class="nav-item" data-target="employees-view">
-                <i class="fas fa-users"></i> الموظفين
+                <i class="fas fa-users"></i> <span class="nav-text">الموظفين</span>
             </li>
             <li class="nav-item" data-target="logs-view">
-                <i class="fas fa-history"></i> سجل النشاطات
+                <i class="fas fa-history"></i> <span class="nav-text">سجل النشاطات</span>
             </li>
         </ul>
     </aside>
@@ -43,7 +45,8 @@
     <!-- ================= المحتوى الرئيسي ================= -->
     <main class="main-content">
         <header class="topbar">
-            <div style="color: #64748b; font-weight: 600; cursor: pointer;">
+            <!-- زرار إخفاء وإظهار القائمة الجانبية -->
+            <div id="sidebarToggle" style="color: #64748b; font-weight: 600; cursor: pointer; font-size: 22px;">
                 <i class="fas fa-bars"></i>
             </div>
             <div class="user-profile">
@@ -60,7 +63,7 @@
                     <h2 class="page-title">نظرة عامة وإحصائيات</h2>
                 </div>
                 <div class="stat-cards">
-                    <!-- كارت إجمالي الطلبات (يوديك لتاب الطلبات) -->
+                    <!-- كارت إجمالي الطلبات -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fas fa-shopping-bag"></i></div>
                         <div class="stat-info">
@@ -68,8 +71,7 @@
                             <p id="statTotalOrders">0</p>
                         </div>
                     </div>
-                    
-                    <!-- كارت إجمالي المبيعات (يفتح تقرير المبيعات المفصل) -->
+                    <!-- كارت إجمالي المبيعات -->
                     <div class="stat-card clickable-card" onclick="openSalesReport()">
                         <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
@@ -77,8 +79,7 @@
                             <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
-                    
-                    <!-- كارت طلبات قيد المراجعة (تم التعديل وتوديك لتاب الطلبات) -->
+                    <!-- كارت طلبات قيد المراجعة -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab()">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
@@ -86,9 +87,8 @@
                             <p id="statPendingOrders">0</p>
                         </div>
                     </div>
-                    
                     <!-- كارت المنتجات النشطة -->
-                    <div class="stat-card" onclick="document.querySelector('[data-target=\'products-view\']').click()" style="cursor:pointer;">
+                    <div class="stat-card clickable-card" onclick="document.querySelector('[data-target=\'products-view\']').click()">
                         <div class="stat-icon" style="color: #8b5cf6; background: #f3e8ff;"><i class="fas fa-box-open"></i></div>
                         <div class="stat-info">
                             <h3>المنتجات النشطة</h3>
@@ -180,6 +180,7 @@
                             <tr>
                                 <th>كود الخصم</th>
                                 <th>النوع والقيمة</th>
+                                <th>الاستخدام</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
                             </tr>
@@ -215,6 +216,7 @@
             <div id="logs-view" class="view-section">
                 <div class="page-header">
                     <h2 class="page-title">سجل النشاطات</h2>
+                    <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogs()"><i class="fas fa-archive"></i> أرشفة سجلات الشهر الماضي</button>
                 </div>
                 <div class="card">
                     <table>
@@ -269,10 +271,10 @@
 
         <!-- نافذة تفاصيل الطلب -->
         <div class="modal-overlay" id="orderDetailsModal">
-            <div class="modal" style="width: 700px;">
+            <div class="modal print-invoice-area" style="width: 700px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
                 
-                <div class="grid-2">
+                <div class="grid-2 screen-only-flex">
                     <div>
                         <div style="margin-bottom: 15px;">
                             <strong>العميل:</strong> <span id="oName"></span><br>
@@ -291,16 +293,35 @@
                         </div>
                     </div>
 
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                        <strong style="color: var(--primary); margin-bottom: 15px; display: block;">مسار الطلب:</strong>
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);" class="screen-only">
+                        <strong style="color: var(--primary); margin-bottom: 15px; display: block;">مسار الطلب (التايم لاين):</strong>
                         <div class="order-timeline" id="oTimeline"></div>
                     </div>
                 </div>
 
-                <div class="modal-actions">
+                <div class="modal-actions screen-only">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
-                    <button class="btn-save" style="background-color: var(--success);" onclick="window.print()"><i class="fas fa-print"></i> طباعة الفاتورة</button>
+                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> بوليصة الشحن</button>
+                    <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')"><i class="fas fa-print"></i> طباعة الفاتورة</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- بوليصة الشحن المخفية (تظهر فقط عند الطباعة) -->
+        <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
+            <div style="border: 2px solid #000; padding: 20px; width: 100%; max-width: 500px; margin: 0 auto; text-align: right; font-family: 'Cairo', sans-serif;">
+                <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">بوليصة شحن - متجري</h1>
+                <h2 style="margin-top: 20px;">رقم الطلب: <span id="wbOrderId" dir="ltr"></span></h2>
+                <div style="margin-top: 20px; font-size: 18px; line-height: 1.8;">
+                    <strong>إلى السيد/ة:</strong> <span id="wbName"></span><br>
+                    <strong>رقم الهاتف:</strong> <span id="wbPhone" dir="ltr"></span><br>
+                    <strong>العنوان بالتفصيل:</strong> <span id="wbAddress"></span><br>
+                </div>
+                <div style="margin-top: 30px; padding: 15px; border: 2px dashed #000; text-align: center; font-size: 22px;">
+                    <strong>المبلغ المطلوب تحصيله:</strong><br>
+                    <span id="wbTotal" style="font-size: 30px; font-weight: 900;"></span>
+                </div>
+                <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #555;">الرجاء تسليم الشحنة للعميل المذكور أعلاه.</p>
             </div>
         </div>
 
@@ -370,16 +391,33 @@
                         <input type="number" id="voucherValue">
                     </div>
                 </div>
-                <div class="input-group">
-                    <label>النوع</label>
-                    <select id="voucherType">
-                        <option value="percentage">نسبة (%)</option>
-                        <option value="fixed">مبلغ ثابت</option>
-                    </select>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>النوع</label>
+                        <select id="voucherType">
+                            <option value="percentage">نسبة (%)</option>
+                            <option value="fixed">مبلغ ثابت</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>حد الاستخدام (عدد الأشخاص)</label>
+                        <input type="number" id="voucherLimit" value="1" min="1">
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveVoucher()">حفظ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- نافذة عرض مستخدمي الكوبون -->
+        <div class="modal-overlay" id="voucherUsersModal">
+            <div class="modal">
+                <h3 id="vuTitle">سجل استخدام الكوبون</h3>
+                <div id="vuList" style="max-height: 300px; overflow-y: auto; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('voucherUsersModal')">إغلاق</button>
                 </div>
             </div>
         </div>
