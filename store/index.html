@@ -15,7 +15,7 @@
             <a href="#" class="logo"><i class="fas fa-bolt"></i> مودي استور</a>
             
             <div style="display: flex; gap: 15px; align-items: center;">
-                <button class="track-btn" onclick="openTrackingModal()">
+                <button class="track-btn" onclick="openTrackingModal(); document.getElementById('overlay').classList.add('show');">
                     <i class="fas fa-map-marker-alt"></i> تتبع طلبك
                 </button>
                 <div class="cart-icon" onclick="toggleCart()">
@@ -135,19 +135,19 @@
         <div id="successScreen" class="success-msg">
             <i class="fas fa-check-circle success-icon"></i>
             <h3 style="color: var(--success); margin-bottom: 10px;">تم استلام طلبك بنجاح!</h3>
-            <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم طلبك هو: <strong id="successOrderId" style="color:var(--primary);"></strong></p>
-            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">احتفظ برقم الطلب لتتمكن من تتبعه لاحقاً.</p>
+            <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم التتبع السري لطلبك هو: <strong id="successOrderId" style="color:var(--primary);"></strong></p>
+            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">احتفظ بالرقم السري لتتمكن من تتبع أو تعديل طلبك لاحقاً.</p>
             <button class="confirm-btn" style="background: var(--primary);" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
         </div>
     </div>
 
     <!-- نافذة تتبع الطلب بالفاتورة المصغرة -->
     <div class="checkout-modal" id="trackingModal" style="max-height: 90vh; overflow-y: auto;">
-        <h3>تتبع طلبك</h3>
-        <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم الطلب ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
+        <h3>تتبع طلبك <i class="fas fa-search-location"></i></h3>
+        <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم التتبع السري ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
         
         <div class="input-wrapper">
-            <input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم الطلب (مثال: 12345678)">
+            <input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم التتبع (المكون من 8 أرقام)">
             <i class="fas fa-hashtag"></i>
         </div>
         <div class="input-wrapper">
@@ -168,6 +168,7 @@
         <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'; document.getElementById('overlay').classList.remove('show');">إغلاق</div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
