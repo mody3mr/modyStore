@@ -131,33 +131,29 @@ function formatDateOnly(ms) {
 // ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-        if (!item.dataset.target) return;
+        if (!item.dataset.target) {
+            return;
+        }
         
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(nav => {
+            nav.classList.remove('active');
+        });
+        
         item.classList.add('active');
         
-        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-        document.getElementById(item.dataset.target).classList.add('active');
+        document.querySelectorAll('.view-section').forEach(view => {
+            view.classList.remove('active');
+        });
         
-        // التعديل: قفل القائمة الجانبية دايماً بمجرد اختيار تاب
-        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById(item.dataset.target).classList.add('active');
     });
-});});
+});
 
 window.goToOrdersTab = (tab = 'active') => {
     document.querySelector('[data-target="orders-view"]').click();
     window.switchOrderTab(tab);
 };
-window.goToPendingOrders = () => {
-    document.querySelector('[data-target="orders-view"]').click();
-    setTimeout(() => {
-        if(document.getElementById('filterOrderStatus')) {
-            document.getElementById('filterOrderStatus').value = 'قيد المراجعة';
-        }
-        window.switchOrderTab('active');
-        if(window.renderOrdersTable) window.renderOrdersTable();
-    }, 50); 
-};
+
 // ==========================================
 // تقارير المبيعات (مع البحث بيوم محدد والمنتجات)
 // ==========================================
@@ -313,6 +309,8 @@ window.filterReportProducts = () => {
             </div>`;
     });
 };
+
+
 // ==========================================
 // الرسوم البيانية (Charts) - إضافة جديدة
 // ==========================================
@@ -464,37 +462,18 @@ window.renderOrdersTable = () => {
 
 window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
     const newStatus = selectElement.value;
-    
-    // التعديل: طلب سبب الإلغاء إجبارياً للجميع
-    if (newStatus === 'ملغي') {
-        let reason = prompt("اكتب سبب الإلغاء ليظهر للعميل:");
-        if (reason) {
-            update(ref(db, `orders/${orderId}`), { 
-                status: newStatus, 
-                cancelledAt: Date.now(), 
-                cancelReason: reason 
-            }).then(() => {
-                logAction("تحديث حالة طلب", `إلغاء طلب لسبب: ${reason}`);
-                window.showAlert("تم الإلغاء بنجاح", "success");
-            });
-        } else {
-            selectElement.value = oldStatus; // التراجع لو مكتبش سبب
-        }
-        return;
-    }
-
-    // السماح للأدمن بالتعديل بحرية، وتقييد المشرف
     if (window.currentUserRole === 'Supervisor') {
         window.showConfirm(`هل تريد إرسال طلب للمدير لتغيير حالة الطلب إلى "${newStatus}"؟`, () => {
             push(ref(db, 'order_requests'), { orderId, requestedStatus: newStatus, requestedBy: currentUser, timestamp: Date.now() });
             window.showAlert("تم إرسال الطلب للمدير بنجاح!", "success");
-            selectElement.value = oldStatus; 
+            selectElement.value = oldStatus; // نرجعها لحد ما المدير يوافق
         });
-        selectElement.value = oldStatus; 
+        selectElement.value = oldStatus; // نرجعها فورا لو ألغى
     } else {
-        window.updateOrderStatus(orderId, selectElement); 
+        updateOrderStatus(orderId, selectElement); // الدالة الأساسية بتاعتك
     }
 };
+
 window.updateOrderStatus = (orderId, selectElement) => {
     const newStatus = selectElement.value;
     const updates = { status: newStatus };
@@ -1026,40 +1005,27 @@ window.deleteVoucher = (id) => {
         remove(ref(db, `vouchers/${id}`));
     });
 };
+
 window.showVoucherUsers = (id) => {
     const v = allVouchers.find(x => x.id === id); 
-    if (!v) return;
+    if (!v) {
+        return;
+    }
     
     const list = document.getElementById("vuList"); 
     list.innerHTML = "";
     
-    // سحب الاستخدامات من الطلبات نفسها
-    let usages = [];
-    allOrders.forEach(o => {
-        if (o.status !== 'ملغي' && (o.coupon === v.code || o.discountCode === v.code || o.voucherCode === v.code)) {
-            usages.push(o);
-        }
-    });
-
-    if (usages.length === 0) {
-        list.innerHTML = "<div style='text-align:center; padding: 20px; color:#666;'>لم يستخدمه أحد بعد أو الطلبات ملغية.</div>"; 
+    if (!v.usedBy || Object.keys(v.usedBy).length === 0) {
+        list.innerHTML = "<div style='text-align:center; padding: 20px; color:#666;'>لم يستخدمه أحد بعد.</div>"; 
     } else {
-        usages.forEach(u => { 
+        Object.values(v.usedBy).forEach(u => { 
             list.innerHTML += `
-                <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content: space-between; align-items:center;">
-                    <div>
-                        <b>${u.customer.name}</b><br>
-                        <span style="color:var(--secondary); font-weight:bold;" dir="ltr">${u.customer.phone}</span><br>
-                        <small>رقم الطلب: #${u.displayId || u.orderId}</small>
-                    </div>
-                    <button class="btn-action btn-view" onclick="viewOrderDetails('${u.dbId}'); closeModal('voucherUsersModal');" style="width: auto; padding: 5px 15px; border-radius: 6px;">
-                        <i class="fas fa-file-invoice"></i> الفاتورة
-                    </button>
+                <div style="padding:15px; border-bottom:1px solid #eee;">
+                    <b>${u.name}</b><br>
+                    <span style="color:var(--secondary); font-weight:bold;" dir="ltr">${u.phone}</span>
                 </div>`; 
         });
     }
-    document.getElementById("voucherUsersModal").style.display = "flex";
-};    }
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };
@@ -1069,48 +1035,10 @@ window.filterVouchers = () => {
     const table = document.getElementById("vouchersTableBody"); 
     table.innerHTML = "";
     
-    let filtered = allVouchers.filter(v => v.code.toLowerCase().includes(term));
-    
-    filtered.forEach(v => {
-        // حساب الاستخدامات أوتوماتيك من الطلبات
-        let usedCount = 0;
-        allOrders.forEach(o => {
-            if (o.status !== 'ملغي' && (o.coupon === v.code || o.discountCode === v.code || o.voucherCode === v.code)) {
-                usedCount++;
-            }
-        });
-        
-        let limitText = v.usageLimit ? `${usedCount} / ${v.usageLimit}` : `${usedCount}`;
-        
-        // التوقيف التلقائي عند الوصول للحد الأقصى
-        if (v.usageLimit && usedCount >= v.usageLimit && v.isActive) {
-            update(ref(db, `vouchers/${v.id}`), { isActive: false }); 
-            v.isActive = false;
-        }
-
-        let typeText = v.type === 'percentage' ? '%' : 'ج.م';
-        let badgeClass = v.isActive ? 'badge-active' : 'badge-inactive';
-        let badgeText = v.isActive ? 'مفعل' : 'معطل';
-        let toggleIcon = v.isActive ? 'fa-ban' : 'fa-check';
-        let toggleBg = v.isActive ? '#64748b' : '#22c55e';
-
-        table.innerHTML += `
-            <tr>
-                <td><b>${v.code}</b></td>
-                <td>${v.value} ${typeText}</td>
-                <td dir="ltr" style="font-weight:bold;">${limitText}</td>
-                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-action btn-users" onclick="showVoucherUsers('${v.id}')"><i class="fas fa-users"></i></button>
-                        <button class="btn-action btn-edit" onclick="editVoucher('${v.id}')"><i class="fas fa-pen"></i></button>
-                        <button class="btn-action btn-hide" style="background-color: ${toggleBg}" onclick="toggleVoucher('${v.id}', ${v.isActive})"><i class="fas ${toggleIcon}"></i></button>
-                        <button class="btn-action btn-delete" onclick="deleteVoucher('${v.id}')"><i class="fas fa-trash"></i></button>
-                    </div>
-                </td>
-            </tr>`; 
+    let filtered = allVouchers.filter(v => {
+        return v.code.toLowerCase().includes(term);
     });
-};    
+    
     filtered.forEach(v => {
         let usedCount = 0;
         if (v.usedBy) {
