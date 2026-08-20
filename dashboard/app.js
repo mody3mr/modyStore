@@ -607,18 +607,18 @@ window.printDocument = (type) => {
         if (order.customer && order.customer.address) {
             addrParts = order.customer.address.split('-');
         }
-        document.getElementById("printCity").innerText = document.getElementById("wbCity") ? document.getElementById("wbCity").value : (addrParts[0] || "غير محدد");
-        document.getElementById("printRegion").innerText = document.getElementById("wbRegion") ? document.getElementById("wbRegion").value : (addrParts[1] || "");
-        document.getElementById("printAddress").innerText = order.customer.address;
+        document.getElementById("printCity").innerText = order.customer.city || addrParts[0] || "غير محدد";
+        document.getElementById("printRegion").innerText = order.customer.region || addrParts[1] || "";
+        document.getElementById("printAddress").innerText = order.customer.address || "-";
         
-        // البيانات الجديدة
-        if(document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = document.getElementById("wbBuilding").value || "-";
-        if(document.getElementById("printFloor")) document.getElementById("printFloor").innerText = document.getElementById("wbFloor").value || "-";
-        if(document.getElementById("printApartment")) document.getElementById("printApartment").innerText = document.getElementById("wbAppt").value || "-";
-        if(document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = document.getElementById("wbLandmark").value || "-";
+        // البيانات من المتجر مباشرة
+        if(document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = order.customer.building || "-";
+        if(document.getElementById("printFloor")) document.getElementById("printFloor").innerText = order.customer.floor || "-";
+        if(document.getElementById("printApartment")) document.getElementById("printApartment").innerText = order.customer.apartment || "-";
+        if(document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = order.customer.landmark || "-";
         
-        document.getElementById("printPhone1").innerText = order.customer.phone;
-        if(document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = document.getElementById("wbPhone2").value || "-";
+        document.getElementById("printPhone1").innerText = order.customer.phone || "-";
+        if(document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = order.customer.phone2 || "-";
         
         let descParts = [];
         order.items.forEach(i => {
