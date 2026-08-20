@@ -84,12 +84,15 @@ window.closeConfirm = () => {
     document.getElementById("customConfirm").style.display = "none";
 };
 
-document.getElementById("confirmBtn").addEventListener("click", () => {
-    if (confirmCallback) {
-        confirmCallback();
-    }
-    closeConfirm();
-});
+const confirmBtnEl = document.getElementById("confirmBtn");
+if (confirmBtnEl) {
+    confirmBtnEl.addEventListener("click", () => {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        closeConfirm();
+    });
+}
 
 // ==========================================
 // دوال مساعدة
