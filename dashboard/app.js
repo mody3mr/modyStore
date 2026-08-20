@@ -453,13 +453,17 @@ window.renderOrdersTable = () => {
                 <td>
                     <!-- التعديل الجديد: التسلسل الإجباري والصلاحيات -->
                     ${(() => {
-                        let availableStatuses = [];
-                        if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
-                        else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
-                        else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
-                        else availableStatuses = [order.status]; // مقفولة لو تم التسليم أو اتلغى
-                        
-                        // لو مشرف نطبق عليه صلاحيات إضافية (اختياري، حاليا مطبق التسلسل على الكل)
+                       let availableStatuses = [];
+if (window.currentUserRole === 'Admin') {
+    // الأدمن يقدر يختار أي حالة دايماً
+    availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
+} else {
+    // باقي المستخدمين يتطبق عليهم التسلسل الإجباري
+    if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
+    else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
+    else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
+    else availableStatuses = [order.status]; // مقفولة لو تم التسليم أو اتلغى
+}
                         
                         let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}')" ${availableStatuses.length === 1 ? 'disabled' : ''}>`;
                         ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
@@ -1147,9 +1151,7 @@ window.deleteVoucher = (id, code) => {
 
 window.showVoucherUsers = (id) => {
     const v = allVouchers.find(x => x.id === id); 
-    if (!v) {
-        return;
-    }
+    if (!v) return;
     
     const list = document.getElementById("vuList"); 
     list.innerHTML = "";
@@ -1158,13 +1160,21 @@ window.showVoucherUsers = (id) => {
         list.innerHTML = "<div style='text-align:center; padding: 20px; color:#666;'>لم يستخدمه أحد بعد.</div>"; 
     } else {
         Object.values(v.usedBy).forEach(u => { 
+            // التعديل: إضافة زر معاينة الفاتورة لو متوفر orderId (dbId بتاع الطلب)
+            let viewOrderBtn = u.orderId ? `<button onclick="closeModal('voucherUsersModal'); viewOrderDetails('${u.orderId}')" style="margin-top:8px; background:var(--secondary); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:12px;"><i class="fas fa-file-invoice"></i> معاينة الطلب</button>` : '';
+            
             list.innerHTML += `
                 <div style="padding:15px; border-bottom:1px solid #eee;">
                     <b>${u.name}</b><br>
-                    <span style="color:var(--secondary); font-weight:bold;" dir="ltr">${u.phone}</span>
+                    <span style="color:var(--secondary); font-weight:bold;" dir="ltr">${u.phone}</span><br>
+                    ${viewOrderBtn}
                 </div>`; 
         });
     }
+    
+    document.getElementById("voucherUsersModal").style.display = "flex";
+};    
+}
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };
