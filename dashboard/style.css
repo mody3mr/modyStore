@@ -416,4 +416,88 @@ tr:hover { background-color: #f8fafc; }
     body.print-mode-waybill .print-waybill-area,
     body.print-mode-waybill .print-waybill-area * { visibility: visible; }
     body.print-mode-waybill .print-waybill-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+    /* ==========================================
+   دعم الشاشات الصغيرة والموبايل (Responsiveness)
+========================================== */
+@media screen and (max-width: 768px) {
+    /* القائمة الجانبية */
+    .sidebar {
+        position: fixed;
+        right: -260px; /* إخفاء القائمة خارج الشاشة */
+        height: 100vh;
+        z-index: 1000;
+        transition: 0.3s ease;
+    }
+    
+    /* عند الضغط على زرار القائمة، نظهرها */
+    .sidebar.collapsed {
+        right: 0;
+        width: 260px;
+    }
+    
+    .sidebar.collapsed .nav-text {
+        display: inline-block; /* إظهار النصوص داخل القائمة */
+    }
+
+    /* المحتوى الرئيسي */
+    .main-content {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    /* الهيدر العلوي */
+    .topbar {
+        padding: 15px;
+    }
+
+    /* الكروت والإحصائيات */
+    .stat-cards {
+        grid-template-columns: 1fr; /* كارت واحد في كل صف */
+    }
+
+    .grid-2 {
+        grid-template-columns: 1fr; /* تحويل الشبكة لعمود واحد */
+    }
+
+    /* النوافذ المنبثقة (Modals) */
+    .modal {
+        width: 95%;
+        margin: 10px;
+        padding: 20px;
+    }
+
+    /* أزرار الطلبات (تابات) */
+    .order-tabs {
+        flex-direction: column;
+    }
+
+    .order-tab-btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    /* الجداول (للسماح بالسحب يميناً ويساراً) */
+    .card {
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 600px; /* منع انكماش الجدول وتداخله */
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .page-header div {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .page-header input, .page-header button {
+        width: 100%;
+    }
+}
 }
