@@ -13,6 +13,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const currentUser = "محمد عمرو";
+// نظام الصلاحيات المبدئي (لو فيه نظام Login هيتغير من هنا)
+window.currentUserRole = "Admin"; // خيارات: "Admin" أو "Supervisor"
 
 // ==========================================
 // القائمة الجانبية 
@@ -28,9 +30,23 @@ window.closeModal = (id) => {
     document.getElementById(id).style.display = 'none';
 };
 
-window.showAlert = (msg) => {
-    document.getElementById("alertMsg").innerText = msg;
-    document.getElementById("customAlert").style.display = "flex";
+window.showAlert = (msg, icon = 'success') => {
+    // --- التعديلات التفاعلية الجديدة ---
+    if(typeof Swal !== 'undefined') {
+        Swal.fire({
+            text: msg,
+            icon: icon,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+        });
+    } else {
+        // --- الكود القديم الخاص بك (احتياطي) ---
+        document.getElementById("alertMsg").innerText = msg;
+        document.getElementById("customAlert").style.display = "flex";
+    }
 };
 
 window.closeAlert = () => {
@@ -40,9 +56,28 @@ window.closeAlert = () => {
 let confirmCallback = null;
 
 window.showConfirm = (msg, callback) => {
-    document.getElementById("confirmMsg").innerText = msg;
-    confirmCallback = callback;
-    document.getElementById("customConfirm").style.display = "flex";
+    // --- التعديلات التفاعلية الجديدة ---
+    if(typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: msg,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'نعم، تأكيد',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                callback();
+            }
+        });
+    } else {
+        // --- الكود القديم الخاص بك (احتياطي) ---
+        document.getElementById("confirmMsg").innerText = msg;
+        confirmCallback = callback;
+        document.getElementById("customConfirm").style.display = "flex";
+    }
 };
 
 window.closeConfirm = () => {
@@ -272,6 +307,47 @@ window.filterReportProducts = () => {
     });
 };
 
+
+// ==========================================
+// الرسوم البيانية (Charts) - إضافة جديدة
+// ==========================================
+let salesChart = null;
+let ordersChart = null;
+
+function initCharts() {
+    const ctxSales = document.getElementById('salesChart');
+    const ctxOrders = document.getElementById('ordersChart');
+    
+    if(ctxSales && !salesChart) {
+        salesChart = new Chart(ctxSales, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'المبيعات (ج.م)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+    
+    if(ctxOrders && !ordersChart) {
+        ordersChart = new Chart(ctxOrders, {
+            type: 'doughnut',
+            data: { labels: ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه'], datasets: [{ data: [0,0,0,0], backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+}
+
+function updateChartsData() {
+    if (!salesChart || !ordersChart || typeof allOrders === 'undefined') return;
+    let counts = { pending: 0, processing: 0, shipped: 0, delivered: 0 };
+    allOrders.forEach(o => {
+        if(o.status === 'قيد المراجعة') counts.pending++;
+        if(o.status === 'جاري التجهيز') counts.processing++;
+        if(o.status === 'تم الشحن') counts.shipped++;
+        if(o.status === 'تم تسليمه') counts.delivered++;
+    });
+    ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
+    ordersChart.update();
+}
+
 // ==========================================
 // إدارة الطلبات (شاملة فلاتر البحث)
 // ==========================================
@@ -342,7 +418,7 @@ window.renderOrdersTable = () => {
         
         table.innerHTML += `
             <tr>
-                <td style="font-weight:900; color:var(--primary);">#${order.orderId}</td>
+                <td style="font-weight:900; color:var(--primary);">#${order.displayId || order.orderId}</td>
                 <td>
                     <b>${order.customer.name}</b><br>
                     <span class="meta-info">${order.paymentMethod || "الدفع عند الاستلام"}</span>
@@ -350,13 +426,26 @@ window.renderOrdersTable = () => {
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
                 <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total)} ج.م</td>
                 <td>
-                    <select class="status-select ${statusClass}" onchange="updateOrderStatus('${order.dbId}', this)">
-                        <option value="قيد المراجعة" ${order.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
-                        <option value="جاري التجهيز" ${order.status === 'جاري التجهيز' ? 'selected' : ''}>📦 جاري التجهيز</option>
-                        <option value="تم الشحن" ${order.status === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
-                        <option value="تم تسليمه" ${order.status === 'تم تسليمه' ? 'selected' : ''}>✅ تم تسليمه</option>
-                        <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
-                    </select>
+                    <!-- التعديل الجديد: تحديد الصلاحيات وعدم التراجع للخلف للمشرفين -->
+                    ${(() => {
+                        let availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
+                        if (window.currentUserRole === 'Supervisor') {
+                            if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
+                            else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
+                            else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه'];
+                            else availableStatuses = [order.status]; // مقفولة
+                        }
+                        
+                        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}')" ${availableStatuses.length === 1 ? 'disabled' : ''}>`;
+                        ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
+                            if (availableStatuses.includes(st) || st === order.status) {
+                                let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':'❌';
+                                sHtml += `<option value="${st}" ${order.status === st ? 'selected' : ''}>${icon} ${st}</option>`;
+                            }
+                        });
+                        sHtml += `</select>`;
+                        return sHtml;
+                    })()}
                 </td>
                 <td>
                     <button class="btn-action btn-view" onclick="viewOrderDetails('${order.dbId}')">
@@ -365,6 +454,21 @@ window.renderOrdersTable = () => {
                 </td>
             </tr>`;
     });
+};
+
+
+window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
+    const newStatus = selectElement.value;
+    if (window.currentUserRole === 'Supervisor') {
+        window.showConfirm(`هل تريد إرسال طلب للمدير لتغيير حالة الطلب إلى "${newStatus}"؟`, () => {
+            push(ref(db, 'order_requests'), { orderId, requestedStatus: newStatus, requestedBy: currentUser, timestamp: Date.now() });
+            window.showAlert("تم إرسال الطلب للمدير بنجاح!", "success");
+            selectElement.value = oldStatus; // نرجعها لحد ما المدير يوافق
+        });
+        selectElement.value = oldStatus; // نرجعها فورا لو ألغى
+    } else {
+        updateOrderStatus(orderId, selectElement); // الدالة الأساسية بتاعتك
+    }
 };
 
 window.updateOrderStatus = (orderId, selectElement) => {
@@ -387,6 +491,7 @@ window.updateOrderStatus = (orderId, selectElement) => {
 
     update(ref(db, `orders/${orderId}`), updates).then(() => {
         logAction("تحديث حالة طلب", `تغيير حالة الطلب لـ ${newStatus}`);
+        window.showAlert("تم تحديث الحالة بنجاح", "success");
     });
 };
 
@@ -474,7 +579,7 @@ window.printDocument = (type) => {
     if (type === 'waybill') {
         const order = currentPrintOrder;
         
-        JsBarcode("#topBarcode", order.orderId, { 
+        JsBarcode("#topBarcode", order.displayId || order.orderId, { 
             format: "CODE128", 
             width: 2, 
             height: 50, 
@@ -499,10 +604,18 @@ window.printDocument = (type) => {
         if (order.customer && order.customer.address) {
             addrParts = order.customer.address.split('-');
         }
-        document.getElementById("printCity").innerText = addrParts[0] || "غير محدد";
-        document.getElementById("printRegion").innerText = addrParts[1] || "";
+        document.getElementById("printCity").innerText = document.getElementById("wbCity") ? document.getElementById("wbCity").value : (addrParts[0] || "غير محدد");
+        document.getElementById("printRegion").innerText = document.getElementById("wbRegion") ? document.getElementById("wbRegion").value : (addrParts[1] || "");
         document.getElementById("printAddress").innerText = order.customer.address;
+        
+        // البيانات الجديدة
+        if(document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = document.getElementById("wbBuilding").value || "-";
+        if(document.getElementById("printFloor")) document.getElementById("printFloor").innerText = document.getElementById("wbFloor").value || "-";
+        if(document.getElementById("printApartment")) document.getElementById("printApartment").innerText = document.getElementById("wbAppt").value || "-";
+        if(document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = document.getElementById("wbLandmark").value || "-";
+        
         document.getElementById("printPhone1").innerText = order.customer.phone;
+        if(document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = document.getElementById("wbPhone2").value || "-";
         
         let descParts = [];
         order.items.forEach(i => {
@@ -567,12 +680,24 @@ onValue(ref(db, 'orders'), (snapshot) => {
                 pending++;
             }
         });
+        
+        // --- تعديل: إعطاء رقم أوردر تسلسلي 0001 ---
+        allOrders.sort((a, b) => a.createdAt - b.createdAt);
+        allOrders.forEach((order, index) => {
+            order.displayId = String(index + 1).padStart(4, '0');
+        });
+        
         allOrders.reverse();
     }
     
     document.getElementById('statTotalOrders').innerText = ordersCount;
     document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
     document.getElementById('statPendingOrders').innerText = pending;
+    
+    if(typeof initCharts !== 'undefined') {
+        initCharts();
+        updateChartsData();
+    }
     
     window.renderOrdersTable();
 });
@@ -623,11 +748,15 @@ window.saveProduct = () => {
     if (editingProductId) {
         update(ref(db, `products/${editingProductId}`), data).then(() => {
             window.closeModal('productModal');
+            window.showAlert("تم التعديل بنجاح!", "success");
+            logAction("تعديل منتج", data.name);
         });
     } else {
         data.isActive = true; 
         push(ref(db, 'products'), data).then(() => {
             window.closeModal('productModal');
+            window.showAlert("تمت الإضافة بنجاح!", "success");
+            logAction("إضافة منتج", data.name);
         });
     }
 };
@@ -692,7 +821,7 @@ onValue(ref(db, 'products'), (snapshot) => {
 
 window.deleteProduct = (id) => {
     window.showConfirm("هل تريد حذف هذا المنتج نهائياً؟", () => {
-        remove(ref(db, `products/${id}`));
+        remove(ref(db, `products/${id}`)).then(() => window.showAlert("تم الحذف", "success"));
     });
 };
 
@@ -739,10 +868,12 @@ window.saveCategory = () => {
     if (editingCatId) {
         update(ref(db, `categories/${editingCatId}`), { name }).then(() => {
             window.closeModal('categoryModal');
+            window.showAlert("تم التعديل", "success");
         });
     } else {
         push(ref(db, 'categories'), { name: name, isActive: true }).then(() => {
             window.closeModal('categoryModal');
+            window.showAlert("تم إضافة القسم", "success");
         });
     }
 };
@@ -839,12 +970,14 @@ window.saveVoucher = () => {
     if (editingVoucherId) {
         update(ref(db, `vouchers/${editingVoucherId}`), data).then(() => {
             window.closeModal('voucherModal');
+            window.showAlert("تم تعديل الكوبون بنجاح!", "success");
         });
     } else {
         data.usedBy = [];
         data.isActive = true;
         push(ref(db, 'vouchers'), data).then(() => {
             window.closeModal('voucherModal');
+            window.showAlert("تم إنشاء الكوبون بنجاح!", "success");
         });
     }
 };
@@ -972,10 +1105,23 @@ window.openEmployeeModal = () => {
 };
 
 window.saveEmployee = () => { 
+    
+    // --- تعديل: جمع الصلاحيات لو كان مشرف ---
+    let permissions = { tabs: [], canChangeStatus: false };
+    if (document.getElementById("empRole").value === 'Supervisor') {
+        document.querySelectorAll('.perm-tab:checked').forEach(cb => permissions.tabs.push(cb.value));
+        if (document.getElementById("permChangeOrderStatus")) {
+            permissions.canChangeStatus = document.getElementById("permChangeOrderStatus").checked;
+        }
+    } else {
+        permissions.canChangeStatus = true; // المدير يقدر يعمل كل حاجة
+    }
+
     const data = { 
         name: document.getElementById("empName").value, 
         phone: document.getElementById("empPhone").value, 
         role: document.getElementById("empRole").value, 
+        permissions: permissions, // حفظ الصلاحيات
         dob: document.getElementById("empDob").value, 
         nationalId: document.getElementById("empNationalId").value, 
         area: document.getElementById("empArea").value, 
@@ -989,12 +1135,14 @@ window.saveEmployee = () => {
     if (editingEmpId) {
         update(ref(db, `employees/${editingEmpId}`), data).then(() => {
             window.closeModal('employeeModal');
+            window.showAlert("تم التعديل بنجاح!", "success");
         }); 
     } else { 
         data.isActive = true; 
         data.createdAt = Date.now(); 
         push(ref(db, 'employees'), data).then(() => {
             window.closeModal('employeeModal');
+            window.showAlert("تم إضافة الموظف بنجاح!", "success");
         }); 
     }
 };
@@ -1008,8 +1156,26 @@ window.editEmployee = (id) => {
     document.getElementById("empDob").value = e.dob || ""; 
     document.getElementById("empNationalId").value = e.nationalId || ""; 
     document.getElementById("empArea").value = e.area || ""; 
-    document.getElementById("empRole").value = e.role || "Support"; 
+    document.getElementById("empRole").value = e.role || "Admin"; 
     document.getElementById("empNotes").value = e.notes || ""; 
+    
+    // --- استرجاع وعرض الصلاحيات لو مشرف ---
+    if (e.role === 'Supervisor' && e.permissions) {
+        document.querySelectorAll('.perm-tab').forEach(cb => {
+            cb.checked = e.permissions.tabs.includes(cb.value);
+        });
+        if (document.getElementById("permChangeOrderStatus")) {
+            document.getElementById("permChangeOrderStatus").checked = e.permissions.canChangeStatus || false;
+        }
+        if (document.getElementById('permissionsUI')) {
+            document.getElementById('permissionsUI').style.display = 'block';
+        }
+    } else {
+        if (document.getElementById('permissionsUI')) {
+            document.getElementById('permissionsUI').style.display = 'none';
+        }
+    }
+    
     document.getElementById('employeeModal').style.display = "flex";
 };
 
@@ -1070,27 +1236,92 @@ onValue(ref(db, 'employees'), (snapshot) => {
 // ==========================================
 // سجل النشاطات والأرشفة
 // ==========================================
-onValue(ref(db, 'logs'), (snapshot) => { 
+
+let allLogs = [];
+
+window.filterLogs = () => {
+    const term = document.getElementById("searchLogs") ? document.getElementById("searchLogs").value.toLowerCase() : "";
     const table = document.getElementById("logsTableBody"); 
-    table.innerHTML = ""; 
+    table.innerHTML = "";
     
+    allLogs.filter(log => {
+        return (log.action && log.action.toLowerCase().includes(term)) || 
+               (log.user && log.user.toLowerCase().includes(term));
+    }).forEach(log => {
+        table.innerHTML += `
+            <tr>
+                <td style="font-weight:bold; color:var(--primary);">${log.action}</td>
+                <td>${log.details}</td>
+                <td>${log.user}</td>
+                <td dir="ltr" style="font-size:12px;">${formatDateTime(log.timestamp)}</td>
+            </tr>`; 
+    });
+};
+
+onValue(ref(db, 'logs'), (snapshot) => { 
+    allLogs = [];
     if (snapshot.exists()) { 
-        const logs = []; 
         snapshot.forEach(child => {
-            logs.push({ id: child.key, ...child.val() });
+            allLogs.push({ id: child.key, ...child.val() });
         }); 
-        
-        logs.reverse().forEach(log => { 
-            table.innerHTML += `
-                <tr>
-                    <td style="font-weight:bold; color:var(--primary);">${log.action}</td>
-                    <td>${log.details}</td>
-                    <td>${log.user}</td>
-                    <td dir="ltr" style="font-size:12px;">${formatDateTime(log.timestamp)}</td>
-                </tr>`; 
-        }); 
-    } 
+        allLogs.reverse();
+    }
+    
+    // إظهار زر الحذف الكلي للمدير فقط
+    if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
+        document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
+    }
+    
+    window.filterLogs();
 });
+
+// --- الأرشفة بالشهر الجديد ---
+window.archiveLogsByMonth = () => {
+    const monthInput = document.getElementById("archiveMonthInput") ? document.getElementById("archiveMonthInput").value : null;
+    if (!monthInput) {
+        // لو مفيش الحقل بتاع الشهر، نرجع للطريقة القديمة كاحتياطي
+        return window.archiveLogs();
+    }
+    
+    window.showConfirm(`هل أنت متأكد من أرشفة سجلات شهر ${monthInput} وحذفها من السجل الحالي؟`, () => {
+        get(ref(db, 'logs')).then(snapshot => {
+            if (snapshot.exists()) {
+                let updates = {};
+                let count = 0;
+                
+                snapshot.forEach(child => { 
+                    const logDate = new Date(child.val().timestamp);
+                    const logMonth = `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, '0')}`;
+                    if (logMonth === monthInput) { 
+                        updates[`archived_logs/${child.key}`] = child.val(); 
+                        updates[`logs/${child.key}`] = null; 
+                        count++;
+                    } 
+                });
+                
+                if (count > 0) {
+                    update(ref(db), updates).then(() => {
+                        window.showAlert(`تمت أرشفة ${count} سجل بنجاح!`, "success");
+                    });
+                } else {
+                    window.showAlert("لا توجد سجلات في هذا الشهر لأرشفتها.");
+                }
+            }
+        });
+    });
+};
+
+window.deleteAllLogs = () => {
+    if (window.currentUserRole !== 'Admin') {
+        return window.showAlert("ليس لديك صلاحية لحذف جميع السجلات!");
+    }
+    window.showConfirm("تحذير: سيتم مسح جميع سجلات النشاطات نهائياً. هل أنت متأكد؟", () => {
+        remove(ref(db, 'logs')).then(() => {
+            window.showAlert("تم تنظيف السجل بالكامل!", "success");
+        });
+    });
+};
+
 
 window.archiveLogs = () => {
     window.showConfirm("هل أنت متأكد من أرشفة سجلات الشهر الماضي وحذفها من السجل الحالي؟", () => {
