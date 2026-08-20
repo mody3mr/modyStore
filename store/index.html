@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>متجر محمد عمرو | الرئيسية</title>
+    <title>مودي استور | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
         <div class="nav-container">
-            <a href="#" class="logo"><i class="fas fa-shopping-bag"></i> متجري</a>
+            <a href="#" class="logo"><i class="fas fa-bolt"></i> مودي استور</a>
             
             <div style="display: flex; gap: 15px; align-items: center;">
                 <button class="track-btn" onclick="openTrackingModal()">
@@ -91,7 +92,7 @@
         </div>
     </div>
 
-    <!-- نافذة إتمام الطلب (بعد التعديلات المطلوبة) -->
+    <!-- نافذة إتمام الطلب -->
     <div class="checkout-modal" id="checkoutModal">
         <div id="checkoutForm">
             <h3>إتمام الطلب</h3>
@@ -99,20 +100,20 @@
             
             <div class="input-wrapper"><input type="text" id="custName" class="checkout-input" placeholder="الاسم بالكامل"><i class="fas fa-user"></i></div>
             
-            <div style="display: flex; gap: 10px;">
-                <div class="input-wrapper" style="flex: 1;"><input type="tel" id="custPhone" class="checkout-input" placeholder="رقم الموبايل"><i class="fas fa-phone"></i></div>
-                <div class="input-wrapper" style="flex: 1;"><input type="tel" id="custPhone2" class="checkout-input" placeholder="رقم بديل (اختياري)"><i class="fas fa-phone-alt"></i></div>
+            <div class="checkout-row">
+                <div class="input-wrapper"><input type="tel" id="custPhone" class="checkout-input" placeholder="رقم الموبايل"><i class="fas fa-phone"></i></div>
+                <div class="input-wrapper"><input type="tel" id="custPhone2" class="checkout-input" placeholder="رقم بديل (اختياري)"><i class="fas fa-phone-alt"></i></div>
             </div>
             
-            <div style="display: flex; gap: 10px;">
-                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custCity" class="checkout-input" placeholder="المحافظة / المدينة"><i class="fas fa-city"></i></div>
-                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custRegion" class="checkout-input" placeholder="المنطقة"><i class="fas fa-map"></i></div>
+            <div class="checkout-row">
+                <div class="input-wrapper"><input type="text" id="custCity" class="checkout-input" placeholder="المحافظة / المدينة"><i class="fas fa-city"></i></div>
+                <div class="input-wrapper"><input type="text" id="custRegion" class="checkout-input" placeholder="المنطقة"><i class="fas fa-map"></i></div>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى" style="padding-right: 15px;"></div>
-                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور" style="padding-right: 15px;"></div>
-                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة" style="padding-right: 15px;"></div>
+            <div class="checkout-row">
+                <div class="input-wrapper"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى" style="padding-right: 15px;"></div>
+                <div class="input-wrapper"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور" style="padding-right: 15px;"></div>
+                <div class="input-wrapper"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة" style="padding-right: 15px;"></div>
             </div>
 
             <div class="input-wrapper"><input type="text" id="custLandmark" class="checkout-input" placeholder="علامة مميزة (اختياري)"><i class="fas fa-map-pin"></i></div>
@@ -169,6 +170,7 @@
         <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'">إغلاق</div>
     </div>
 
+    <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
