@@ -19,6 +19,9 @@
     <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- مكتبة تصدير الاكسيل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -57,6 +60,11 @@
                 <i class="fas fa-history"></i> 
                 <span class="nav-text">سجل النشاطات</span>
             </li>
+            <!-- التاب الجديد الخاص بالإعدادات -->
+            <li class="nav-item" data-target="settings-view">
+                <i class="fas fa-cog"></i> 
+                <span class="nav-text">الإعدادات</span>
+            </li>
         </ul>
     </aside>
 
@@ -80,7 +88,6 @@
                     <h2 class="page-title">نظرة عامة وإحصائيات</h2>
                 </div>
                 <div class="stat-cards">
-                    <!-- تم تعديل الزر ليوجه إلى أرشيف الطلبات عند الضغط -->
                     <div class="stat-card clickable-card" onclick="goToOrdersTab('archived')">
                         <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;">
                             <i class="fas fa-shopping-bag"></i>
@@ -99,7 +106,7 @@
                             <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
-                    <div class="stat-card clickable-card" onclick="goToOrdersTab('pending')">
+                    <div class="stat-card clickable-card" onclick="goToPendingOrders()">
                         <div class="stat-icon" style="color: #f59e0b; background: #fef3c7;">
                             <i class="fas fa-clock"></i>
                         </div>
@@ -119,7 +126,6 @@
                     </div>
                 </div>
 
-                <!-- إضافة الرسوم البيانية -->
                 <div class="charts-container grid-2" style="margin-top: 30px;">
                     <div class="card" style="padding: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات (آخر 7 أيام)</h3>
@@ -137,20 +143,27 @@
                 <div class="page-header">
                     <h2 class="page-title">إدارة الطلبات</h2>
                 </div>
-                <div class="order-tabs">
-                    <button class="order-tab-btn active" id="tabActiveOrders" onclick="switchOrderTab('active')">الطلبات الحالية</button>
-                    <button class="order-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived')">أرشيف الطلبات</button>
+                
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" id="tabActiveOrders" onclick="switchOrderTab('active', this)">الطلبات الحالية</button>
+                    <button class="custom-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived', this)">أرشيف الطلبات</button>
                 </div>
                 
-                <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; border: 1px solid var(--border);">
-                    <input type="text" id="searchOrders" class="search-input" placeholder="بحث برقم الفاتورة، اسم العميل، التليفون..." onkeyup="renderOrdersTable()" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                    
-                    <input type="date" id="filterOrderDate" onchange="renderOrdersTable()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                    
-                    <select id="filterOrderPayment" onchange="renderOrdersTable()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                <div class="filter-bar">
+                    <input type="text" id="searchOrders" placeholder="بحث برقم الفاتورة، اسم العميل، التليفون..." onkeyup="renderOrdersTable()">
+                    <input type="date" id="filterOrderDate" onchange="renderOrdersTable()">
+                    <select id="filterOrderStatus" onchange="renderOrdersTable()">
+                        <option value="">كل الحالات</option>
+                        <option value="قيد المراجعة">قيد المراجعة</option>
+                        <option value="جاري التجهيز">جاري التجهيز</option>
+                        <option value="تم الشحن">تم الشحن</option>
+                        <option value="تم تسليمه">تم تسليمه</option>
+                        <option value="ملغي">ملغي</option>
+                    </select>
+                    <select id="filterOrderPayment" onchange="renderOrdersTable()">
                         <option value="">كل طرق الدفع</option>
-                        <option value="الدفع عند الاستلام (COD)">كاش (COD)</option>
-                        <option value="محفظة">محافظ إلكترونية</option>
+                        <option value="كاش">كاش</option>
+                        <option value="محفظة إلكترونية">محافظ إلكترونية</option>
                         <option value="إنستا">إنستا باي</option>
                         <option value="فيزا">فيزا</option>
                     </select>
@@ -169,9 +182,7 @@
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody">
-                            <tr>
-                                <td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td>
-                            </tr>
+                            <tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -181,19 +192,35 @@
             <div id="products-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="searchProducts" placeholder="بحث باسم المنتج..." onkeyup="filterProducts()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add" onclick="openProductModal()">
-                            <i class="fas fa-plus"></i> إضافة منتج
-                        </button>
-                    </div>
+                    <button class="btn-add" onclick="openProductModal()">
+                        <i class="fas fa-plus"></i> إضافة منتج
+                    </button>
                 </div>
+
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" onclick="switchProductTab('active', this)">المنتجات النشطة</button>
+                    <button class="custom-tab-btn" onclick="switchProductTab('inactive', this)">المنتجات الغير نشطة</button>
+                    <button class="custom-tab-btn" onclick="switchProductTab('lowstock', this)" style="color: var(--danger);">المنتجات الناقصة</button>
+                </div>
+
+                <div class="filter-bar">
+                    <input type="text" id="searchProducts" placeholder="بحث باسم المنتج..." onkeyup="filterProducts()">
+                    <select id="filterProductCat" onchange="filterProducts()">
+                        <option value="">كل الأقسام</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:5px; font-weight:bold; white-space: nowrap;">
+                        <input type="checkbox" id="filterProductOffers" onchange="filterProducts()" style="width: 20px; height: 20px; min-width: auto;"> 
+                        المنتجات المخفضة فقط
+                    </label>
+                </div>
+
                 <div class="card" style="overflow-x: auto;">
                     <table>
                         <thead>
                             <tr>
                                 <th>المنتج</th>
                                 <th>السعر / العرض</th>
+                                <th>المخزون</th>
                                 <th>القسم</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
@@ -209,7 +236,7 @@
                 <div class="page-header">
                     <h2 class="page-title">إدارة الأقسام</h2>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="searchCategories" placeholder="بحث باسم القسم..." onkeyup="filterCategories()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <input type="text" id="searchCategories" placeholder="بحث باسم القسم..." onkeyup="filterCategories()" class="filter-bar" style="margin: 0; padding: 10px; border-radius: 8px; outline: none; border: 1px solid var(--border);">
                         <button class="btn-add btn-cat" onclick="openCategoryModal()">
                             <i class="fas fa-plus"></i> إضافة قسم
                         </button>
@@ -233,13 +260,20 @@
             <div id="vouchers-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الكوبونات</h2>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="searchVouchers" placeholder="بحث بكود الخصم..." onkeyup="filterVouchers()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add btn-voucher" onclick="openVoucherModal()">
-                            <i class="fas fa-ticket-alt"></i> إنشاء كود
-                        </button>
-                    </div>
+                    <button class="btn-add btn-voucher" onclick="openVoucherModal()">
+                        <i class="fas fa-ticket-alt"></i> إنشاء كود
+                    </button>
                 </div>
+
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" onclick="switchVoucherTab('active', this)">الكوبونات الحالية</button>
+                    <button class="custom-tab-btn" onclick="switchVoucherTab('used', this)">الكوبونات المنتهية / المستخدمة</button>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom: 20px;">
+                    <input type="text" id="searchVouchers" placeholder="بحث بكود الخصم..." onkeyup="filterVouchers()" style="width: 100%;">
+                </div>
+
                 <div class="card" style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -261,7 +295,7 @@
                 <div class="page-header">
                     <h2 class="page-title">إدارة الموظفين</h2>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="searchEmployees" placeholder="بحث باسم الموظف، الهاتف..." onkeyup="filterEmployees()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
+                        <input type="text" id="searchEmployees" placeholder="بحث باسم الموظف، الهاتف..." onkeyup="filterEmployees()" class="filter-bar" style="margin: 0; padding: 10px; border-radius: 8px; outline: none; border: 1px solid var(--border);">
                         <button class="btn-add btn-emp" onclick="openEmployeeModal()">
                             <i class="fas fa-user-plus"></i> إضافة موظف
                         </button>
@@ -283,21 +317,34 @@
                 </div>
             </div>
 
-            <!-- 7. سجل النشاطات (مع تحديثات البحث والأرشفة الدقيقة) -->
+            <!-- 7. سجل النشاطات -->
             <div id="logs-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">سجل النشاطات</h2>
                     <div style="display:flex; gap:10px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="searchLogs" placeholder="بحث بالحدث أو المستخدم..." onkeyup="filterLogs()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <input type="month" id="archiveMonthInput" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Cairo'; outline: none;">
-                        <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogsByMonth()">
-                            <i class="fas fa-archive"></i> أرشفة بالشهر
+                        <button class="btn-add" style="background-color: #10b981;" onclick="exportLogsToExcel()">
+                            <i class="fas fa-file-excel"></i> تصدير إلى Excel
                         </button>
-                        <button class="btn-add" id="btnDeleteAllLogs" style="background-color: #ef4444; display: none;" onclick="deleteAllLogs()">
-                            <i class="fas fa-trash-alt"></i> حذف الكل
+                        <button class="btn-add" style="background-color: var(--text-dark);" onclick="archiveLogsAll()">
+                            <i class="fas fa-archive"></i> أرشفة السجل الحالي
                         </button>
                     </div>
                 </div>
+
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" onclick="switchLogTab('current', this)">السجل الحالي</button>
+                    <button class="custom-tab-btn" onclick="switchLogTab('archived', this)">الأرشيف</button>
+                </div>
+
+                <div class="filter-bar">
+                    <input type="text" id="searchLogs" placeholder="بحث بالحدث أو التفاصيل..." onkeyup="filterLogs()">
+                    <select id="filterLogUser" onchange="filterLogs()">
+                        <option value="">كل الموظفين</option>
+                    </select>
+                    <input type="date" id="filterLogDateFrom" title="من تاريخ" onchange="filterLogs()">
+                    <input type="date" id="filterLogDateTo" title="إلى تاريخ" onchange="filterLogs()">
+                </div>
+
                 <div class="card" style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -313,11 +360,55 @@
                 </div>
             </div>
 
+            <!-- 8. شاشة الإعدادات الجديدة -->
+            <div id="settings-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header">
+                    <h2 class="page-title">إعدادات المتجر</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-store"></i> الإعدادات الأساسية</h3>
+                        <div class="input-group">
+                            <label>اسم المتجر</label>
+                            <input type="text" id="setStoreName" placeholder="ModyStore">
+                        </div>
+                        <div class="input-group">
+                            <label>شريط الأخبار (يظهر أعلى الموقع للعملاء)</label>
+                            <input type="text" id="setNewsTicker" placeholder="مثال: خصم 20% لفترة محدودة...">
+                        </div>
+                        <div class="input-group" style="display:flex; align-items:center; gap:10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                            <label style="margin:0; font-weight: 800; color: var(--primary);">حالة المتجر (مفتوح لاستقبال الطلبات؟)</label>
+                            <input type="checkbox" id="setStoreStatus" style="width:20px; height:20px;">
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="padding: 20px;">
+                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-address-card"></i> بيانات التواصل (الفوتر)</h3>
+                        <div class="input-group"><label>رقم التليفون الأساسي</label><input type="text" id="setPhone" dir="ltr"></div>
+                        <div class="input-group"><label>البريد الإلكتروني</label><input type="email" id="setEmail" dir="ltr"></div>
+                        <div class="input-group"><label>العنوان</label><input type="text" id="setAddress"></div>
+                        <div class="input-group"><label>حقوق الملكية (Copyright)</label><input type="text" id="setCopyright" placeholder="© 2026 ModyStore"></div>
+                    </div>
+                    
+                    <div class="card" style="padding: 20px; grid-column: span 2;">
+                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-share-alt"></i> روابط السوشيال ميديا</h3>
+                        <div class="grid-2">
+                            <div class="input-group"><label><i class="fab fa-facebook" style="color: #1877F2;"></i> فيسبوك</label><input type="text" id="setFb" dir="ltr" placeholder="رابط الصفحة..."></div>
+                            <div class="input-group"><label><i class="fab fa-instagram" style="color: #E4405F;"></i> انستجرام</label><input type="text" id="setInsta" dir="ltr" placeholder="رابط الحساب..."></div>
+                            <div class="input-group"><label><i class="fab fa-telegram" style="color: #0088cc;"></i> تليجرام</label><input type="text" id="setTelegram" dir="ltr" placeholder="رابط القناة / الحساب..."></div>
+                            <div class="input-group"><label><i class="fab fa-whatsapp" style="color: #25D366;"></i> واتساب</label><input type="text" id="setWhatsapp" dir="ltr" placeholder="رقم الواتساب بالصيغة الدولية..."></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-save" style="margin-top:20px; width:100%; font-size: 18px; padding: 15px;" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> حفظ وتحديث الإعدادات
+                </button>
+            </div>
+
         </div>
 
         <!-- ================= تقرير المبيعات المفصل ================= -->
         <div class="modal-overlay" id="salesReportModal">
-            <!-- (نفس محتوى النافذة السابقة) -->
             <div class="modal animate__animated animate__zoomIn" style="width: 800px; max-width: 95%;">
                 <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fas fa-chart-line" style="color: var(--success);"></i> تقرير المبيعات المفصل</span>
@@ -365,7 +456,9 @@
                             <strong>العميل:</strong> <span id="oName"></span><br>
                             <strong>التليفون:</strong> <span id="oPhone" dir="ltr"></span><br>
                             <strong>العنوان:</strong> <span id="oAddress"></span><br>
-                            <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span>
+                            <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span><br>
+                            <!-- الرقم السري -->
+                            <strong>الرقم السري للعميل:</strong> <span id="oSecretCode" style="color: var(--danger); font-weight: bold; font-size: 18px; letter-spacing: 2px;"></span>
                         </div>
                         
                         <strong>المنتجات:</strong>
@@ -379,6 +472,12 @@
                     </div>
 
                     <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);" class="screen-only">
+                        <!-- مساحة سبب الإلغاء -->
+                        <div id="oCancelReasonBox" style="display: none; background: #fee2e2; border: 1px solid #f87171; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong style="color: #b91c1c;"><i class="fas fa-exclamation-circle"></i> سبب الإلغاء:</strong>
+                            <p id="oCancelReasonText" style="color: #991b1b; margin-top: 5px; font-weight: bold;"></p>
+                        </div>
+                        
                         <strong style="color: var(--primary); margin-bottom: 10px; display: block;">خيارات بوليصة الشحن:</strong>
                         
                         <div class="input-group">
@@ -410,11 +509,9 @@
             </div>
         </div>
 
-        <!-- ================= تصميم بوليصة الشحن للطباعة (محدث بالكامل) ================= -->
+        <!-- ================= تصميم بوليصة الشحن للطباعة ================= -->
         <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
             <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 2px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 10px;">
-                
-                <!-- الهيدر: اللوجو والباركود متمركز تحت اللوجو -->
                 <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
                     <div style="font-size: 24px; font-weight: 900; margin-bottom: 5px;">ModyStore <i class="fas fa-bolt"></i></div>
                     <svg id="topBarcode" style="height: 50px !important; width: 80%; max-width: 250px; margin: 0 auto;"></svg>
@@ -428,7 +525,6 @@
                     <div style="flex: 1; padding-right: 5px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
                 </div>
 
-                <!-- بيانات العميل والتفاصيل الجديدة -->
                 <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 14px;">
                     <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:16px;"></span><br>
                     <strong>المدينة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
@@ -451,7 +547,6 @@
                     <strong>ملاحظات:</strong> <span id="printNotes"></span>
                 </div>
 
-                <!-- مربع التحصيل (تم تصغيره وتوسيعه بناء على الطلب) -->
                 <div id="codAmountContainer" style="text-align: center; border: 2px solid black; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
                     <strong style="font-size:14px;">المبلغ المطلوب تحصيله (COD)</strong><br>
                     <span id="printCodAmount" style="font-size:24px; font-weight:900;"></span>
@@ -486,6 +581,16 @@
                     <div class="input-group">
                         <label style="color: var(--accent);">سعر العرض (اختياري)</label>
                         <input type="number" id="prodDiscountPrice">
+                    </div>
+                    <!-- حقل المخزون الجديد -->
+                    <div class="input-group">
+                        <label>المخزون (الكمية المتاحة)</label>
+                        <input type="number" id="prodStock" value="10">
+                    </div>
+                    <!-- حقل أيام انتهاء العرض -->
+                    <div class="input-group">
+                        <label>أيام انتهاء العرض (اختياري)</label>
+                        <input type="number" id="prodOfferDays" placeholder="مثال: 7">
                     </div>
                 </div>
                 <div class="input-group">
@@ -522,7 +627,7 @@
             </div>
         </div>
         
-        <!-- إنشاء/تعديل كوبون (مع التعديلات الجديدة) -->
+        <!-- إنشاء/تعديل كوبون -->
         <div class="modal-overlay" id="voucherModal">
             <div class="modal animate__animated animate__zoomIn">
                 <h3 id="voucherModalTitle">إنشاء كود</h3>
@@ -568,63 +673,63 @@
             </div>
         </div>
 
-        <!-- إضافة/تعديل موظف (مع نظام الصلاحيات الجديد) -->
+        <!-- إضافة/تعديل موظف (مع نظام الصلاحيات والباسورد) -->
         <div class="modal-overlay" id="employeeModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 600px;">
                 <h3 id="empModalTitle">إضافة موظف / مشرف</h3>
-                <div class="input-group">
-                    <label>الاسم</label>
-                    <input type="text" id="empName">
-                </div>
                 <div class="grid-2">
+                    <div class="input-group">
+                        <label>الاسم</label>
+                        <input type="text" id="empName">
+                    </div>
                     <div class="input-group">
                         <label>تليفون</label>
                         <input type="tel" id="empPhone">
                     </div>
-                    <div class="input-group">
-                        <label>الرقم القومي</label>
-                        <input type="text" id="empNationalId" maxlength="14">
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>تاريخ الميلاد</label>
-                        <input type="date" id="empDob">
-                    </div>
-                    <div class="input-group">
-                        <label>المنطقة</label>
-                        <input type="text" id="empArea">
-                    </div>
                 </div>
                 
+                <!-- بيانات تسجيل الدخول الجديدة -->
+                <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe;">
+                    <strong style="color:var(--secondary); display:block; margin-bottom:10px;"><i class="fas fa-lock"></i> بيانات تسجيل الدخول للوحة:</strong>
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>البريد الإلكتروني</label>
+                            <input type="email" id="empEmail" dir="ltr" placeholder="example@modystore.com">
+                        </div>
+                        <div class="input-group">
+                            <label>كلمة المرور</label>
+                            <input type="text" id="empPass" dir="ltr" placeholder="رقم سري قوي...">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <label>الدور الوظيفي (الصلاحية)</label>
                     <select id="empRole" onchange="toggleEmployeePermissionsUI()">
-                        <option value="Admin">مدير (Admin)</option>
-                        <option value="Supervisor">مشرف (Supervisor)</option>
+                        <option value="Admin">مدير (Admin) - صلاحيات كاملة</option>
+                        <option value="Supervisor">مشرف (Supervisor) - تحديد الصلاحيات</option>
                     </select>
                 </div>
 
                 <!-- واجهة تحديد الصلاحيات للمشرف -->
                 <div id="permissionsUI" style="display:none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">التبويبات المسموح برؤيتها:</label>
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">ما يمكنه رؤيته:</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <label><input type="checkbox" class="perm-tab" value="analytics-view"> الإحصائيات</label>
                         <label><input type="checkbox" class="perm-tab" value="orders-view"> الطلبات</label>
                         <label><input type="checkbox" class="perm-tab" value="products-view"> المنتجات</label>
                         <label><input type="checkbox" class="perm-tab" value="categories-view"> الأقسام</label>
                         <label><input type="checkbox" class="perm-tab" value="vouchers-view"> الكوبونات</label>
-                        <label><input type="checkbox" class="perm-tab" value="logs-view"> سجل النشاطات</label>
                     </div>
                     <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">صلاحيات إضافية:</label>
-                    <label><input type="checkbox" id="permChangeOrderStatus"> السماح بتغيير حالة الطلبات</label>
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">ما يمكنه فعله:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label><input type="checkbox" id="permAdd"> إضافة (إنشاء)</label>
+                        <label><input type="checkbox" id="permEdit"> تعديل</label>
+                        <label><input type="checkbox" id="permDelete"> حذف</label>
+                        <label><input type="checkbox" id="permStatus"> تغيير حالات الطلبات</label>
+                    </div>
                 </div>
 
-                <div class="input-group">
-                    <label>ملاحظات</label>
-                    <textarea id="empNotes" rows="2"></textarea>
-                </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveEmployee()">حفظ</button>
@@ -633,15 +738,7 @@
         </div>
 
     </main>
-
-    <!-- سكربت بسيط لتبديل واجهة الصلاحيات -->
-    <script>
-        function toggleEmployeePermissionsUI() {
-            const role = document.getElementById('empRole').value;
-            document.getElementById('permissionsUI').style.display = (role === 'Supervisor') ? 'block' : 'none';
-        }
-    </script>
-
+    
     <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
