@@ -131,44 +131,33 @@ function formatDateOnly(ms) {
 // ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-        if (!item.dataset.target) {
-            return;
-        }
+        if (!item.dataset.target) return;
         
-        document.querySelectorAll('.nav-item').forEach(nav => {
-            nav.classList.remove('active');
-        });
-        
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
-        document.querySelectorAll('.view-section').forEach(view => {
-            view.classList.remove('active');
-        });
-        
+        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
         document.getElementById(item.dataset.target).classList.add('active');
-
-        // التعديل: إغلاق القائمة الجانبية تلقائياً عند اختيار أي تاب
+        
+        // التعديل: قفل القائمة الجانبية دايماً بمجرد اختيار تاب
         document.getElementById('sidebar').classList.add('collapsed');
     });
-});
+});});
 
 window.goToOrdersTab = (tab = 'active') => {
     document.querySelector('[data-target="orders-view"]').click();
     window.switchOrderTab(tab);
 };
-
-// التعديل: دالة التوجيه لكارت قيد المراجعة مع تأخير زمني عشان الفلتر يشتغل صح
 window.goToPendingOrders = () => {
     document.querySelector('[data-target="orders-view"]').click();
     setTimeout(() => {
         if(document.getElementById('filterOrderStatus')) {
             document.getElementById('filterOrderStatus').value = 'قيد المراجعة';
         }
-        if(window.switchOrderTab) window.switchOrderTab('active');
+        window.switchOrderTab('active');
         if(window.renderOrdersTable) window.renderOrdersTable();
     }, 50); 
 };
-
 // ==========================================
 // تقارير المبيعات (مع البحث بيوم محدد والمنتجات)
 // ==========================================
@@ -324,6 +313,45 @@ window.filterReportProducts = () => {
             </div>`;
     });
 };
+// ==========================================
+// الرسوم البيانية (Charts) - إضافة جديدة
+// ==========================================
+let salesChart = null;
+let ordersChart = null;
+
+function initCharts() {
+    const ctxSales = document.getElementById('salesChart');
+    const ctxOrders = document.getElementById('ordersChart');
+    
+    if(ctxSales && !salesChart) {
+        salesChart = new Chart(ctxSales, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'المبيعات (ج.م)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+    
+    if(ctxOrders && !ordersChart) {
+        ordersChart = new Chart(ctxOrders, {
+            type: 'doughnut',
+            data: { labels: ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه'], datasets: [{ data: [0,0,0,0], backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+}
+
+function updateChartsData() {
+    if (!salesChart || !ordersChart || typeof allOrders === 'undefined') return;
+    let counts = { pending: 0, processing: 0, shipped: 0, delivered: 0 };
+    allOrders.forEach(o => {
+        if(o.status === 'قيد المراجعة') counts.pending++;
+        if(o.status === 'جاري التجهيز') counts.processing++;
+        if(o.status === 'تم الشحن') counts.shipped++;
+        if(o.status === 'تم تسليمه') counts.delivered++;
+    });
+    ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
+    ordersChart.update();
+}
 
 // ==========================================
 // إدارة الطلبات (شاملة فلاتر البحث)
@@ -333,13 +361,8 @@ let currentOrderTab = 'active';
 
 window.switchOrderTab = (tab) => {
     currentOrderTab = tab;
-    
-    // التعديل: التأكد إن الزراير موجودة عشان ميعملش Error
-    const btnActive = document.getElementById('tabActiveOrders');
-    const btnArchived = document.getElementById('tabArchivedOrders');
-    if(btnActive) btnActive.classList.toggle('active', tab === 'active');
-    if(btnArchived) btnArchived.classList.toggle('active', tab === 'archived');
-    
+    document.getElementById('tabActiveOrders').classList.toggle('active', tab === 'active');
+    document.getElementById('tabArchivedOrders').classList.toggle('active', tab === 'archived');
     renderOrdersTable();
 };
 
@@ -347,10 +370,9 @@ window.renderOrdersTable = () => {
     const table = document.getElementById("ordersTableBody");
     table.innerHTML = "";
     
-    const search = document.getElementById("searchOrders") ? document.getElementById("searchOrders").value.toLowerCase() : "";
-    const dateFilter = document.getElementById("filterOrderDate") ? document.getElementById("filterOrderDate").value : "";
-    const paymentFilter = document.getElementById("filterOrderPayment") ? document.getElementById("filterOrderPayment").value : "";
-    const statusFilter = document.getElementById("filterOrderStatus") ? document.getElementById("filterOrderStatus").value : "";
+    const search = document.getElementById("searchOrders").value.toLowerCase();
+    const dateFilter = document.getElementById("filterOrderDate").value;
+    const paymentFilter = document.getElementById("filterOrderPayment").value;
 
     let filteredOrders = allOrders.filter(order => {
         let tabMatch = false;
@@ -360,7 +382,7 @@ window.renderOrdersTable = () => {
             tabMatch = ['تم تسليمه', 'ملغي'].includes(order.status);
         }
             
-        let searchMatch = (order.displayId || order.orderId).includes(search) || 
+        let searchMatch = order.orderId.includes(search) || 
                           order.customer.name.toLowerCase().includes(search) || 
                           order.customer.phone.includes(search);
                           
@@ -378,15 +400,8 @@ window.renderOrdersTable = () => {
                 payMatch = false;
             }
         }
-        
-        let statMatch = true;
-        if (statusFilter) {
-            if (order.status !== statusFilter) {
-                statMatch = false;
-            }
-        }
 
-        return tabMatch && searchMatch && dateMatch && payMatch && statMatch;
+        return tabMatch && searchMatch && dateMatch && payMatch;
     });
 
     if (filteredOrders.length === 0) {
@@ -416,13 +431,10 @@ window.renderOrdersTable = () => {
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
                 <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total)} ج.م</td>
                 <td>
-                    <!-- التعديل الجديد: تحديد الصلاحيات والتسلسل -->
+                    <!-- التعديل الجديد: تحديد الصلاحيات وعدم التراجع للخلف للمشرفين -->
                     ${(() => {
-                        let availableStatuses = [];
-                        
-                        if (window.currentUserRole === 'Admin') {
-                            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
-                        } else {
+                        let availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
+                        if (window.currentUserRole === 'Supervisor') {
                             if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
                             else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
                             else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه'];
@@ -449,49 +461,29 @@ window.renderOrdersTable = () => {
     });
 };
 
+
 window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
     const newStatus = selectElement.value;
     
-    // التعديل: إجبار كتابة سبب الإلغاء
+    // التعديل: طلب سبب الإلغاء إجبارياً للجميع
     if (newStatus === 'ملغي') {
-        if(typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: 'إلغاء الطلب',
-                text: 'اكتب سبب الإلغاء ليظهر للعميل:',
-                input: 'text',
-                inputPlaceholder: 'السبب...',
-                showCancelButton: true,
-                confirmButtonText: 'تأكيد',
-                cancelButtonText: 'تراجع',
-                inputValidator: (value) => {
-                    if (!value) return 'يجب كتابة سبب الإلغاء!';
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    update(ref(db, `orders/${orderId}`), { 
-                        status: newStatus, 
-                        cancelledAt: Date.now(), 
-                        cancelReason: result.value 
-                    }).then(() => {
-                        logAction("تحديث حالة طلب", `إلغاء طلب لسبب: ${result.value}`);
-                        window.showAlert("تم التحديث بنجاح", "success");
-                    });
-                } else {
-                    selectElement.value = oldStatus;
-                }
+        let reason = prompt("اكتب سبب الإلغاء ليظهر للعميل:");
+        if (reason) {
+            update(ref(db, `orders/${orderId}`), { 
+                status: newStatus, 
+                cancelledAt: Date.now(), 
+                cancelReason: reason 
+            }).then(() => {
+                logAction("تحديث حالة طلب", `إلغاء طلب لسبب: ${reason}`);
+                window.showAlert("تم الإلغاء بنجاح", "success");
             });
         } else {
-            let r = prompt("سبب الإلغاء:");
-            if(r) {
-                update(ref(db, `orders/${orderId}`), { status: newStatus, cancelledAt: Date.now(), cancelReason: r });
-                logAction("تحديث حالة طلب", `إلغاء طلب لسبب: ${r}`);
-            } else {
-                selectElement.value = oldStatus;
-            }
+            selectElement.value = oldStatus; // التراجع لو مكتبش سبب
         }
         return;
     }
 
+    // السماح للأدمن بالتعديل بحرية، وتقييد المشرف
     if (window.currentUserRole === 'Supervisor') {
         window.showConfirm(`هل تريد إرسال طلب للمدير لتغيير حالة الطلب إلى "${newStatus}"؟`, () => {
             push(ref(db, 'order_requests'), { orderId, requestedStatus: newStatus, requestedBy: currentUser, timestamp: Date.now() });
@@ -503,7 +495,6 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
         window.updateOrderStatus(orderId, selectElement); 
     }
 };
-
 window.updateOrderStatus = (orderId, selectElement) => {
     const newStatus = selectElement.value;
     const updates = { status: newStatus };
@@ -518,12 +509,16 @@ window.updateOrderStatus = (orderId, selectElement) => {
     if (newStatus === 'تم تسليمه') {
         updates.deliveredAt = now;
     }
+    if (newStatus === 'ملغي') {
+        updates.cancelledAt = now;
+    }
 
     update(ref(db, `orders/${orderId}`), updates).then(() => {
         logAction("تحديث حالة طلب", `تغيير حالة الطلب لـ ${newStatus}`);
         window.showAlert("تم تحديث الحالة بنجاح", "success");
     });
 };
+
 // ==========================================
 // تجهيز بوليصة الشحن Bosta
 // ==========================================
@@ -966,7 +961,7 @@ onValue(ref(db, 'categories'), (snapshot) => {
 });
 
 // ==========================================
-// الكوبونات (التعديل لسحب الاستخدام من الطلبات)
+// الكوبونات (مع الحذف وتغيير الحالة التلقائي)
 // ==========================================
 let editingVoucherId = null; 
 let allVouchers = [];
@@ -1031,17 +1026,14 @@ window.deleteVoucher = (id) => {
         remove(ref(db, `vouchers/${id}`));
     });
 };
-
 window.showVoucherUsers = (id) => {
     const v = allVouchers.find(x => x.id === id); 
-    if (!v) {
-        return;
-    }
+    if (!v) return;
     
     const list = document.getElementById("vuList"); 
     list.innerHTML = "";
     
-    // --- التعديل: قراءة الاستخدامات من جدول الطلبات وميزة عرض الفاتورة ---
+    // سحب الاستخدامات من الطلبات نفسها
     let usages = [];
     allOrders.forEach(o => {
         if (o.status !== 'ملغي' && (o.coupon === v.code || o.discountCode === v.code || o.voucherCode === v.code)) {
@@ -1061,11 +1053,13 @@ window.showVoucherUsers = (id) => {
                         <small>رقم الطلب: #${u.displayId || u.orderId}</small>
                     </div>
                     <button class="btn-action btn-view" onclick="viewOrderDetails('${u.dbId}'); closeModal('voucherUsersModal');" style="width: auto; padding: 5px 15px; border-radius: 6px;">
-                        <i class="fas fa-file-invoice"></i> عرض الفاتورة
+                        <i class="fas fa-file-invoice"></i> الفاتورة
                     </button>
                 </div>`; 
         });
     }
+    document.getElementById("voucherUsersModal").style.display = "flex";
+};    }
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };
@@ -1075,12 +1069,10 @@ window.filterVouchers = () => {
     const table = document.getElementById("vouchersTableBody"); 
     table.innerHTML = "";
     
-    let filtered = allVouchers.filter(v => {
-        return v.code.toLowerCase().includes(term);
-    });
+    let filtered = allVouchers.filter(v => v.code.toLowerCase().includes(term));
     
     filtered.forEach(v => {
-        // --- التعديل: حساب الاستخدامات أوتوماتيك من الطلبات وحساب الحد ---
+        // حساب الاستخدامات أوتوماتيك من الطلبات
         let usedCount = 0;
         allOrders.forEach(o => {
             if (o.status !== 'ملغي' && (o.coupon === v.code || o.discountCode === v.code || o.voucherCode === v.code)) {
@@ -1088,7 +1080,44 @@ window.filterVouchers = () => {
             }
         });
         
-        let limitText = `${usedCount}`;
+        let limitText = v.usageLimit ? `${usedCount} / ${v.usageLimit}` : `${usedCount}`;
+        
+        // التوقيف التلقائي عند الوصول للحد الأقصى
+        if (v.usageLimit && usedCount >= v.usageLimit && v.isActive) {
+            update(ref(db, `vouchers/${v.id}`), { isActive: false }); 
+            v.isActive = false;
+        }
+
+        let typeText = v.type === 'percentage' ? '%' : 'ج.م';
+        let badgeClass = v.isActive ? 'badge-active' : 'badge-inactive';
+        let badgeText = v.isActive ? 'مفعل' : 'معطل';
+        let toggleIcon = v.isActive ? 'fa-ban' : 'fa-check';
+        let toggleBg = v.isActive ? '#64748b' : '#22c55e';
+
+        table.innerHTML += `
+            <tr>
+                <td><b>${v.code}</b></td>
+                <td>${v.value} ${typeText}</td>
+                <td dir="ltr" style="font-weight:bold;">${limitText}</td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td>
+                    <div class="actions">
+                        <button class="btn-action btn-users" onclick="showVoucherUsers('${v.id}')"><i class="fas fa-users"></i></button>
+                        <button class="btn-action btn-edit" onclick="editVoucher('${v.id}')"><i class="fas fa-pen"></i></button>
+                        <button class="btn-action btn-hide" style="background-color: ${toggleBg}" onclick="toggleVoucher('${v.id}', ${v.isActive})"><i class="fas ${toggleIcon}"></i></button>
+                        <button class="btn-action btn-delete" onclick="deleteVoucher('${v.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`; 
+    });
+};    
+    filtered.forEach(v => {
+        let usedCount = 0;
+        if (v.usedBy) {
+            usedCount = Object.keys(v.usedBy).length;
+        }
+        
+        let limitText = usedCount;
         if (v.usageLimit) {
             limitText = `${usedCount} / ${v.usageLimit}`;
         }
@@ -1132,17 +1161,12 @@ onValue(ref(db, 'vouchers'), (snapshot) => {
     }
     window.filterVouchers();
 });
+
 // ==========================================
-// إدارة الموظفين (مع الإيميل والباسورد والصلاحيات)
+// إدارة الموظفين (مع الحذف والبحث)
 // ==========================================
 let editingEmpId = null; 
 let allEmployees = [];
-
-window.toggleEmployeePermissionsUI = () => {
-    if (document.getElementById("permissionsUI")) {
-        document.getElementById("permissionsUI").style.display = document.getElementById("empRole").value === 'Supervisor' ? 'block' : 'none';
-    }
-};
 
 window.openEmployeeModal = () => { 
     editingEmpId = null; 
@@ -1152,35 +1176,27 @@ window.openEmployeeModal = () => {
     document.getElementById("empNationalId").value = ""; 
     document.getElementById("empArea").value = ""; 
     document.getElementById("empNotes").value = ""; 
-    if (document.getElementById("empEmail")) document.getElementById("empEmail").value = "";
-    if (document.getElementById("empPass")) document.getElementById("empPass").value = "";
     document.getElementById('employeeModal').style.display = "flex"; 
 };
 
 window.saveEmployee = () => { 
-    // --- التعديل: جمع الصلاحيات لو كان مشرف ---
+    
+    // --- تعديل: جمع الصلاحيات لو كان مشرف ---
     let permissions = { tabs: [], canChangeStatus: false };
     if (document.getElementById("empRole").value === 'Supervisor') {
-        if (document.querySelectorAll('.perm-tab')) {
-            document.querySelectorAll('.perm-tab:checked').forEach(cb => permissions.tabs.push(cb.value));
-        }
+        document.querySelectorAll('.perm-tab:checked').forEach(cb => permissions.tabs.push(cb.value));
         if (document.getElementById("permChangeOrderStatus")) {
             permissions.canChangeStatus = document.getElementById("permChangeOrderStatus").checked;
         }
-        if (document.getElementById("permAdd")) permissions.canAdd = document.getElementById("permAdd").checked;
-        if (document.getElementById("permEdit")) permissions.canEdit = document.getElementById("permEdit").checked;
-        if (document.getElementById("permDelete")) permissions.canDelete = document.getElementById("permDelete").checked;
     } else {
-        permissions = null; // المدير يقدر يعمل كل حاجة
+        permissions.canChangeStatus = true; // المدير يقدر يعمل كل حاجة
     }
 
     const data = { 
         name: document.getElementById("empName").value, 
         phone: document.getElementById("empPhone").value, 
-        email: document.getElementById("empEmail") ? document.getElementById("empEmail").value : "",
-        password: document.getElementById("empPass") ? document.getElementById("empPass").value : "",
         role: document.getElementById("empRole").value, 
-        permissions: permissions, 
+        permissions: permissions, // حفظ الصلاحيات
         dob: document.getElementById("empDob").value, 
         nationalId: document.getElementById("empNationalId").value, 
         area: document.getElementById("empArea").value, 
@@ -1195,7 +1211,6 @@ window.saveEmployee = () => {
         update(ref(db, `employees/${editingEmpId}`), data).then(() => {
             window.closeModal('employeeModal');
             window.showAlert("تم التعديل بنجاح!", "success");
-            logAction("تعديل موظف", `تعديل بيانات حساب: ${data.name}`);
         }); 
     } else { 
         data.isActive = true; 
@@ -1203,7 +1218,6 @@ window.saveEmployee = () => {
         push(ref(db, 'employees'), data).then(() => {
             window.closeModal('employeeModal');
             window.showAlert("تم إضافة الموظف بنجاح!", "success");
-            logAction("إضافة موظف", `إنشاء حساب موظف جديد: ${data.name}`);
         }); 
     }
 };
@@ -1219,23 +1233,15 @@ window.editEmployee = (id) => {
     document.getElementById("empArea").value = e.area || ""; 
     document.getElementById("empRole").value = e.role || "Admin"; 
     document.getElementById("empNotes").value = e.notes || ""; 
-    if (document.getElementById("empEmail")) document.getElementById("empEmail").value = e.email || "";
-    if (document.getElementById("empPass")) document.getElementById("empPass").value = e.password || "";
     
     // --- استرجاع وعرض الصلاحيات لو مشرف ---
     if (e.role === 'Supervisor' && e.permissions) {
-        if(document.querySelectorAll('.perm-tab')) {
-            document.querySelectorAll('.perm-tab').forEach(cb => {
-                cb.checked = e.permissions.tabs?.includes(cb.value) || false;
-            });
-        }
+        document.querySelectorAll('.perm-tab').forEach(cb => {
+            cb.checked = e.permissions.tabs.includes(cb.value);
+        });
         if (document.getElementById("permChangeOrderStatus")) {
             document.getElementById("permChangeOrderStatus").checked = e.permissions.canChangeStatus || false;
         }
-        if (document.getElementById("permAdd")) document.getElementById("permAdd").checked = e.permissions.canAdd || false;
-        if (document.getElementById("permEdit")) document.getElementById("permEdit").checked = e.permissions.canEdit || false;
-        if (document.getElementById("permDelete")) document.getElementById("permDelete").checked = e.permissions.canDelete || false;
-
         if (document.getElementById('permissionsUI')) {
             document.getElementById('permissionsUI').style.display = 'block';
         }
@@ -1248,12 +1254,9 @@ window.editEmployee = (id) => {
     document.getElementById('employeeModal').style.display = "flex";
 };
 
-window.deleteEmployee = (id, name) => {
+window.deleteEmployee = (id) => {
     window.showConfirm("حذف بيانات الموظف نهائياً؟", () => {
-        remove(ref(db, `employees/${id}`)).then(() => {
-            logAction("حذف موظف", `تم حذف حساب: ${name}`);
-            window.showAlert("تم حذف الموظف", "success");
-        });
+        remove(ref(db, `employees/${id}`));
     });
 };
 
@@ -1272,22 +1275,21 @@ window.filterEmployees = () => {
     });
     
     filtered.forEach(e => {
-        let emailText = e.email ? `<br><small style="color:var(--text-light);">${e.email}</small>` : "";
         table.innerHTML += `
             <tr>
                 <td>
-                    <b>${e.name}</b>${emailText}
+                    <b>${e.name}</b>
                     <div class="emp-details">${formatDateOnly(e.createdAt)}</div>
                 </td>
                 <td>${e.phone}</td>
-                <td>${e.role === 'Admin' ? 'مدير' : 'مشرف'}</td>
+                <td>${e.role}</td>
                 <td><span class="badge badge-active">نشط</span></td>
                 <td>
                     <div class="actions">
                         <button class="btn-action btn-edit" onclick="editEmployee('${e.id}')">
                             <i class="fas fa-pen"></i>
                         </button>
-                        <button class="btn-action btn-delete" onclick="deleteEmployee('${e.id}', '${e.name}')">
+                        <button class="btn-action btn-delete" onclick="deleteEmployee('${e.id}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1298,85 +1300,37 @@ window.filterEmployees = () => {
 
 onValue(ref(db, 'employees'), (snapshot) => { 
     allEmployees = []; 
-    const filterUserDropdown = document.getElementById("filterLogUser");
-    if(filterUserDropdown) filterUserDropdown.innerHTML = "<option value=''>كل الموظفين</option>";
-
     if (snapshot.exists()) {
         snapshot.forEach(child => {
-            let e = { id: child.key, ...child.val() };
-            allEmployees.push(e);
-            if(filterUserDropdown) filterUserDropdown.innerHTML += `<option value="${e.name}">${e.name}</option>`;
+            allEmployees.push({ id: child.key, ...child.val() });
         });
     }
     window.filterEmployees();
 });
 
 // ==========================================
-// سجل النشاطات والأرشفة (بالإكسيل)
+// سجل النشاطات والأرشفة
 // ==========================================
 
 let allLogs = [];
-let allArchivedLogs = [];
-let currentLogTab = 'current';
-
-window.switchLogTab = (tab, btn) => {
-    currentLogTab = tab;
-    document.querySelectorAll('#logs-view .custom-tab-btn').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    window.filterLogs();
-};
 
 window.filterLogs = () => {
     const term = document.getElementById("searchLogs") ? document.getElementById("searchLogs").value.toLowerCase() : "";
-    const userF = document.getElementById("filterLogUser") ? document.getElementById("filterLogUser").value : "";
-    const dateFrom = document.getElementById("filterLogDateFrom") ? document.getElementById("filterLogDateFrom").value : "";
-    const dateTo = document.getElementById("filterLogDateTo") ? document.getElementById("filterLogDateTo").value : "";
     const table = document.getElementById("logsTableBody"); 
     table.innerHTML = "";
     
-    let dataset = currentLogTab === 'current' ? allLogs : allArchivedLogs;
-
-    dataset.filter(log => {
-        let textMatch = (log.action && log.action.toLowerCase().includes(term)) || 
-                        (log.details && log.details.toLowerCase().includes(term));
-        let userMatch = userF ? log.user === userF : true;
-        let dateMatch = true;
-        if (dateFrom && dateTo) {
-            let t = new Date(log.timestamp);
-            dateMatch = t >= new Date(dateFrom) && t <= new Date(dateTo + 'T23:59:59');
-        }
-        return textMatch && userMatch && dateMatch;
+    allLogs.filter(log => {
+        return (log.action && log.action.toLowerCase().includes(term)) || 
+               (log.user && log.user.toLowerCase().includes(term));
     }).forEach(log => {
         table.innerHTML += `
             <tr>
                 <td style="font-weight:bold; color:var(--primary);">${log.action}</td>
                 <td>${log.details}</td>
-                <td><span class="badge" style="background:#e2e8f0; color:#475569;">${log.user}</span></td>
+                <td>${log.user}</td>
                 <td dir="ltr" style="font-size:12px;">${formatDateTime(log.timestamp)}</td>
             </tr>`; 
     });
-};
-
-window.exportLogsToExcel = () => {
-    if (typeof XLSX === 'undefined') {
-        return window.showAlert("برجاء التأكد من إضافة مكتبة Excel في HTML");
-    }
-    
-    let dataset = currentLogTab === 'current' ? allLogs : allArchivedLogs;
-    if(dataset.length === 0) return window.showAlert("لا توجد بيانات للتصدير", "warning");
-
-    let formattedData = dataset.map(l => ({
-        "الحدث": l.action,
-        "التفاصيل": l.details,
-        "بواسطة": l.user,
-        "التاريخ والوقت": new Date(l.timestamp).toLocaleString('ar-EG')
-    }));
-
-    let worksheet = XLSX.utils.json_to_sheet(formattedData);
-    let workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Activity Logs");
-    XLSX.writeFile(workbook, `Activity_Logs_${new Date().getTime()}.xlsx`);
-    logAction("تصدير سجل", `تم تصدير سجل النشاطات إلى إكسيل`);
 };
 
 onValue(ref(db, 'logs'), (snapshot) => { 
@@ -1388,43 +1342,19 @@ onValue(ref(db, 'logs'), (snapshot) => {
         allLogs.reverse();
     }
     
+    // إظهار زر الحذف الكلي للمدير فقط
     if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
         document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
     }
     
-    if(currentLogTab === 'current') window.filterLogs();
+    window.filterLogs();
 });
 
-onValue(ref(db, 'archived_logs'), (snapshot) => { 
-    allArchivedLogs = [];
-    if (snapshot.exists()) { 
-        snapshot.forEach(child => {
-            allArchivedLogs.push({ id: child.key, ...child.val() });
-        }); 
-        allArchivedLogs.reverse();
-    }
-    if(currentLogTab === 'archived') window.filterLogs();
-});
-
-// --- الأرشفة ---
-window.archiveLogsAll = () => {
-    if(allLogs.length === 0) return window.showAlert("السجل الحالي فارغ بالفعل");
-    window.showConfirm("سيتم نقل السجل الحالي بالكامل إلى الأرشيف. هل أنت متأكد؟", () => {
-        let updates = {};
-        allLogs.forEach(l => { 
-            updates[`archived_logs/${l.id}`] = l; 
-            updates[`logs/${l.id}`] = null; 
-        });
-        update(ref(db), updates).then(() => {
-            logAction("أرشفة سجل", "تمت أرشفة السجل الحالي بالكامل");
-            window.showAlert("تمت الأرشفة بنجاح!");
-        });
-    });
-};
-
+// --- الأرشفة بالشهر الجديد ---
 window.archiveLogsByMonth = () => {
     const monthInput = document.getElementById("archiveMonthInput") ? document.getElementById("archiveMonthInput").value : null;
     if (!monthInput) {
+        // لو مفيش الحقل بتاع الشهر، نرجع للطريقة القديمة كاحتياطي
         return window.archiveLogs();
     }
     
@@ -1447,7 +1377,6 @@ window.archiveLogsByMonth = () => {
                 if (count > 0) {
                     update(ref(db), updates).then(() => {
                         window.showAlert(`تمت أرشفة ${count} سجل بنجاح!`, "success");
-                        logAction("أرشفة سجل", `تمت أرشفة سجلات شهر ${monthInput}`);
                     });
                 } else {
                     window.showAlert("لا توجد سجلات في هذا الشهر لأرشفتها.");
@@ -1464,10 +1393,10 @@ window.deleteAllLogs = () => {
     window.showConfirm("تحذير: سيتم مسح جميع سجلات النشاطات نهائياً. هل أنت متأكد؟", () => {
         remove(ref(db, 'logs')).then(() => {
             window.showAlert("تم تنظيف السجل بالكامل!", "success");
-            logAction("حذف السجل", "تم مسح السجل بالكامل من قبل المدير");
         });
     });
 };
+
 
 window.archiveLogs = () => {
     window.showConfirm("هل أنت متأكد من أرشفة سجلات الشهر الماضي وحذفها من السجل الحالي؟", () => {
@@ -1486,7 +1415,6 @@ window.archiveLogs = () => {
                 if (Object.keys(updates).length > 0) {
                     update(ref(db), updates).then(() => {
                         window.showAlert("تمت أرشفة السجلات القديمة بنجاح! السجل الآن نظيف.");
-                        logAction("أرشفة سجل", "أرشفة السجلات الأقدم من 30 يوم");
                     });
                 } else {
                     window.showAlert("لا توجد سجلات أقدم من شهر لأرشفتها.");
@@ -1495,49 +1423,3 @@ window.archiveLogs = () => {
         });
     });
 };
-
-// ==========================================
-// إعدادات المتجر الأساسية (الإضافة الجديدة)
-// ==========================================
-window.saveSettings = () => {
-    const data = {
-        name: document.getElementById("setStoreName") ? document.getElementById("setStoreName").value : "",
-        newsTicker: document.getElementById("setNewsTicker") ? document.getElementById("setNewsTicker").value : "",
-        isOpen: document.getElementById("setStoreStatus") ? document.getElementById("setStoreStatus").checked : true,
-        phone: document.getElementById("setPhone") ? document.getElementById("setPhone").value : "",
-        email: document.getElementById("setEmail") ? document.getElementById("setEmail").value : "",
-        address: document.getElementById("setAddress") ? document.getElementById("setAddress").value : "",
-        copyright: document.getElementById("setCopyright") ? document.getElementById("setCopyright").value : "",
-        social: {
-            facebook: document.getElementById("setFb") ? document.getElementById("setFb").value : "",
-            instagram: document.getElementById("setInsta") ? document.getElementById("setInsta").value : "",
-            telegram: document.getElementById("setTelegram") ? document.getElementById("setTelegram").value : "",
-            whatsapp: document.getElementById("setWhatsapp") ? document.getElementById("setWhatsapp").value : ""
-        }
-    };
-
-    update(ref(db, 'storeSettings'), data).then(() => {
-        logAction("تحديث الإعدادات", "تم تحديث بيانات المتجر الأساسية بنجاح");
-        window.showAlert("تم حفظ الإعدادات بنجاح!", "success");
-    });
-};
-
-onValue(ref(db, 'storeSettings'), (snapshot) => {
-    if (snapshot.exists()) {
-        const d = snapshot.val();
-        if(document.getElementById("setStoreName")) document.getElementById("setStoreName").value = d.name || "";
-        if(document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
-        if(document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
-        if(document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
-        if(document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
-        if(document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
-        if(document.getElementById("setCopyright")) document.getElementById("setCopyright").value = d.copyright || "";
-        
-        if(d.social) {
-            if(document.getElementById("setFb")) document.getElementById("setFb").value = d.social.facebook || "";
-            if(document.getElementById("setInsta")) document.getElementById("setInsta").value = d.social.instagram || "";
-            if(document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
-            if(document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
-        }
-    }
-});
