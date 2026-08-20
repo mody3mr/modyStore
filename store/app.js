@@ -12,12 +12,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// بيانات التليجرام
 const TELEGRAM_BOT_TOKEN = "8578331488:AAG8XHQBN7TSduQ1ip5Fd8pHggSrf_kIn90"; 
 const TELEGRAM_CHAT_ID = "5664540316";     
 
 let allActiveProducts = [];
 let cart = [];
 let appliedVoucher = null; 
+
+// Toast Notifications Settings
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true
+});
 
 function formatDateTime(ms) {
     if(!ms) return "";
@@ -149,6 +159,7 @@ window.addToCart = (id, name, price, img) => {
     if (existingItem) existingItem.qty++;
     else cart.push({ id, name, price, img, qty: 1 });
     
+    Toast.fire({icon: 'success', title: 'تمت الإضافة للسلة'});
     updateCartUI();
     document.getElementById("cartSidebar").classList.add("open");
     document.getElementById("overlay").classList.add("show");
@@ -223,10 +234,12 @@ window.applyPromo = () => {
             appliedVoucher = foundVoucher;
             msgBox.style.color = "var(--success)";
             msgBox.innerHTML = `<i class="fas fa-check-circle"></i> تم تطبيق الخصم بنجاح!`;
+            Toast.fire({icon: 'success', title: 'تم تفعيل الكوبون'});
         } else {
             appliedVoucher = null;
             msgBox.style.color = "var(--accent)";
             msgBox.innerHTML = `<i class="fas fa-exclamation-circle"></i> الكود غير صحيح أو منتهي.`;
+            Toast.fire({icon: 'error', title: 'كوبون غير صالح'});
         }
         updateCartUI();
     });
@@ -250,7 +263,10 @@ function calculateFinalTotal(subtotal) {
 }
 
 window.openCheckoutModal = () => {
-    if(cart.length === 0) return alert("سلة المشتريات فارغة!");
+    if(cart.length === 0) {
+        Swal.fire({icon: 'warning', title: 'عفواً', text: 'سلة المشتريات فارغة!', confirmButtonColor: 'var(--primary)'});
+        return;
+    }
     document.getElementById("checkoutModal").style.display = "block";
     document.getElementById("cartSidebar").classList.remove("open");
 };
@@ -270,7 +286,8 @@ window.sendOrder = async () => {
     const btn = document.getElementById("submitOrderBtn");
 
     if(!name || !phone || !city || !region || !address) {
-        return alert("الرجاء إكمال البيانات الأساسية للتوصيل (الاسم، رقم الموبايل، المحافظة، المنطقة، العنوان)!");
+        Swal.fire({icon: 'error', title: 'بيانات ناقصة', text: 'الرجاء إكمال البيانات الأساسية للتوصيل (الاسم، الموبايل، المحافظة، المنطقة، العنوان)', confirmButtonColor: 'var(--primary)'});
+        return;
     }
 
     btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...`;
@@ -281,7 +298,8 @@ window.sendOrder = async () => {
     let orderItemsForDb = [];
     
     cart.forEach(item => {
-        orderItemsText += `🔹 ${item.qty}x ${item.name} (${item.price * item.qty} ج)\n`;
+        orderItemsText += `🔹 ${item.qty}x ${item.name} (${item.price * item.qty} ج)
+`;
         subtotal += (item.price * item.qty);
         orderItemsForDb.push({ id: item.id, name: item.name, price: item.price, qty: item.qty });
     });
@@ -294,7 +312,8 @@ window.sendOrder = async () => {
         discountVal = appliedVoucher.type === "percentage" ? subtotal * (appliedVoucher.value/100) : appliedVoucher.value;
         if(discountVal > subtotal) discountVal = subtotal;
         finalTotal -= discountVal;
-        discountText = `\n🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
+        discountText = `
+🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
     }
 
     const orderId = Math.floor(10000000 + Math.random() * 90000000).toString(); 
@@ -342,7 +361,7 @@ ${orderItemsText}
         });
 
         if(paymentMethod !== "الدفع عند الاستلام (COD)") {
-            alert("تم تسجيل طلبك بنجاح. سيتم توجيهك لبوابة الدفع الإلكتروني (Paymob).");
+            Swal.fire({icon: 'info', title: 'توجيه للدفع', text: 'تم تسجيل طلبك بنجاح. سيتم توجيهك لبوابة الدفع الإلكتروني.', confirmButtonColor: 'var(--primary)'});
         }
 
         document.getElementById("checkoutForm").style.display = "none";
@@ -353,7 +372,7 @@ ${orderItemsText}
         updateCartUI();
 
     } catch (error) {
-        alert("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.");
+        Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.', confirmButtonColor: 'var(--primary)'});
         btn.innerHTML = `تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i>`;
         btn.disabled = false;
     }
@@ -361,7 +380,7 @@ ${orderItemsText}
 
 window.openTrackingModal = () => {
     document.getElementById('trackingModal').style.display = 'block';
-    document.getElementById('overlay').classList.add('show'); // لإظهار الشاشة الرمادية
+    document.getElementById('overlay').classList.add('show');
     document.getElementById('trackingResult').style.display = 'none';
     document.getElementById('trackOrderId').value = '';
     document.getElementById('trackPhone').value = '';
@@ -374,7 +393,10 @@ window.trackOrder = () => {
     const statusText = document.getElementById('trackingStatusText');
     const detailsBox = document.getElementById('trackingOrderDetails');
 
-    if(!orderIdInput || !phoneInput) return alert("الرجاء إدخال رقم الطلب ورقم الموبايل");
+    if(!orderIdInput || !phoneInput) {
+        Toast.fire({icon: 'warning', title: 'الرجاء إدخال بيانات التتبع بالكامل'});
+        return;
+    }
 
     get(ref(db, 'orders')).then((snapshot) => {
         let foundOrder = null;
@@ -442,59 +464,82 @@ window.trackOrder = () => {
 };
 
 window.cancelCustomerOrder = (dbId) => {
-    if(confirm("هل أنت متأكد من إلغاء هذا الطلب بشكل نهائي؟")) {
-        update(ref(db, `orders/${dbId}`), { 
-            status: 'ملغي', 
-            cancelledAt: Date.now() 
-        }).then(() => {
-            alert("تم إلغاء الطلب بنجاح.");
-            document.getElementById('trackingModal').style.display = 'none';
-            document.getElementById('overlay').classList.remove('show');
-        });
-    }
+    Swal.fire({
+        title: 'إلغاء الطلب؟',
+        text: "هل أنت متأكد من إلغاء هذا الطلب بشكل نهائي؟",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--accent)',
+        cancelButtonColor: 'var(--text-light)',
+        confirmButtonText: 'نعم، إلغاء الطلب',
+        cancelButtonText: 'تراجع'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            update(ref(db, `orders/${dbId}`), { 
+                status: 'ملغي', 
+                cancelledAt: Date.now() 
+            }).then(() => {
+                Swal.fire({icon: 'success', title: 'تم', text: 'تم إلغاء الطلب بنجاح.', confirmButtonColor: 'var(--primary)'});
+                document.getElementById('trackingModal').style.display = 'none';
+                document.getElementById('overlay').classList.remove('show');
+            });
+        }
+    });
 };
 
 window.editCustomerOrder = (dbId) => {
-    if(confirm("سيتم إلغاء هذا الطلب وإرجاع المنتجات لسلة التسوق لتتمكن من إضافة أو إزالة منتجات براحتك. هل توافق؟")) {
-        get(ref(db, `orders/${dbId}`)).then(snapshot => {
-            if(snapshot.exists()) {
-                const orderData = snapshot.val();
-                
-                cart = []; 
-                orderData.items.forEach(item => {
-                    const fullProd = allActiveProducts.find(p => p.id === item.id) || {};
-                    cart.push({
-                        id: item.id,
-                        name: item.name,
-                        price: item.price,
-                        qty: item.qty,
-                        img: fullProd.imageUrl || 'https://via.placeholder.com/100'
+    Swal.fire({
+        title: 'تعديل الطلب؟',
+        text: "سيتم إلغاء هذا الطلب وإرجاع المنتجات لسلة التسوق لتتمكن من إضافة أو إزالة منتجات. هل توافق؟",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--secondary)',
+        cancelButtonColor: 'var(--text-light)',
+        confirmButtonText: 'نعم، موافق',
+        cancelButtonText: 'تراجع'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            get(ref(db, `orders/${dbId}`)).then(snapshot => {
+                if(snapshot.exists()) {
+                    const orderData = snapshot.val();
+                    
+                    cart = []; 
+                    orderData.items.forEach(item => {
+                        const fullProd = allActiveProducts.find(p => p.id === item.id) || {};
+                        cart.push({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            qty: item.qty,
+                            img: fullProd.imageUrl || 'https://via.placeholder.com/100'
+                        });
                     });
-                });
-                
-                if(orderData.customer) {
-                    document.getElementById("custName").value = orderData.customer.name || '';
-                    document.getElementById("custPhone").value = orderData.customer.phone || '';
-                    document.getElementById("custPhone2").value = orderData.customer.phone2 || '';
-                    document.getElementById("custCity").value = orderData.customer.city || '';
-                    document.getElementById("custRegion").value = orderData.customer.region || '';
-                    document.getElementById("custBuilding").value = orderData.customer.building || '';
-                    document.getElementById("custFloor").value = orderData.customer.floor || '';
-                    document.getElementById("custAppt").value = orderData.customer.apartment || '';
-                    document.getElementById("custLandmark").value = orderData.customer.landmark || '';
-                    document.getElementById("custAddress").value = orderData.customer.address || '';
+                    
+                    if(orderData.customer) {
+                        document.getElementById("custName").value = orderData.customer.name || '';
+                        document.getElementById("custPhone").value = orderData.customer.phone || '';
+                        document.getElementById("custPhone2").value = orderData.customer.phone2 || '';
+                        document.getElementById("custCity").value = orderData.customer.city || '';
+                        document.getElementById("custRegion").value = orderData.customer.region || '';
+                        document.getElementById("custBuilding").value = orderData.customer.building || '';
+                        document.getElementById("custFloor").value = orderData.customer.floor || '';
+                        document.getElementById("custAppt").value = orderData.customer.apartment || '';
+                        document.getElementById("custLandmark").value = orderData.customer.landmark || '';
+                        document.getElementById("custAddress").value = orderData.customer.address || '';
+                    }
+                    
+                    update(ref(db, `orders/${dbId}`), { 
+                        status: 'ملغي', 
+                        cancelledAt: Date.now(),
+                        editNote: 'تم الإلغاء بواسطة العميل بغرض التعديل'
+                    }).then(() => {
+                        updateCartUI();
+                        document.getElementById('trackingModal').style.display = 'none';
+                        document.getElementById('cartSidebar').classList.add('open');
+                        Toast.fire({icon: 'success', title: 'تم تجهيز السلة للتعديل'});
+                    });
                 }
-                
-                update(ref(db, `orders/${dbId}`), { 
-                    status: 'ملغي', 
-                    cancelledAt: Date.now(),
-                    editNote: 'تم الإلغاء بواسطة العميل بغرض التعديل'
-                }).then(() => {
-                    updateCartUI();
-                    document.getElementById('trackingModal').style.display = 'none';
-                    document.getElementById('cartSidebar').classList.add('open');
-                });
-            }
-        });
-    }
+            });
+        }
+    });
 };
