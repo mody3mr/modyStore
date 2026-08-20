@@ -6,7 +6,6 @@
     <title>متجر محمد عمرو | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -92,16 +91,34 @@
         </div>
     </div>
 
-    <!-- نافذة إتمام الطلب -->
+    <!-- نافذة إتمام الطلب (بعد التعديلات المطلوبة) -->
     <div class="checkout-modal" id="checkoutModal">
         <div id="checkoutForm">
             <h3>إتمام الطلب</h3>
-            <label class="checkout-label">بيانات التوصيل</label>
+            <label class="checkout-label">بيانات التوصيل التفصيلية</label>
+            
             <div class="input-wrapper"><input type="text" id="custName" class="checkout-input" placeholder="الاسم بالكامل"><i class="fas fa-user"></i></div>
-            <div class="input-wrapper"><input type="tel" id="custPhone" class="checkout-input" placeholder="رقم الموبايل للتواصل"><i class="fas fa-phone"></i></div>
-            <div class="input-wrapper"><textarea id="custAddress" class="checkout-input" rows="2" placeholder="العنوان بالتفصيل"></textarea><i class="fas fa-map-marker-alt"></i></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="input-wrapper" style="flex: 1;"><input type="tel" id="custPhone" class="checkout-input" placeholder="رقم الموبايل"><i class="fas fa-phone"></i></div>
+                <div class="input-wrapper" style="flex: 1;"><input type="tel" id="custPhone2" class="checkout-input" placeholder="رقم بديل (اختياري)"><i class="fas fa-phone-alt"></i></div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custCity" class="checkout-input" placeholder="المحافظة / المدينة"><i class="fas fa-city"></i></div>
+                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custRegion" class="checkout-input" placeholder="المنطقة"><i class="fas fa-map"></i></div>
+            </div>
 
-            <label class="checkout-label" style="margin-top: 20px;">طريقة الدفع</label>
+            <div style="display: flex; gap: 10px;">
+                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى" style="padding-right: 15px;"></div>
+                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور" style="padding-right: 15px;"></div>
+                <div class="input-wrapper" style="flex: 1;"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة" style="padding-right: 15px;"></div>
+            </div>
+
+            <div class="input-wrapper"><input type="text" id="custLandmark" class="checkout-input" placeholder="علامة مميزة (اختياري)"><i class="fas fa-map-pin"></i></div>
+            <div class="input-wrapper"><textarea id="custAddress" class="checkout-input" rows="2" placeholder="العنوان بالتفصيل السردي (وصف للمندوب)"></textarea><i class="fas fa-map-marker-alt"></i></div>
+
+            <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
                 <select id="paymentMethod" class="checkout-input">
                     <option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>
@@ -124,7 +141,7 @@
         </div>
     </div>
 
-    <!-- نافذة تتبع الطلب بالفاتورة المصغرة -->
+    <!-- نافذة تتبع الطلب بالفاتورة المصغرة (مع التعديل والإلغاء) -->
     <div class="checkout-modal" id="trackingModal" style="max-height: 90vh; overflow-y: auto;">
         <h3>تتبع طلبك</h3>
         <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم الطلب ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
@@ -152,7 +169,6 @@
         <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'">إغلاق</div>
     </div>
 
-    <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
