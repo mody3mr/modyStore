@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getDatabase, ref, onValue, get, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+import { getDatabase, ref, onValue, get, push, update } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
@@ -263,13 +263,23 @@ window.openCheckoutModal = () => {
 };
 
 window.sendOrder = async () => {
+    // جمع كل المتغيرات الجديدة للعميل
     const name = document.getElementById("custName").value;
     const phone = document.getElementById("custPhone").value;
+    const phone2 = document.getElementById("custPhone2").value;
+    const city = document.getElementById("custCity").value;
+    const region = document.getElementById("custRegion").value;
+    const building = document.getElementById("custBuilding").value;
+    const floor = document.getElementById("custFloor").value;
+    const apartment = document.getElementById("custAppt").value;
+    const landmark = document.getElementById("custLandmark").value;
     const address = document.getElementById("custAddress").value;
     const paymentMethod = document.getElementById("paymentMethod").value;
     const btn = document.getElementById("submitOrderBtn");
 
-    if(!name || !phone || !address) return alert("الرجاء إكمال بيانات التوصيل!");
+    if(!name || !phone || !city || !region || !address) {
+        return alert("الرجاء إكمال البيانات الأساسية للتوصيل (الاسم، رقم الموبايل، المحافظة، المنطقة، العنوان)!");
+    }
 
     btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...`;
     btn.disabled = true;
@@ -302,8 +312,10 @@ window.sendOrder = async () => {
 🛍️ *طلب جديد #${orderId}*
 
 👤 *الاسم:* ${name}
-📞 *التليفون:* ${phone}
-📍 *العنوان:* ${address}
+📞 *التليفون:* ${phone} ${phone2 ? ' / ' + phone2 : ''}
+📍 *العنوان:* ${city} - ${region} - مبنى ${building || '-'} دور ${floor || '-'} شقة ${apartment || '-'}
+🔖 *علامة مميزة:* ${landmark || '-'}
+📝 *تفاصيل للوصول:* ${address}
 💳 *الدفع:* ${paymentMethod}
 
 📦 *المنتجات:*
@@ -312,9 +324,10 @@ ${orderItemsText}
 🔥 *الإجمالي النهائي: ${Math.round(finalTotal)} ج.م*
     `;
 
+    // تم إضافة التفاصيل الجديدة لبيانات العميل
     const orderData = {
         orderId: orderId,
-        customer: { name, phone, address },
+        customer: { name, phone, phone2, city, region, building, floor, apartment, landmark, address },
         paymentMethod: paymentMethod,
         items: orderItemsForDb,
         subtotal: subtotal,
@@ -358,7 +371,7 @@ ${orderItemsText}
 };
 
 // ==========================================
-// 5. ميزة تتبع الطلب للعميل (مع الفاتورة والتايم لاين)
+// 5. ميزة تتبع الطلب للعميل (مع التعديل والإلغاء)
 // ==========================================
 window.openTrackingModal = () => {
     document.getElementById('trackingModal').style.display = 'block';
@@ -378,11 +391,14 @@ window.trackOrder = () => {
 
     get(ref(db, 'orders')).then((snapshot) => {
         let foundOrder = null;
+        let foundDbId = null;
+        
         if(snapshot.exists()) {
             snapshot.forEach(child => {
                 const order = child.val();
                 if(order.orderId === orderIdInput && order.customer.phone === phoneInput) {
                     foundOrder = order;
+                    foundDbId = child.key;
                 }
             });
         }
@@ -391,7 +407,7 @@ window.trackOrder = () => {
 
         if(foundOrder) {
             let statusColor = "var(--secondary)";
-            if(foundOrder.status === "تم الاستلام") statusColor = "var(--success)";
+            if(foundOrder.status === "تم تسليمه") statusColor = "var(--success)";
             if(foundOrder.status === "ملغي") statusColor = "var(--accent)";
             
             statusText.style.color = statusColor;
@@ -410,6 +426,17 @@ window.trackOrder = () => {
             const orderDate = new Date(foundOrder.createdAt).toLocaleDateString('ar-EG');
             let discountHtml = foundOrder.discount > 0 ? `<div style="color:var(--accent); display:flex; justify-content:space-between; margin-bottom:5px;"><span>الخصم:</span> <span>-${Math.round(foundOrder.discount)} ج.م</span></div>` : "";
 
+            // أزرار التعديل والإلغاء (فقط في حالة 'قيد المراجعة')
+            let actionsHtml = '';
+            if (foundOrder.status === 'قيد المراجعة') {
+                actionsHtml = `
+                    <div style="display: flex; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 2px dashed var(--border);">
+                        <button onclick="editCustomerOrder('${foundDbId}')" style="flex:1; background:var(--secondary); color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-family:'Cairo'; font-weight:bold; font-size:15px; transition:0.3s;">تعديل الطلب <i class="fas fa-edit"></i></button>
+                        <button onclick="cancelCustomerOrder('${foundDbId}')" style="flex:1; background:var(--accent); color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-family:'Cairo'; font-weight:bold; font-size:15px; transition:0.3s;">إلغاء الطلب <i class="fas fa-times"></i></button>
+                    </div>
+                `;
+            }
+
             detailsBox.innerHTML = `
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>تاريخ الطلب:</strong> ${orderDate}</div>
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'الدفع عند الاستلام'}</div>
@@ -419,6 +446,7 @@ window.trackOrder = () => {
                 <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:18px; font-weight:900; color:var(--primary); background:#e2e8f0; padding:10px; border-radius:8px;">
                     <span>الإجمالي النهائي:</span> <span>${Math.round(foundOrder.total)} ج.م</span>
                 </div>
+                ${actionsHtml}
             `;
         } else {
             statusText.style.color = "var(--accent)";
@@ -426,4 +454,66 @@ window.trackOrder = () => {
             detailsBox.innerHTML = "";
         }
     });
+};
+
+// وظيفة الإلغاء للعميل
+window.cancelCustomerOrder = (dbId) => {
+    if(confirm("هل أنت متأكد من إلغاء هذا الطلب بشكل نهائي؟")) {
+        update(ref(db, `orders/${dbId}`), { 
+            status: 'ملغي', 
+            cancelledAt: Date.now() 
+        }).then(() => {
+            alert("تم إلغاء الطلب بنجاح.");
+            document.getElementById('trackingModal').style.display = 'none';
+        });
+    }
+};
+
+// وظيفة التعديل للعميل
+window.editCustomerOrder = (dbId) => {
+    if(confirm("سيتم إلغاء هذا الطلب وإرجاع المنتجات لسلة التسوق لتتمكن من إضافة أو إزالة منتجات براحتك. هل توافق؟")) {
+        get(ref(db, `orders/${dbId}`)).then(snapshot => {
+            if(snapshot.exists()) {
+                const orderData = snapshot.val();
+                
+                // 1. إعادة المنتجات للسلة
+                cart = []; 
+                orderData.items.forEach(item => {
+                    const fullProd = allActiveProducts.find(p => p.id === item.id) || {};
+                    cart.push({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        qty: item.qty,
+                        img: fullProd.imageUrl || 'https://via.placeholder.com/100'
+                    });
+                });
+                
+                // 2. إعادة بيانات التوصيل للفورمة عشان ميضطرش يكتبها تاني
+                if(orderData.customer) {
+                    document.getElementById("custName").value = orderData.customer.name || '';
+                    document.getElementById("custPhone").value = orderData.customer.phone || '';
+                    document.getElementById("custPhone2").value = orderData.customer.phone2 || '';
+                    document.getElementById("custCity").value = orderData.customer.city || '';
+                    document.getElementById("custRegion").value = orderData.customer.region || '';
+                    document.getElementById("custBuilding").value = orderData.customer.building || '';
+                    document.getElementById("custFloor").value = orderData.customer.floor || '';
+                    document.getElementById("custAppt").value = orderData.customer.apartment || '';
+                    document.getElementById("custLandmark").value = orderData.customer.landmark || '';
+                    document.getElementById("custAddress").value = orderData.customer.address || '';
+                }
+                
+                // 3. إلغاء الطلب القديم وكتابة ملاحظة للداش بورد
+                update(ref(db, `orders/${dbId}`), { 
+                    status: 'ملغي', 
+                    cancelledAt: Date.now(),
+                    editNote: 'تم الإلغاء بواسطة العميل بغرض التعديل'
+                }).then(() => {
+                    updateCartUI();
+                    document.getElementById('trackingModal').style.display = 'none';
+                    toggleCart(); // فتح السلة تلقائياً
+                });
+            }
+        });
+    }
 };
