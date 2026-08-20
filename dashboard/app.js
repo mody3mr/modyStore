@@ -1623,3 +1623,14 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         }
     }
 });
+window.goToPendingOrders = () => {
+    document.querySelector('[data-target="orders-view"]').click();
+    window.switchOrderTab('active');
+    
+    // عشان يفلتر الجدول ويجيب "قيد المراجعة" بس
+    const statusF = document.getElementById('filterOrderStatus');
+    if (statusF) {
+        statusF.value = 'قيد المراجعة';
+        window.renderOrdersTable();
+    }
+};
