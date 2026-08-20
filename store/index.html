@@ -6,7 +6,6 @@
     <title>مودي استور | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -111,9 +110,9 @@
             </div>
 
             <div class="checkout-row">
-                <div class="input-wrapper"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى" style="padding-right: 15px;"></div>
-                <div class="input-wrapper"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور" style="padding-right: 15px;"></div>
-                <div class="input-wrapper"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة" style="padding-right: 15px;"></div>
+                <div class="input-wrapper"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى"></div>
+                <div class="input-wrapper"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور"></div>
+                <div class="input-wrapper"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة"></div>
             </div>
 
             <div class="input-wrapper"><input type="text" id="custLandmark" class="checkout-input" placeholder="علامة مميزة (اختياري)"><i class="fas fa-map-pin"></i></div>
@@ -130,7 +129,7 @@
             </div>
 
             <button class="confirm-btn" id="submitOrderBtn" onclick="sendOrder()">تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i></button>
-            <div class="cancel-btn" onclick="document.getElementById('checkoutModal').style.display='none'">إلغاء والعودة للسلة</div>
+            <div class="cancel-btn" onclick="document.getElementById('checkoutModal').style.display='none'; document.getElementById('cartSidebar').classList.add('open');">إلغاء والعودة للسلة</div>
         </div>
 
         <div id="successScreen" class="success-msg">
@@ -142,7 +141,7 @@
         </div>
     </div>
 
-    <!-- نافذة تتبع الطلب بالفاتورة المصغرة (مع التعديل والإلغاء) -->
+    <!-- نافذة تتبع الطلب بالفاتورة المصغرة -->
     <div class="checkout-modal" id="trackingModal" style="max-height: 90vh; overflow-y: auto;">
         <h3>تتبع طلبك</h3>
         <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم الطلب ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
@@ -162,15 +161,13 @@
                 <div id="trackingStatusText" style="font-size: 22px; font-weight: 900; color: var(--secondary);"></div>
             </div>
             
-            <!-- تفاصيل الأوردر (الفاتورة) هتظهر هنا -->
             <div id="trackingOrderDetails" style="font-size: 14px; color: var(--text);"></div>
         </div>
 
         <button class="confirm-btn" onclick="trackOrder()">تتبع الآن <i class="fas fa-search"></i></button>
-        <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'">إغلاق</div>
+        <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'; document.getElementById('overlay').classList.remove('show');">إغلاق</div>
     </div>
 
-    <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
