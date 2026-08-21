@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | ModyStore</title>
+    <!-- خطوط جوجل والأيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- مكتبات التفاعل والأنيميشن -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --primary: #1e293b; 
+            --secondary: #3b82f6; 
+            --bg: #f1f5f9; 
+            --card-bg: #ffffff; 
+            --text-dark: #334155; 
+            --border: #e2e8f0; 
+            --danger: #ef4444;
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Cairo', sans-serif; 
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: var(--text-dark); 
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; 
+            overflow: hidden; 
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 40px 30px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .brand-logo {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-logo i {
+            color: #f59e0b;
+        }
+
+        .login-subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: right;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 40px; /* مساحة للأيقونة */
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Cairo';
+            outline: none;
+            background: #f8fafc;
+            transition: 0.3s;
+            direction: ltr; /* عشان الإيميل والباسورد إنجليزي */
+            text-align: left;
+        }
+
+        .input-group input:focus {
+            border-color: var(--secondary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .input-group .icon {
+            position: absolute;
+            left: 15px;
+            top: 38px;
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        /* زرار إظهار الباسورد */
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 38px;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: 0.3s;
+        }
+        
+        .toggle-password:hover {
+            color: var(--primary);
+        }
+
+        .btn-login {
+            width: 100%;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-login:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* شكل التحميل */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer-text {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-card animate__animated animate__fadeInUp">
+            <div class="brand-logo">
+                <i class="fas fa-bolt"></i> ModyStore
+            </div>
+            <p class="login-subtitle">لوحة تحكم الإدارة - الرجاء تسجيل الدخول</p>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <label>البريد الإلكتروني</label>
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="email" id="email" placeholder="admin@modystore.com" required autocomplete="email">
+                </div>
+
+                <div class="input-group">
+                    <label>كلمة المرور</label>
+                    <i class="fas fa-lock icon"></i>
+                    <i class="fas fa-eye toggle-password" id="togglePassword" title="عرض/إخفاء"></i>
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-login" id="loginBtn">
+                    <span id="btnText">دخول للوحة التحكم</span>
+                    <div class="loader" id="loginLoader"></div>
+                </button>
+            </form>
+
+            <div class="footer-text">
+                نظام إدارة المبيعات المتكامل &copy; 2026
+            </div>
+        </div>
+    </div>
+
+    <!-- كود الجافاسكريبت الخاص بتسجيل الدخول -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+        // إعدادات قاعدة البيانات (نفس الموجودة في app.js)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
+            authDomain: "modytech-850c2.firebaseapp.com",
+            projectId: "modytech-850c2",
+            storageBucket: "modytech-850c2.firebasestorage.app",
+            messagingSenderId: "909293461306",
+            appId: "1:909293461306:web:48e5492107ad32ceec7a03"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // التحقق إذا كان المستخدم مسجل دخول بالفعل، يحوله للوحة التحكم مباشرة
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = "index.html";
+            }
+        });
+
+        // حركة إظهار وإخفاء الباسورد
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function (e) {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+        });
+
+        // عملية تسجيل الدخول
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const loginLoader = document.getElementById('loginLoader');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            // تغيير شكل الزرار لوضع التحميل
+            loginBtn.disabled = true;
+            btnText.style.display = 'none';
+            loginLoader.style.display = 'block';
+
+            try {
+                // 1. تسجيل الدخول عن طريق Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. التحقق من حالة الموظف في الداتا بيز (هل حسابه نشط؟)
+                const snapshot = await get(ref(db, 'employees'));
+                let isUserActive = false;
+                let userName = "موظف";
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        if (child.val().email === user.email && child.val().isActive === true) {
+                            isUserActive = true;
+                            userName = child.val().name;
+                        }
+                    });
+                }
+
+                // 3. اتخاذ القرار
+                if (isUserActive) {
+                    Swal.fire({
+                        title: `أهلاً بك يا ${userName}`,
+                        text: 'جاري تحويلك للوحة التحكم...',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = "index.html";
+                    });
+                } else {
+                    // الحساب غير نشط أو مش موجود في الداتا بيز
+                    await signOut(auth); // خروجه فوراً
+                    Swal.fire({
+                        title: 'عفواً!',
+                        text: 'هذا الحساب موقوف أو غير مصرح له بالدخول.',
+                        icon: 'error',
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#1e293b'
+                    });
+                }
+
+            } catch (error) {
+                console.error("Login Error:", error.code);
+                let errorMessage = "حدث خطأ أثناء تسجيل الدخول.";
+                
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "تم حظر الحساب مؤقتاً بسبب محاولات كثيرة خاطئة، جرب لاحقاً.";
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = "تأكد من اتصالك بالإنترنت.";
+                }
+
+                Swal.fire({
+                    text: errorMessage,
+                    icon: 'error',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 4000
+                });
+            } finally {
+                // إرجاع الزرار لشكله الطبيعي
+                loginBtn.disabled = false;
+                btnText.style.display = 'block';
+                loginLoader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
