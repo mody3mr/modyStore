@@ -1751,10 +1751,11 @@ window.goToPendingOrders = () => {
             window.renderOrdersTable();
         }
     }, 50);
- // ==========================================
-// تشغيل القائمة المنسدلة للملف الشخصي
+}; // <--- القوس ده اللي كان ناقص عندك يا بطل!
+
 // ==========================================
-const profileBtn = document.getElementById('userProfileBtn');
+// تشغيل القائمة المنسدلة للملف الشخصي
+// ==========================================const profileBtn = document.getElementById('userProfileBtn');
 const profileDropdown = document.getElementById('profileDropdown');
 
 if (profileBtn && profileDropdown) {
