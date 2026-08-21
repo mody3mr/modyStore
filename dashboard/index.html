@@ -22,6 +22,50 @@
     
     <!-- مكتبة تصدير الاكسيل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- أكواد الستايل الخاصة بإخفاء أسهم التمرير وتظبيط الطباعة -->
+    <style>
+        /* إخفاء أسهم شريط التمرير (الطلوع والنزول) */
+        ::-webkit-scrollbar-button {
+            display: none !important;
+        }
+
+        /* تظبيط شكل الطباعة للفواتير والبوليصة */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            /* طباعة الفاتورة */
+            body.print-mode-invoice .print-invoice-area, 
+            body.print-mode-invoice .print-invoice-area * {
+                visibility: visible;
+            }
+            body.print-mode-invoice .print-invoice-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            /* طباعة بوليصة الشحن */
+            body.print-mode-waybill .print-waybill-area, 
+            body.print-mode-waybill .print-waybill-area * {
+                visibility: visible;
+            }
+            body.print-mode-waybill .print-waybill-area {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -129,7 +173,19 @@
                 <div class="charts-container grid-2" style="margin-top: 30px;">
                     <div class="card" style="padding: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات (آخر 7 أيام)</h3>
-                        <div style="position: relative; height: 250px; width: 100%;"><canvas id="salesChart"></canvas></div>
+                        <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;"><canvas id="salesChart"></canvas></div>
+                        <!-- جدول آخر 7 أيام -->
+                        <table style="width: 100%; text-align: right; border-collapse: collapse; font-size: 14px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                    <th style="padding: 10px;">التاريخ</th>
+                                    <th style="padding: 10px;">عدد الطلبات</th>
+                                    <th style="padding: 10px;">الإيرادات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="last7DaysTableBody">
+                            </tbody>
+                        </table>
                     </div>
                     <div class="card" style="padding: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-pie"></i> حالة الطلبات الحالية</h3>
@@ -147,6 +203,11 @@
                 <div class="custom-tabs">
                     <button class="custom-tab-btn active" id="tabActiveOrders" onclick="switchOrderTab('active', this)">الطلبات الحالية</button>
                     <button class="custom-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived', this)">أرشيف الطلبات</button>
+                </div>
+
+                <!-- كارد عدد الطلبات الموجودة في البحث -->
+                <div class="stat-card" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: inline-block;">
+                    <h3 style="margin: 0; font-size: 16px;">الطلبات المعروضة حالياً: <span id="filteredOrdersCount" style="color: var(--primary); font-weight: bold; font-size: 20px;">0</span></h3>
                 </div>
                 
                 <div class="filter-bar">
@@ -389,6 +450,17 @@
                         <div class="input-group"><label>العنوان</label><input type="text" id="setAddress"></div>
                         <div class="input-group"><label>حقوق الملكية (Copyright)</label><input type="text" id="setCopyright" placeholder="© 2026 ModyStore"></div>
                     </div>
+
+                    <!-- قسم طرق الدفع الجديد -->
+                    <div class="card" style="padding: 20px; grid-column: span 2;">
+                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-money-check-alt"></i> طرق الدفع المتاحة</h3>
+                        <div class="grid-2">
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayCod" style="width:20px; height:20px;"> الدفع عند الاستلام (COD)</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayWallet" style="width:20px; height:20px;"> محفظة إلكترونية (فودافون كاش...)</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayInsta" style="width:20px; height:20px;"> إنستا باي (InstaPay)</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayVisa" style="width:20px; height:20px;"> فيزا / بطاقة ائتمان</label>
+                        </div>
+                    </div>
                     
                     <div class="card" style="padding: 20px; grid-column: span 2;">
                         <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-share-alt"></i> روابط السوشيال ميديا</h3>
@@ -419,11 +491,23 @@
                 
                 <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px; flex-wrap: wrap; align-items: center;">
                     <button class="order-tab-btn active" id="btnFilterToday" onclick="generateReport('today', this)">اليوم</button>
+                    <!-- زرار أسبوع الجديد -->
+                    <button class="order-tab-btn" id="btnFilterWeek" onclick="generateReport('week', this)">أسبوع</button>
                     <button class="order-tab-btn" id="btnFilterMonth" onclick="generateReport('month', this)">هذا الشهر</button>
                     <button class="order-tab-btn" id="btnFilterAll" onclick="generateReport('all', this)">كل الأوقات</button>
                     
                     <span style="color: var(--text-light); font-weight: bold; margin: 0 10px;">أو اختر يوماً محدد:</span>
                     <input type="date" id="reportSpecificDate" onchange="generateReport('specific', this)" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-family: 'Cairo'; flex: 1; outline: none;">
+                    
+                    <!-- أزرار التصدير -->
+                    <div style="flex-basis: 100%; display: flex; gap: 10px; margin-top: 10px;">
+                        <button onclick="exportReportToExcel()" style="background-color: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-file-excel"></i> تصدير Excel
+                        </button>
+                        <button onclick="exportReportToPDF()" style="background-color: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-file-pdf"></i> تصدير PDF
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid-2">
