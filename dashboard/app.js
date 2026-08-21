@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
 import { getDatabase, ref, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+
 const firebaseConfig = {
     apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
     authDomain: "modytech-850c2.firebaseapp.com",
@@ -29,6 +30,7 @@ onAuthStateChanged(auth, (user) => {
                     if (child.val().email === user.email && child.val().isActive) {
                         currentUser = child.val().name;
                         window.currentUserRole = child.val().role;
+                        
                         // --- تحديث بيانات الهيدر ---
                         const nameDisplay = document.getElementById("currentUserNameDisplay");
                         const avatar = document.getElementById("currentUserAvatar");
@@ -44,6 +46,7 @@ onAuthStateChanged(auth, (user) => {
                             avatar.src = `https://ui-avatars.com/api/?name=${apiName}&background=3b82f6&color=fff`;
                         }
                         // ---------------------------
+                        
                         found = true;
                     }
                 });
@@ -55,8 +58,7 @@ onAuthStateChanged(auth, (user) => {
             }
         });
     } else {
-        // تفعيل هذا السطر سيجبر أي شخص غير مسجل على الانتقال لصفحة تسجيل الدخول
-       window.location.href = "login.html"; 
+        window.location.href = "login.html"; 
     }
 });
 
@@ -203,7 +205,7 @@ window.goToOrdersTab = (tab = 'active') => {
 };
 
 // ==========================================
-// تقارير المبيعات (مع البحث بيوم وأسبوع محدد وتصدير)
+// تقارير المبيعات
 // ==========================================
 let productCatalog = {}; 
 
@@ -386,7 +388,7 @@ window.exportReportToPDF = () => {
 };
 
 // ==========================================
-// الرسوم البيانية (Charts) وإحصائيات آخر 7 أيام
+// الرسوم البيانية
 // ==========================================
 let salesChart = null;
 let ordersChart = null;
@@ -460,7 +462,7 @@ function render7DaysSales() {
 }
 
 // ==========================================
-// إدارة الطلبات (شاملة فلاتر البحث)
+// إدارة الطلبات
 // ==========================================
 let allOrders = [];
 let currentOrderTab = 'active';
@@ -1350,7 +1352,8 @@ window.openEmployeeModal = () => {
     document.getElementById('employeeModal').style.display = "flex"; 
 };
 
-window.saveEmployee = () => { 
+// دالة حفظ موظف وتوليد حساب له في الـ Auth أوتوماتيك
+window.saveEmployee = async () => { 
     let permissions = { tabs: [], canAdd: false, canEdit: false, canDelete: false, canChangeStatus: false };
     if (document.getElementById("empRole").value === 'Supervisor') {
         if (document.querySelectorAll('.perm-tab')) {
@@ -1366,33 +1369,72 @@ window.saveEmployee = () => {
         permissions = null; 
     }
 
-    const data = { 
-        name: document.getElementById("empName").value, 
-        phone: document.getElementById("empPhone").value, 
-        email: document.getElementById("empEmail") ? document.getElementById("empEmail").value : "",
-        password: document.getElementById("empPass") ? document.getElementById("empPass").value : "",
-        role: document.getElementById("empRole").value, 
-        permissions: permissions
-    };
+    const nameVal = document.getElementById("empName").value.trim();
+    const phoneVal = document.getElementById("empPhone").value.trim();
+    const emailVal = document.getElementById("empEmail") ? document.getElementById("empEmail").value.trim() : "";
+    const passVal = document.getElementById("empPass") ? document.getElementById("empPass").value.trim() : "";
+    const roleVal = document.getElementById("empRole").value;
     
-    if (!data.name) {
+    if (!nameVal) {
         return window.showAlert("اسم الموظف مطلوب!");
     }
     
     if (editingEmpId) {
+        const data = { 
+            name: nameVal, 
+            phone: phoneVal, 
+            email: emailVal,
+            password: passVal,
+            role: roleVal, 
+            permissions: permissions
+        };
+
         update(ref(db, `employees/${editingEmpId}`), data).then(() => {
             window.closeModal('employeeModal');
             window.showAlert("تم التعديل بنجاح!", "success");
-            logAction("تعديل موظف", `تعديل حساب: ${data.name}`);
+            logAction("تعديل موظف", `تعديل حساب: ${nameVal}`);
         }); 
     } else { 
-        data.isActive = true; 
-        data.createdAt = Date.now(); 
-        push(ref(db, 'employees'), data).then(() => {
+        if(!emailVal || !passVal) {
+            return window.showAlert("البريد الإلكتروني وكلمة المرور مطلوبين لإنشاء حساب تسجيل الدخول!");
+        }
+
+        try {
+            const secondaryApp = initializeApp(firebaseConfig, "SecondaryAppInstance");
+            const secondaryAuth = getAuth(secondaryApp);
+            
+            await createUserWithEmailAndPassword(secondaryAuth, emailVal, passVal);
+            await signOut(secondaryAuth);
+
+            const newEmpData = { 
+                name: nameVal, 
+                phone: phoneVal, 
+                email: emailVal,
+                password: passVal,
+                role: roleVal, 
+                permissions: permissions,
+                isActive: true, 
+                createdAt: Date.now() 
+            };
+            
+            await push(ref(db, 'employees'), newEmpData);
+            
             window.closeModal('employeeModal');
-            window.showAlert("تم إضافة الموظف بنجاح!", "success");
-            logAction("إضافة موظف", `إنشاء حساب جديد: ${data.name}`);
-        }); 
+            window.showAlert("تم إضافة الموظف وإنشاء حساب الدخول بنجاح!", "success");
+            logAction("إضافة موظف", `إنشاء حساب جديد: ${nameVal}`);
+            
+        } catch (error) {
+            console.error("Error creating employee auth:", error);
+            let errMsg = "حدث خطأ أثناء إنشاء الحساب.";
+            if (error.code === 'auth/email-already-in-use') {
+                errMsg = "البريد الإلكتروني مستخدم بالفعل لحساب آخر!";
+            } else if (error.code === 'auth/weak-password') {
+                errMsg = "كلمة المرور ضعيفة جداً (يجب أن تكون 6 أحرف على الأقل).";
+            } else if (error.code === 'auth/invalid-email') {
+                errMsg = "صيغة البريد الإلكتروني غير صحيحة.";
+            }
+            window.showAlert(errMsg, "error");
+        }
     }
 };
 
@@ -1750,7 +1792,7 @@ window.goToPendingOrders = () => {
             window.renderOrdersTable();
         }
     }, 50);
-}; // <--- القوس ده اللي كان ناقص عندك يا بطل!
+};
 
 // ==========================================
 // تشغيل القائمة المنسدلة للملف الشخصي
