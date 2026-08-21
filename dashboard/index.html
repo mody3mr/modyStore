@@ -66,18 +66,8 @@
             }
         }
     </style>
-<style>
-        html.auth-checking body.dashboard-locked { visibility:hidden; }
-        .invoice-paper{width:210mm;max-width:210mm;min-height:270mm;margin:0 auto;padding:16mm;background:#fff;color:#111827;font-family:'Cairo',sans-serif;box-sizing:border-box;}
-        .invoice-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:3px solid #1e293b;padding-bottom:14px;margin-bottom:16px}.invoice-brand{font-size:30px;font-weight:900;color:#1e293b}.invoice-subtitle{font-size:15px;color:#64748b;font-weight:700}.invoice-meta{text-align:left;font-size:13px;line-height:1.9}.invoice-customer{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;font-size:13px}.invoice-table{width:100%;border-collapse:collapse}.invoice-table th{background:#1e293b;color:#fff;padding:11px 8px;border:1px solid #1e293b;font-size:13px}.invoice-table td{padding:10px 8px;border:1px solid #cbd5e1;font-size:13px}.invoice-summary{width:45%;margin-right:auto;margin-top:18px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}.invoice-summary>div{display:flex;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #e2e8f0;font-size:13px}.invoice-grand-total{background:#f1f5f9;font-size:17px!important;font-weight:900}.invoice-footer{margin-top:35px;padding-top:14px;border-top:1px dashed #94a3b8;text-align:center;color:#64748b;font-size:12px;line-height:1.8}
-        @media screen{.invoice-paper{display:none}}
-        @media print{ @page{size:A4;margin:0} body.print-mode-invoice .print-invoice-area,body.print-mode-invoice .print-invoice-area *{visibility:visible!important} body.print-mode-invoice .print-invoice-area{display:block!important;position:absolute;inset:0;width:100%;margin:0;padding:0;background:#fff} body.print-mode-invoice .invoice-paper{display:block!important} body.print-mode-invoice .workspace,body.print-mode-invoice .topbar,body.print-mode-invoice .sidebar{display:none!important} }
-    </style>
-<style>
-@media print{body.print-mode-sales .sales-report-printable{visibility:visible!important}body.print-mode-sales .sales-report-printable *{visibility:visible!important}body.print-mode-sales .sales-report-printable{position:absolute!important;display:block!important;inset:0!important;width:100%!important;background:#fff!important;z-index:99999!important}body.print-mode-sales .workspace,body.print-mode-sales .topbar,body.print-mode-sales .sidebar{display:none!important}}
-</style>
 </head>
-<body class="dashboard-locked">
+<body>
 
     <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar" id="sidebar">
@@ -151,14 +141,13 @@
                             <p id="statTotalOrders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card sales-stat-card clickable-card" onclick="openSalesReport()">
-                        <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-money-bill-wave"></i></div>
-                        <div class="stat-info sales-stat-info">
-                            <h3>إجمالي المبيعات</h3><p id="statTotalRevenue">0 ج.م</p>
-                            <div class="sales-card-actions" onclick="event.stopPropagation()">
-                                <button type="button" class="mini-export-btn mini-export-excel" onclick="openSalesReport(); setTimeout(() => exportReportToExcel(), 250);"><i class="fas fa-file-excel"></i> Excel</button>
-                                <button type="button" class="mini-export-btn mini-export-pdf" onclick="openSalesReport(); setTimeout(() => exportReportToPDF(), 250);"><i class="fas fa-file-pdf"></i> PDF</button>
-                            </div>
+                    <div class="stat-card clickable-card" onclick="openSalesReport()">
+                        <div class="stat-icon" style="color: #10b981; background: #dcfce7;">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>إجمالي المبيعات</h3>
+                            <p id="statTotalRevenue">0 ج.م</p>
                         </div>
                     </div>
                     <div class="stat-card clickable-card" onclick="goToPendingOrders()">
@@ -380,7 +369,6 @@
                                 <th>الموظف</th>
                                 <th>الاتصال</th>
                                 <th>الصلاحية</th>
-                                <th>كلمة المرور</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
                             </tr>
@@ -492,7 +480,7 @@
         </div>
 
         <!-- ================= تقرير المبيعات المفصل ================= -->
-        <div class="modal-overlay sales-report-printable" id="salesReportModal">
+        <div class="modal-overlay" id="salesReportModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 800px; max-width: 95%;">
                 <h3 style="border-bottom: 2px solid var(--bg); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fas fa-chart-line" style="color: var(--success);"></i> تقرير المبيعات المفصل</span>
@@ -543,7 +531,7 @@
 
         <!-- ================= تفاصيل الطلب وإدخال بيانات بوليصة الشحن ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
-            <div class="modal animate__animated animate__zoomIn" style="width: 800px;">
+            <div class="modal print-invoice-area animate__animated animate__zoomIn" style="width: 800px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
                 
                 <div class="grid-2 screen-only-flex">
@@ -602,17 +590,6 @@
                         <i class="fas fa-print"></i> طباعة الفاتورة
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- ================= تصميم الفاتورة للطباعة ================= -->
-        <div id="invoicePrintArea" class="print-invoice-area" style="display:none;">
-            <div class="invoice-paper" dir="rtl">
-                <div class="invoice-header"><div><div class="invoice-brand">ModyStore <i class="fas fa-bolt"></i></div><div class="invoice-subtitle">فاتورة مبيعات</div></div><div class="invoice-meta"><div><strong>رقم الطلب:</strong> <span id="invOrderId"></span></div><div><strong>التاريخ:</strong> <span id="invDate"></span></div></div></div>
-                <div class="invoice-customer"><div><strong>اسم العميل:</strong> <span id="invCustName"></span></div><div><strong>التليفون:</strong> <span id="invCustPhone" dir="ltr"></span></div><div><strong>العنوان:</strong> <span id="invCustAddress"></span></div><div><strong>طريقة الدفع:</strong> <span id="invPaymentMethod"></span></div><div><strong>الرقم السري:</strong> <span id="invSecretCode"></span></div></div>
-                <table class="invoice-table"><thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody id="invItemsList"></tbody></table>
-                <div class="invoice-summary"><div><span>الإجمالي الفرعي</span><strong id="invSubtotal"></strong></div><div><span>الخصم</span><strong id="invDiscount"></strong></div><div class="invoice-grand-total"><span>الإجمالي النهائي</span><strong id="invTotal"></strong></div></div>
-                <div class="invoice-footer"><div>شكراً لثقتكم بنا ❤️</div><div>ModyStore — نتمنى لكم تجربة سعيدة</div></div>
             </div>
         </div>
 
@@ -805,10 +782,7 @@
                         </div>
                         <div class="input-group">
                             <label>كلمة المرور</label>
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <input type="password" id="empPass" dir="ltr" placeholder="رقم سري قوي..." autocomplete="new-password">
-                                <button type="button" class="password-toggle-btn" onclick="togglePasswordInput('empPass', this)" title="إظهار كلمة المرور"><i class="fas fa-eye"></i></button>
-                            </div>
+                            <input type="text" id="empPass" dir="ltr" placeholder="رقم سري قوي...">
                         </div>
                     </div>
                 </div>
