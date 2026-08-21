@@ -227,7 +227,10 @@ window.applyPromo = () => {
         if(snapshot.exists()){
             snapshot.forEach(child => {
                 const v = child.val();
-                if(v.code === codeInput && v.isActive) foundVoucher = v;
+                if(v.code === codeInput && v.isActive) {
+    foundVoucher = v;
+    foundVoucher.id = child.key; // السطر ده مهم جداً عشان نحتفظ بالـ ID الخاص بالكوبون
+}
             });
         }
         if(foundVoucher) {
