@@ -832,8 +832,6 @@ window.printDocument = (type) => {
     setTimeout(() => { 
         document.body.className = ''; 
     }, 500); 
-};
-
 onValue(ref(db, 'orders'), (snapshot) => {
     allOrders = [];
     let totalRev = 0;
