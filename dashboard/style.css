@@ -466,23 +466,37 @@ tr:hover { background-color: #f8fafc; }
    دعم الشاشات الصغيرة والموبايل (Responsiveness)
 ========================================== */
 /* ================= القائمة المنسدلة للملف الشخصي ================= */
+.user-profile {
+    position: relative; /* مهم جداً عشان القائمة تطلع تحته مباشرة */
+}
+
 .profile-dropdown {
     position: absolute;
-    top: 50px;
+    top: 55px;
     left: 0;
     background: var(--card-bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    width: 200px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    width: 220px;
     display: none;
     flex-direction: column;
     z-index: 1000;
     overflow: hidden;
     animation: fadeIn 0.2s ease-in-out;
 }
-.profile-dropdown.show { display: flex; }
-.dropdown-header { padding: 15px; background: #f8fafc; text-align: right; }
+
+.profile-dropdown.show { 
+    display: flex; 
+}
+
+.dropdown-header { 
+    padding: 15px; 
+    background: #f8fafc; 
+    text-align: right; 
+    border-bottom: 1px solid var(--border);
+}
+
 .dropdown-item {
     padding: 12px 15px;
     background: none;
@@ -495,11 +509,21 @@ tr:hover { background-color: #f8fafc; }
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
+    color: var(--text-dark);
 }
-.dropdown-item:hover { background: #f1f5f9; }
-.dropdown-item.text-danger { color: var(--danger); }
-.dropdown-item.text-danger:hover { background: #fef2f2; }
-@media screen and (max-width: 768px) {
+
+.dropdown-item:hover { 
+    background: #f1f5f9; 
+}
+
+.dropdown-item.text-danger { 
+    color: var(--danger); 
+}
+
+.dropdown-item.text-danger:hover { 
+    background: #fef2f2; 
+}@media screen and (max-width: 768px) {
     /* القائمة الجانبية */
     .sidebar {
         position: fixed;
