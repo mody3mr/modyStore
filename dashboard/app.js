@@ -823,6 +823,7 @@ window.printDocument = (type) => {
             let paidAmountEl = document.getElementById("printPaidAmount");
             if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total) + " ج.م (مدفوع)";
         }
+        {
 
         document.body.className = 'print-mode-waybill';
     } else {
