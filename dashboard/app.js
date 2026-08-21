@@ -30,7 +30,20 @@ onAuthStateChanged(auth, (user) => {
                     if (child.val().email === user.email && child.val().isActive) {
                         currentUser = child.val().name;
                         window.currentUserRole = child.val().role;
-                        
+                        // --- تطبيق الصلاحيات للمشرفين ---
+                        const empData = child.val();
+                        if (empData.role === 'Supervisor' && empData.permissions) {
+                            // 1. إخفاء التابات اللي ملهوش صلاحية عليها
+                            const allowedTabs = empData.permissions.tabs || [];
+                            document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
+                                const target = nav.getAttribute('data-target');
+                                // دائماً بنسيب الإحصائيات أو بنديله إذن، وباقي التابات بنشيك عليها
+                                if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
+                                    nav.style.display = 'none';
+                                }
+                            });
+                        }
+                        // ---------------------------------
                         // --- تحديث بيانات الهيدر ---
                         const nameDisplay = document.getElementById("currentUserNameDisplay");
                         const avatar = document.getElementById("currentUserAvatar");
