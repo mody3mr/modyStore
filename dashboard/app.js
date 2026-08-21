@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
 import { getDatabase, ref, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
@@ -12,9 +13,44 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const currentUser = "محمد عمرو";
-// نظام الصلاحيات المبدئي (لو فيه نظام Login هيتغير من هنا)
-window.currentUserRole = "Admin"; // خيارات: "Admin" أو "Supervisor"
+const auth = getAuth(app);
+
+let currentUser = "جاري التحميل...";
+window.currentUserRole = "Supervisor"; 
+
+// ==========================================
+// تسجيل الدخول الصارم (Strict Auth)
+// ==========================================
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        get(ref(db, 'employees')).then((snapshot) => {
+            let found = false;
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    if (child.val().email === user.email && child.val().isActive) {
+                        currentUser = child.val().name;
+                        window.currentUserRole = child.val().role;
+                        found = true;
+                    }
+                });
+            }
+            if (!found) {
+                signOut(auth).then(() => {
+                    window.location.href = "login.html"; 
+                });
+            }
+        });
+    } else {
+        // تفعيل هذا السطر سيجبر أي شخص غير مسجل على الانتقال لصفحة تسجيل الدخول
+        // window.location.href = "login.html"; 
+    }
+});
+
+window.logout = () => {
+    signOut(auth).then(() => {
+        window.location.href = "login.html";
+    });
+};
 
 // ==========================================
 // القائمة الجانبية 
@@ -31,7 +67,6 @@ window.closeModal = (id) => {
 };
 
 window.showAlert = (msg, icon = 'success') => {
-    // --- التعديلات التفاعلية الجديدة ---
     if(typeof Swal !== 'undefined') {
         Swal.fire({
             text: msg,
@@ -43,7 +78,6 @@ window.showAlert = (msg, icon = 'success') => {
             timerProgressBar: true,
         });
     } else {
-        // --- الكود القديم الخاص بك (احتياطي) ---
         document.getElementById("alertMsg").innerText = msg;
         document.getElementById("customAlert").style.display = "flex";
     }
@@ -56,7 +90,6 @@ window.closeAlert = () => {
 let confirmCallback = null;
 
 window.showConfirm = (msg, callback) => {
-    // --- التعديلات التفاعلية الجديدة ---
     if(typeof Swal !== 'undefined') {
         Swal.fire({
             title: 'هل أنت متأكد؟',
@@ -73,7 +106,6 @@ window.showConfirm = (msg, callback) => {
             }
         });
     } else {
-        // --- الكود القديم الخاص بك (احتياطي) ---
         document.getElementById("confirmMsg").innerText = msg;
         confirmCallback = callback;
         document.getElementById("customConfirm").style.display = "flex";
@@ -147,7 +179,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
         
         document.getElementById(item.dataset.target).classList.add('active');
 
-        // التعديل: قفل القائمة الجانبية دائماً بعد اختيار أي تاب
         document.getElementById('sidebar').classList.add('collapsed');
     });
 });
@@ -158,7 +189,7 @@ window.goToOrdersTab = (tab = 'active') => {
 };
 
 // ==========================================
-// تقارير المبيعات (مع البحث بيوم محدد والمنتجات)
+// تقارير المبيعات (مع البحث بيوم وأسبوع محدد وتصدير)
 // ==========================================
 let productCatalog = {}; 
 
@@ -183,12 +214,12 @@ window.openSalesReport = () => {
 let currentReportProducts = [];
 
 window.generateReport = (filterType, element) => {
-    if (element.tagName === "BUTTON") {
+    if (element && element.tagName === "BUTTON") {
         document.querySelectorAll('.report-filters button').forEach(b => {
             b.classList.remove('active');
         });
         element.classList.add('active');
-        document.getElementById("reportSpecificDate").value = ""; 
+        if(document.getElementById("reportSpecificDate")) document.getElementById("reportSpecificDate").value = ""; 
     } else {
         document.querySelectorAll('.report-filters button').forEach(b => {
             b.classList.remove('active');
@@ -200,6 +231,9 @@ window.generateReport = (filterType, element) => {
 
     if (filterType === 'today') {
         start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        end = Date.now();
+    } else if (filterType === 'week') {
+        start = Date.now() - (7 * 24 * 60 * 60 * 1000);
         end = Date.now();
     } else if (filterType === 'month') {
         start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -259,26 +293,28 @@ window.generateReport = (filterType, element) => {
         }
     });
 
-    document.getElementById("reportTotalSales").innerText = Math.round(filteredTotal) + " ج.م";
+    if(document.getElementById("reportTotalSales")) document.getElementById("reportTotalSales").innerText = Math.round(filteredTotal) + " ج.م";
     
-    document.getElementById("reportPaymentBreakdown").innerHTML = `
-        <div class="payment-row">
-            <span><i class="fas fa-hand-holding-usd text-accent"></i> كاش</span> 
-            <span class="amount">${Math.round(paymentStats["الدفع عند الاستلام (COD)"])} ج</span>
-        </div>
-        <div class="payment-row">
-            <span><i class="fas fa-mobile-alt" style="color:#8b5cf6;"></i> محفظة</span> 
-            <span class="amount">${Math.round(paymentStats["محفظة إلكترونية"])} ج</span>
-        </div>
-        <div class="payment-row">
-            <span><i class="fas fa-bolt" style="color:#0ea5e9;"></i> إنستا</span> 
-            <span class="amount">${Math.round(paymentStats["إنستا باي (InstaPay)"])} ج</span>
-        </div>
-        <div class="payment-row">
-            <span><i class="fas fa-credit-card text-primary"></i> فيزا</span> 
-            <span class="amount">${Math.round(paymentStats["فيزا / بطاقة ائتمان"])} ج</span>
-        </div>
-    `;
+    if(document.getElementById("reportPaymentBreakdown")) {
+        document.getElementById("reportPaymentBreakdown").innerHTML = `
+            <div class="payment-row">
+                <span><i class="fas fa-hand-holding-usd text-accent"></i> كاش</span> 
+                <span class="amount">${Math.round(paymentStats["الدفع عند الاستلام (COD)"])} ج</span>
+            </div>
+            <div class="payment-row">
+                <span><i class="fas fa-mobile-alt" style="color:#8b5cf6;"></i> محفظة</span> 
+                <span class="amount">${Math.round(paymentStats["محفظة إلكترونية"])} ج</span>
+            </div>
+            <div class="payment-row">
+                <span><i class="fas fa-bolt" style="color:#0ea5e9;"></i> إنستا</span> 
+                <span class="amount">${Math.round(paymentStats["إنستا باي (InstaPay)"])} ج</span>
+            </div>
+            <div class="payment-row">
+                <span><i class="fas fa-credit-card text-primary"></i> فيزا</span> 
+                <span class="amount">${Math.round(paymentStats["فيزا / بطاقة ائتمان"])} ج</span>
+            </div>
+        `;
+    }
 
     currentReportProducts = Object.values(productSales).sort((a, b) => {
         return b.qty - a.qty;
@@ -288,8 +324,10 @@ window.generateReport = (filterType, element) => {
 };
 
 window.filterReportProducts = () => {
-    const term = document.getElementById("searchReportProducts").value.toLowerCase();
+    const termEl = document.getElementById("searchReportProducts");
+    const term = termEl ? termEl.value.toLowerCase() : "";
     const div = document.getElementById("reportTopProducts");
+    if(!div) return;
     div.innerHTML = "";
     
     let filtered = currentReportProducts.filter(p => {
@@ -313,9 +351,28 @@ window.filterReportProducts = () => {
     });
 };
 
+window.exportReportToExcel = () => {
+    if (typeof XLSX === 'undefined') {
+        return window.showAlert("برجاء إضافة مكتبة Excel في ملف HTML لتصدير الإحصائيات");
+    }
+    let formattedData = currentReportProducts.map(p => ({
+        "اسم المنتج": p.name,
+        "الكمية المباعة": p.qty,
+        "الإيرادات (ج.م)": Math.round(p.revenue)
+    }));
+    let worksheet = XLSX.utils.json_to_sheet(formattedData);
+    let workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+    XLSX.writeFile(workbook, `Sales_Report_${new Date().getTime()}.xlsx`);
+    logAction("تصدير تقرير", `تم تصدير تقرير المبيعات إلى إكسيل`);
+};
+
+window.exportReportToPDF = () => {
+    window.print();
+};
 
 // ==========================================
-// الرسوم البيانية (Charts)
+// الرسوم البيانية (Charts) وإحصائيات آخر 7 أيام
 // ==========================================
 let salesChart = null;
 let ordersChart = null;
@@ -352,6 +409,40 @@ function updateChartsData() {
     });
     ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
     ordersChart.update();
+    render7DaysSales();
+}
+
+function render7DaysSales() {
+    const tableBody = document.getElementById('last7DaysTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = "";
+    
+    let daysStats = {};
+    for (let i = 6; i >= 0; i--) {
+        let d = new Date();
+        d.setDate(d.getDate() - i);
+        let dateStr = d.toLocaleDateString('ar-EG');
+        daysStats[dateStr] = { count: 0, revenue: 0 };
+    }
+
+    allOrders.forEach(order => {
+        if(order.status === 'ملغي') return;
+        let orderDate = new Date(order.createdAt).toLocaleDateString('ar-EG');
+        if (daysStats[orderDate]) {
+            daysStats[orderDate].count++;
+            daysStats[orderDate].revenue += order.total;
+        }
+    });
+
+    Object.keys(daysStats).forEach(date => {
+        tableBody.innerHTML += `
+            <tr>
+                <td>${date}</td>
+                <td>${daysStats[date].count}</td>
+                <td style="font-weight:bold; color:var(--primary);">${Math.round(daysStats[date].revenue)} ج.م</td>
+            </tr>
+        `;
+    });
 }
 
 // ==========================================
@@ -368,7 +459,6 @@ window.switchOrderTab = (tab) => {
     if(btnActive) btnActive.classList.toggle('active', tab === 'active');
     if(btnArchived) btnArchived.classList.toggle('active', tab === 'archived');
     
-    // التعديل: تصفير فلتر الحالة عند التبديل عشان تظهر كل الطلبات للتاب
     const statusF = document.getElementById('filterOrderStatus');
     if(statusF) statusF.value = '';
     
@@ -377,9 +467,9 @@ window.switchOrderTab = (tab) => {
 
 window.renderOrdersTable = () => {
     const table = document.getElementById("ordersTableBody");
+    if(!table) return;
     table.innerHTML = "";
     
-    // التعديل: حل مشكلة البحث والفلاتر
     const search = document.getElementById("searchOrders") ? document.getElementById("searchOrders").value.toLowerCase() : "";
     const dateFilter = document.getElementById("filterOrderDate") ? document.getElementById("filterOrderDate").value : "";
     const paymentFilter = document.getElementById("filterOrderPayment") ? document.getElementById("filterOrderPayment").value : "";
@@ -422,6 +512,9 @@ window.renderOrdersTable = () => {
         return tabMatch && searchMatch && dateMatch && payMatch && statMatch;
     });
 
+    const countEl = document.getElementById("filteredOrdersCount");
+    if(countEl) countEl.innerText = filteredOrders.length;
+
     if (filteredOrders.length === 0) {
         table.innerHTML = "<tr><td colspan='6' style='text-align:center; padding: 20px;'>لا توجد طلبات مطابقة للبحث.</td></tr>";
         return;
@@ -449,21 +542,18 @@ window.renderOrdersTable = () => {
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
                 <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total)} ج.م</td>
                 <td>
-                    <!-- التعديل الجديد: التسلسل الإجباري والصلاحيات -->
                     ${(() => {
                        let availableStatuses = [];
-if (window.currentUserRole === 'Admin') {
-    // الأدمن يقدر يختار أي حالة دايماً
-    availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
-} else {
-    // باقي المستخدمين يتطبق عليهم التسلسل الإجباري
-    if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
-    else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
-    else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
-    else availableStatuses = [order.status]; // مقفولة لو تم التسليم أو اتلغى
-}
+                        if (window.currentUserRole === 'Admin') {
+                            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
+                        } else {
+                            if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
+                            else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
+                            else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
+                            else availableStatuses = [order.status];
+                        }
                         
-                        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}')" ${availableStatuses.length === 1 ? 'disabled' : ''}>`;
+                        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}', '${order.displayId || order.orderId}')" ${availableStatuses.length === 1 ? 'disabled' : ''}>`;
                         ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
                             if (availableStatuses.includes(st) || st === order.status) {
                                 let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':'❌';
@@ -483,11 +573,9 @@ if (window.currentUserRole === 'Admin') {
     });
 };
 
-
-window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
+window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId) => {
     const newStatus = selectElement.value;
     
-    // التعديل: إجبار كتابة سبب الإلغاء
     if (newStatus === 'ملغي') {
         if(typeof Swal !== 'undefined') {
             Swal.fire({
@@ -510,39 +598,37 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus) => {
                         cancelledAt: Date.now(),
                         cancelReason: result.value 
                     }).then(() => {
-                        logAction("تحديث حالة طلب", `تغيير حالة الطلب #${orderId} لـ ملغي بسبب: ${result.value}`);
+                        logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ملغي بسبب: ${result.value}`);
                         window.showAlert("تم إلغاء الطلب بنجاح", "success");
                     });
                 } else {
-                    selectElement.value = oldStatus; // تراجع
+                    selectElement.value = oldStatus; 
                 }
             });
         } else {
-            // بديل لو Swal مش شغال
             let reason = prompt("اكتب سبب الإلغاء:");
             if(reason) {
                 update(ref(db, `orders/${orderId}`), { status: newStatus, cancelledAt: Date.now(), cancelReason: reason });
-                logAction("تحديث حالة طلب", `إلغاء طلب #${orderId} بسبب: ${reason}`);
+                logAction("تحديث حالة طلب", `إلغاء طلب #${displayId} بسبب: ${reason}`);
             } else {
                 selectElement.value = oldStatus;
             }
         }
     } else {
-        // الحالات العادية
         if (window.currentUserRole === 'Supervisor') {
             window.showConfirm(`هل تريد إرسال طلب للمدير لتغيير حالة الطلب إلى "${newStatus}"؟`, () => {
                 push(ref(db, 'order_requests'), { orderId, requestedStatus: newStatus, requestedBy: currentUser, timestamp: Date.now() });
                 window.showAlert("تم إرسال الطلب للمدير بنجاح!", "success");
-                selectElement.value = oldStatus; // نرجعها لحد ما المدير يوافق
+                selectElement.value = oldStatus; 
             });
-            selectElement.value = oldStatus; // نرجعها فورا لو ألغى
+            selectElement.value = oldStatus; 
         } else {
-            updateOrderStatus(orderId, selectElement); 
+            updateOrderStatus(orderId, selectElement, displayId); 
         }
     }
 };
 
-window.updateOrderStatus = (orderId, selectElement) => {
+window.updateOrderStatus = (orderId, selectElement, displayId) => {
     const newStatus = selectElement.value;
     const updates = { status: newStatus };
     const now = Date.now();
@@ -561,13 +647,13 @@ window.updateOrderStatus = (orderId, selectElement) => {
     }
 
     update(ref(db, `orders/${orderId}`), updates).then(() => {
-        logAction("تحديث حالة طلب", `تغيير حالة الطلب #${orderId} لـ ${newStatus}`);
+        logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ${newStatus}`);
         window.showAlert("تم تحديث الحالة بنجاح", "success");
     });
 };
 
 // ==========================================
-// تجهيز بوليصة الشحن Bosta وتفاصيل الطلب
+// تجهيز بوليصة الشحن وتفاصيل الطلب
 // ==========================================
 let currentPrintOrder = null;
 
@@ -585,7 +671,6 @@ window.viewOrderDetails = (orderDbId) => {
     document.getElementById("oAddress").innerText = order.customer.address;
     document.getElementById("oPayment").innerText = order.paymentMethod || "دفع عند الاستلام";
 
-    // التعديل: إظهار الرقم السري للعميل وسبب الإلغاء لو موجود
     if(document.getElementById("oSecretCode")) {
         document.getElementById("oSecretCode").innerText = order.secretCode || "غير متوفر";
     }
@@ -767,7 +852,6 @@ onValue(ref(db, 'orders'), (snapshot) => {
             }
         });
         
-        // --- تعديل: إعطاء رقم أوردر تسلسلي 0001 ---
         allOrders.sort((a, b) => a.createdAt - b.createdAt);
         allOrders.forEach((order, index) => {
             order.displayId = String(index + 1).padStart(4, '0');
@@ -776,9 +860,9 @@ onValue(ref(db, 'orders'), (snapshot) => {
         allOrders.reverse();
     }
     
-    document.getElementById('statTotalOrders').innerText = ordersCount;
-    document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
-    document.getElementById('statPendingOrders').innerText = pending;
+    if(document.getElementById('statTotalOrders')) document.getElementById('statTotalOrders').innerText = ordersCount;
+    if(document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
+    if(document.getElementById('statPendingOrders')) document.getElementById('statPendingOrders').innerText = pending;
     
     if(typeof initCharts !== 'undefined') {
         initCharts();
@@ -789,7 +873,7 @@ onValue(ref(db, 'orders'), (snapshot) => {
 });
 
 // ==========================================
-// إدارة المنتجات (التابات والمخزون)
+// إدارة المنتجات
 // ==========================================
 let editingProductId = null;
 let allProducts = [];
@@ -822,8 +906,6 @@ window.saveProduct = () => {
     const category = document.getElementById("prodCategory").value;
     const description = document.getElementById("prodDesc").value;
     const image = document.getElementById("prodImage").value;
-    
-    // الإضافات الجديدة
     const stock = document.getElementById("prodStock") ? document.getElementById("prodStock").value : 0;
     const offerDays = document.getElementById("prodOfferDays") ? document.getElementById("prodOfferDays").value : "";
     
@@ -868,6 +950,7 @@ window.filterProducts = () => {
     const catF = document.getElementById("filterProductCat") ? document.getElementById("filterProductCat").value : "";
     const offerF = document.getElementById("filterProductOffers") ? document.getElementById("filterProductOffers").checked : false;
     const table = document.getElementById("productsTableBody"); 
+    if(!table) return;
     table.innerHTML = "";
     
     let filtered = allProducts.filter(p => {
@@ -971,7 +1054,7 @@ window.editProduct = (id) => {
 };
 
 // ==========================================
-// الأقسام (مع تسجيل النشاطات)
+// الأقسام
 // ==========================================
 let editingCatId = null; 
 let allCategories = [];
@@ -984,9 +1067,7 @@ window.openCategoryModal = () => {
 
 window.saveCategory = () => { 
     const name = document.getElementById("catNameInput").value.trim(); 
-    if (!name) {
-        return;
-    }
+    if (!name) return;
     
     if (editingCatId) {
         update(ref(db, `categories/${editingCatId}`), { name }).then(() => {
@@ -1023,8 +1104,9 @@ window.filterCategories = () => {
     const select1 = document.getElementById("prodCategory");
     const select2 = document.getElementById("filterProductCat");
     
+    if(!table) return;
     table.innerHTML = ""; 
-    select1.innerHTML = "";
+    if(select1) select1.innerHTML = "";
     if (select2) select2.innerHTML = "<option value=''>كل الأقسام</option>";
     
     let filtered = allCategories.filter(c => {
@@ -1052,7 +1134,7 @@ window.filterCategories = () => {
             </tr>`;
             
         let opt = `<option value="${c.name}">${c.name}</option>`;
-        select1.innerHTML += opt;
+        if(select1) select1.innerHTML += opt;
         if (select2) select2.innerHTML += opt;
     });
 };
@@ -1068,7 +1150,7 @@ onValue(ref(db, 'categories'), (snapshot) => {
 });
 
 // ==========================================
-// الكوبونات (مع التابات والإيقاف التلقائي)
+// الكوبونات
 // ==========================================
 let editingVoucherId = null; 
 let allVouchers = [];
@@ -1095,9 +1177,7 @@ window.saveVoucher = () => {
     const value = document.getElementById("voucherValue").value;
     const limit = document.getElementById("voucherLimit").value; 
     
-    if (!code || !value) {
-        return;
-    }
+    if (!code || !value) return;
     
     let data = { 
         code: code, 
@@ -1175,6 +1255,7 @@ window.showVoucherUsers = (id) => {
 window.filterVouchers = () => {
     const term = document.getElementById("searchVouchers").value.toLowerCase();
     const table = document.getElementById("vouchersTableBody"); 
+    if(!table) return;
     table.innerHTML = "";
     
     let filtered = allVouchers.filter(v => {
@@ -1194,7 +1275,6 @@ window.filterVouchers = () => {
             limitText = `${usedCount} / ${v.usageLimit}`;
         }
         
-        // التعديل: إيقاف الكوبون أوتوماتيك لو جاب الحد الأقصى
         if (v.usageLimit && usedCount >= v.usageLimit && v.isActive) {
             update(ref(db, `vouchers/${v.id}`), { isActive: false }); 
             v.isActive = false;
@@ -1236,7 +1316,7 @@ onValue(ref(db, 'vouchers'), (snapshot) => {
 });
 
 // ==========================================
-// إدارة الموظفين (مع الإيميل والباسورد والصلاحيات)
+// إدارة الموظفين
 // ==========================================
 let editingEmpId = null; 
 let allEmployees = [];
@@ -1257,8 +1337,6 @@ window.openEmployeeModal = () => {
 };
 
 window.saveEmployee = () => { 
-    
-    // --- تعديل: جمع الصلاحيات لو كان مشرف ---
     let permissions = { tabs: [], canAdd: false, canEdit: false, canDelete: false, canChangeStatus: false };
     if (document.getElementById("empRole").value === 'Supervisor') {
         if (document.querySelectorAll('.perm-tab')) {
@@ -1271,7 +1349,7 @@ window.saveEmployee = () => {
         if(document.getElementById("permEdit")) permissions.canEdit = document.getElementById("permEdit").checked;
         if(document.getElementById("permDelete")) permissions.canDelete = document.getElementById("permDelete").checked;
     } else {
-        permissions = null; // المدير يقدر يعمل كل حاجة
+        permissions = null; 
     }
 
     const data = { 
@@ -1314,7 +1392,6 @@ window.editEmployee = (id) => {
     if(document.getElementById("empPass")) document.getElementById("empPass").value = e.password || ""; 
     document.getElementById("empRole").value = e.role || "Admin"; 
     
-    // --- استرجاع وعرض الصلاحيات لو مشرف ---
     if (e.role === 'Supervisor' && e.permissions) {
         if(document.querySelectorAll('.perm-tab')) {
             document.querySelectorAll('.perm-tab').forEach(cb => {
@@ -1349,6 +1426,7 @@ window.deleteEmployee = (id, name) => {
 window.filterEmployees = () => {
     const term = document.getElementById("searchEmployees").value.toLowerCase();
     const table = document.getElementById("employeesTableBody"); 
+    if(!table) return;
     table.innerHTML = ""; 
     
     let filtered = allEmployees.filter(e => {
@@ -1400,9 +1478,8 @@ onValue(ref(db, 'employees'), (snapshot) => {
 });
 
 // ==========================================
-// سجل النشاطات والأرشفة (بالإكسيل)
+// سجل النشاطات والأرشفة 
 // ==========================================
-
 let allLogs = [];
 let allArchivedLogs = [];
 let currentLogTab = 'current';
@@ -1420,6 +1497,7 @@ window.filterLogs = () => {
     const dateFrom = document.getElementById("filterLogDateFrom") ? document.getElementById("filterLogDateFrom").value : "";
     const dateTo = document.getElementById("filterLogDateTo") ? document.getElementById("filterLogDateTo").value : "";
     const table = document.getElementById("logsTableBody"); 
+    if(!table) return;
     table.innerHTML = "";
     
     let dataset = currentLogTab === 'current' ? allLogs : allArchivedLogs;
@@ -1493,7 +1571,6 @@ onValue(ref(db, 'archived_logs'), (snapshot) => {
     if(currentLogTab === 'archived') window.filterLogs();
 });
 
-// --- الأرشفة ---
 window.archiveLogsAll = () => {
     if(allLogs.length === 0) return window.showAlert("السجل الحالي فارغ بالفعل");
     window.showConfirm("سيتم نقل السجل الحالي بالكامل إلى الأرشيف. هل أنت متأكد؟", () => {
@@ -1554,7 +1631,6 @@ window.deleteAllLogs = () => {
     });
 };
 
-
 window.archiveLogs = () => {
     window.showConfirm("هل أنت متأكد من أرشفة سجلات الشهر الماضي وحذفها من السجل الحالي؟", () => {
         const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
@@ -1582,7 +1658,7 @@ window.archiveLogs = () => {
 };
 
 // ==========================================
-// إعدادات المتجر الأساسية (شريط الأخبار، التواصل، الخ)
+// إعدادات المتجر الأساسية وطرق الدفع
 // ==========================================
 window.saveSettings = () => {
     const data = {
@@ -1598,6 +1674,12 @@ window.saveSettings = () => {
             instagram: document.getElementById("setInsta") ? document.getElementById("setInsta").value : "",
             telegram: document.getElementById("setTelegram") ? document.getElementById("setTelegram").value : "",
             whatsapp: document.getElementById("setWhatsapp") ? document.getElementById("setWhatsapp").value : ""
+        },
+        paymentMethods: {
+            cod: document.getElementById("setPayCod") ? document.getElementById("setPayCod").checked : true,
+            wallet: document.getElementById("setPayWallet") ? document.getElementById("setPayWallet").checked : false,
+            instapay: document.getElementById("setPayInsta") ? document.getElementById("setPayInsta").checked : false,
+            visa: document.getElementById("setPayVisa") ? document.getElementById("setPayVisa").checked : false
         }
     };
 
@@ -1624,28 +1706,29 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             if(document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
             if(document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
         }
+
+        if(d.paymentMethods) {
+            if(document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
+            if(document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
+            if(document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
+            if(document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
+        }
     }
 });
 
 window.goToPendingOrders = () => {
-    // 1. إزالة التفعيل من كل التابات
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-    // 2. تفعيل تاب الطلبات في القائمة
     const orderNavItem = document.querySelector('[data-target="orders-view"]');
     if(orderNavItem) orderNavItem.classList.add('active');
 
-    // 3. إظهار قسم الطلبات وإخفاء الباقي
     document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
     const ordersView = document.getElementById('orders-view');
     if(ordersView) ordersView.classList.add('active');
 
-    // 4. قفل القائمة الجانبية
     document.getElementById('sidebar').classList.add('collapsed');
 
-    // 5. تفعيل الطلبات الحالية والفلترة
     window.switchOrderTab('active');
     
-    // تأخير بسيط لضمان تحميل العناصر ثم الفلترة
     setTimeout(() => {
         const statusF = document.getElementById('filterOrderStatus');
         if (statusF) {
