@@ -190,33 +190,34 @@ function formatDateOnly(ms) {
 // ==========================================
 // التنقل بين الشاشات
 // ==========================================
+// ==========================================
+// التنقل بين الشاشات (مع فحص الصلاحيات أمنياً)
+// ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-        if (!item.dataset.target) {
-            return;
+        const targetView = item.dataset.target;
+        if (!targetView) return;
+        
+        // التحقق الأمني للمشرفين
+        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+            const allowedTabs = window.currentEmpPermissions.tabs || [];
+            // لو التاب مش مسموح له بيه وفي نفس الوقت مش الإحصائيات (أو لو الإحصائيات ممنوعة) نمنعه
+            if (targetView !== 'analytics-view' && !allowedTabs.includes(targetView)) {
+                window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
+                return; // وقف التنقل فوراً
+            }
         }
         
-        document.querySelectorAll('.nav-item').forEach(nav => {
-            nav.classList.remove('active');
-        });
-        
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
-        document.querySelectorAll('.view-section').forEach(view => {
-            view.classList.remove('active');
-        });
-        
-        document.getElementById(item.dataset.target).classList.add('active');
+        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+        const targetEl = document.getElementById(targetView);
+        if(targetEl) targetEl.classList.add('active');
 
         document.getElementById('sidebar').classList.add('collapsed');
     });
 });
-
-window.goToOrdersTab = (tab = 'active') => {
-    document.querySelector('[data-target="orders-view"]').click();
-    window.switchOrderTab(tab);
-};
-
 // ==========================================
 // تقارير المبيعات
 // ==========================================
