@@ -1755,20 +1755,19 @@ window.goToPendingOrders = () => {
 
 // ==========================================
 // تشغيل القائمة المنسدلة للملف الشخصي
-// ==========================================const profileBtn = document.getElementById('userProfileBtn');
-const profileDropdown = document.getElementById('profileDropdown');
+// ==========================================
+const myProfileBtn = document.getElementById('userProfileBtn');
+const myProfileMenu = document.getElementById('profileDropdown');
 
-if (profileBtn && profileDropdown) {
-    // لما تدوس على اسمك يفتح ويقفل
-    profileBtn.addEventListener('click', (e) => {
-        profileDropdown.classList.toggle('show');
-        e.stopPropagation(); // عشان نمنع القفلة السريعة
+if (myProfileBtn && myProfileMenu) {
+    myProfileBtn.addEventListener('click', (e) => {
+        myProfileMenu.classList.toggle('show');
+        e.stopPropagation(); 
     });
 
-    // لو دوست في أي حتة فاضية في الشاشة، القائمة تقفل
     document.addEventListener('click', (e) => {
-        if (!profileBtn.contains(e.target)) {
-            profileDropdown.classList.remove('show');
+        if (!myProfileBtn.contains(e.target)) {
+            myProfileMenu.classList.remove('show');
         }
     });
 }
