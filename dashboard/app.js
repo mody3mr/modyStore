@@ -30,6 +30,21 @@ onAuthStateChanged(auth, (user) => {
                     if (child.val().email === user.email && child.val().isActive) {
                         currentUser = child.val().name;
                         window.currentUserRole = child.val().role;
+                        // --- تحديث بيانات الهيدر ---
+                        const nameDisplay = document.getElementById("currentUserNameDisplay");
+                        const avatar = document.getElementById("currentUserAvatar");
+                        const dropName = document.getElementById("dropdownName");
+                        const dropRole = document.getElementById("dropdownRole");
+                        
+                        if(nameDisplay) nameDisplay.innerText = currentUser;
+                        if(dropName) dropName.innerText = currentUser;
+                        if(dropRole) dropRole.innerText = window.currentUserRole === 'Admin' ? 'مدير النظام' : 'مشرف';
+                        
+                        if(avatar) {
+                            let apiName = currentUser.split(' ').join('+');
+                            avatar.src = `https://ui-avatars.com/api/?name=${apiName}&background=3b82f6&color=fff`;
+                        }
+                        // ---------------------------
                         found = true;
                     }
                 });
