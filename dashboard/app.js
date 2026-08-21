@@ -129,9 +129,6 @@ function formatDateOnly(ms) {
 // ==========================================
 // التنقل بين الشاشات
 // ==========================================
-// ==========================================
-// التنقل بين الشاشات
-// ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         if (!item.dataset.target) {
@@ -153,19 +150,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
         // التعديل: قفل القائمة الجانبية دائماً بعد اختيار أي تاب
         document.getElementById('sidebar').classList.add('collapsed');
     });
-});        
-        item.classList.add('active');
-        
-        document.querySelectorAll('.view-section').forEach(view => {
-            view.classList.remove('active');
-        });
-        
-        document.getElementById(item.dataset.target).classList.add('active');
-
-        // التعديل: قفل القائمة الجانبية لما تضغط على أي تاب (للشاشات الصغيرة أو عموماً)
-        if (window.innerWidth <= 768) {
-            document.getElementById('sidebar').classList.add('collapsed');
-        }
+});
 
 window.goToOrdersTab = (tab = 'active') => {
     document.querySelector('[data-target="orders-view"]').click();
@@ -680,7 +665,6 @@ window.printDocument = (type) => {
     if (!order) return;
 
     if (type === 'waybill') {
-        // ... (نفس كود البوليصة الخاص بك بدون تغيير) ...
         JsBarcode("#topBarcode", order.displayId || order.orderId, { format: "CODE128", width: 2, height: 50, displayValue: true });
         document.getElementById("qrCodeBox").innerHTML = "";
         new QRCode(document.getElementById("qrCodeBox"), { text: "https://mody3mr.github.io/modytech/store", width: 55, height: 55 });
@@ -728,14 +712,13 @@ window.printDocument = (type) => {
         }
         document.body.className = 'print-mode-waybill';
     } else {
-        // --- التعديل: تعبئة بيانات الفاتورة المطبوعة ---
         if(document.getElementById("invOrderId")) document.getElementById("invOrderId").innerText = "#" + (order.displayId || order.orderId);
         if(document.getElementById("invDate")) document.getElementById("invDate").innerText = formatDateTime(order.createdAt);
         if(document.getElementById("invCustName")) document.getElementById("invCustName").innerText = order.customer.name;
         if(document.getElementById("invCustPhone")) document.getElementById("invCustPhone").innerText = order.customer.phone;
         if(document.getElementById("invCustAddress")) document.getElementById("invCustAddress").innerText = order.customer.address;
         
-        const invItemsList = document.getElementById("invItemsList"); // الـ tbody الخاص بجدول الفاتورة المطبوعة
+        const invItemsList = document.getElementById("invItemsList");
         if (invItemsList) {
             invItemsList.innerHTML = "";
             order.items.forEach(item => {
@@ -761,77 +744,8 @@ window.printDocument = (type) => {
     setTimeout(() => { 
         document.body.className = ''; 
     }, 500); 
-};        
-        document.getElementById("qrCodeBox").innerHTML = "";
-        new QRCode(document.getElementById("qrCodeBox"), { 
-            text: "https://mody3mr.github.io/modytech/store", 
-            width: 55, 
-            height: 55 
-        });
+};
 
-        const allowOpenSelect = document.getElementById("wbAllowOpen");
-        if (allowOpenSelect) {
-            document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
-        }
-        
-        document.getElementById("printCustName").innerText = order.customer.name;
-        
-        let addrParts = [];
-        if (order.customer && order.customer.address) {
-            addrParts = order.customer.address.split('-');
-        }
-        document.getElementById("printCity").innerText = order.customer.city || addrParts[0] || "غير محدد";
-        document.getElementById("printRegion").innerText = order.customer.region || addrParts[1] || "";
-        document.getElementById("printAddress").innerText = order.customer.address || "-";
-        
-        // البيانات من المتجر مباشرة
-        if(document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = order.customer.building || "-";
-        if(document.getElementById("printFloor")) document.getElementById("printFloor").innerText = order.customer.floor || "-";
-        if(document.getElementById("printApartment")) document.getElementById("printApartment").innerText = order.customer.apartment || "-";
-        if(document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = order.customer.landmark || "-";
-        
-        document.getElementById("printPhone1").innerText = order.customer.phone || "-";
-        if(document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = order.customer.phone2 || "-";
-        
-        let descParts = [];
-        order.items.forEach(i => {
-            descParts.push(`${i.qty}x ${i.name}`);
-        });
-        document.getElementById("printProductsDesc").innerText = descParts.join(' ، ');
-        
-        let notesText = document.getElementById("wbNotes").value;
-        if (!notesText) {
-            notesText = "لا يوجد";
-        }
-        document.getElementById("printNotes").innerText = notesText;
-
-        // التحكم في ظهور المبلغ (كاش ولا مدفوع إلكتروني)
-        const codContainer = document.getElementById("codAmountContainer");
-        const paidContainer = document.getElementById("paidAmountContainer");
-        let payMethod = order.paymentMethod || "الدفع عند الاستلام (COD)";
-        
-        if (payMethod.includes("عند الاستلام") || payMethod.includes("COD") || payMethod.includes("كاش")) {
-            if (codContainer) codContainer.style.display = "block";
-            if (paidContainer) paidContainer.style.display = "none";
-            let codAmountEl = document.getElementById("printCodAmount");
-            if (codAmountEl) codAmountEl.innerText = Math.round(order.total) + " ج.م";
-        } else {
-            if (codContainer) codContainer.style.display = "none";
-            if (paidContainer) paidContainer.style.display = "block";
-            let payMethodLabel = document.getElementById("printPaymentMethodLabel");
-            if (payMethodLabel) payMethodLabel.innerText = payMethod;
-            let paidAmountEl = document.getElementById("printPaidAmount");
-            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total) + " ج.م (مدفوع)";
-        }
-        {
-        document.body.className = 'print-mode-invoice';
-    }
-    
-    window.print();
-    
-    setTimeout(() => { 
-        document.body.className = ''; 
-    }, 500); 
 onValue(ref(db, 'orders'), (snapshot) => {
     allOrders = [];
     let totalRev = 0;
@@ -1245,7 +1159,6 @@ window.showVoucherUsers = (id) => {
         list.innerHTML = "<div style='text-align:center; padding: 20px; color:#666;'>لم يستخدمه أحد بعد.</div>"; 
     } else {
         Object.values(v.usedBy).forEach(u => { 
-            // التعديل: إضافة زر معاينة الفاتورة لو متوفر orderId (dbId بتاع الطلب)
             let viewOrderBtn = u.orderId ? `<button onclick="closeModal('voucherUsersModal'); viewOrderDetails('${u.orderId}')" style="margin-top:8px; background:var(--secondary); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:12px;"><i class="fas fa-file-invoice"></i> معاينة الطلب</button>` : '';
             
             list.innerHTML += `
@@ -1713,6 +1626,7 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         }
     }
 });
+
 window.goToPendingOrders = () => {
     // 1. إزالة التفعيل من كل التابات
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
