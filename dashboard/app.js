@@ -1751,23 +1751,23 @@ window.goToPendingOrders = () => {
             window.renderOrdersTable();
         }
     }, 50);
-    // ==========================================
+ // ==========================================
 // تشغيل القائمة المنسدلة للملف الشخصي
 // ==========================================
 const profileBtn = document.getElementById('userProfileBtn');
 const profileDropdown = document.getElementById('profileDropdown');
 
 if (profileBtn && profileDropdown) {
+    // لما تدوس على اسمك يفتح ويقفل
     profileBtn.addEventListener('click', (e) => {
         profileDropdown.classList.toggle('show');
-        e.stopPropagation(); 
+        e.stopPropagation(); // عشان نمنع القفلة السريعة
     });
 
-    // قفل القائمة لو داس في أي مكان فاضي في الشاشة
+    // لو دوست في أي حتة فاضية في الشاشة، القائمة تقفل
     document.addEventListener('click', (e) => {
         if (!profileBtn.contains(e.target)) {
             profileDropdown.classList.remove('show');
         }
     });
 }
-};
