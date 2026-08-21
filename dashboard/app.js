@@ -17,9 +17,10 @@ const auth = getAuth(app);
 
 let currentUser = "جاري التحميل...";
 window.currentUserRole = "Supervisor"; 
+window.currentEmpPermissions = null;
 
 // ==========================================
-// تسجيل الدخول الصارم (Strict Auth)
+// تسجيل الدخول الصارم وحماية الصلاحيات (Strict Auth)
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -30,20 +31,35 @@ onAuthStateChanged(auth, (user) => {
                     if (child.val().email === user.email && child.val().isActive) {
                         currentUser = child.val().name;
                         window.currentUserRole = child.val().role;
-                        // --- تطبيق الصلاحيات للمشرفين ---
                         const empData = child.val();
-                        if (empData.role === 'Supervisor' && empData.permissions) {
-                            // 1. إخفاء التابات اللي ملهوش صلاحية عليها
+                        window.currentEmpPermissions = empData.permissions; 
+                        
+                        // --- تطبيق الصلاحيات للمشرفين وحذف التابات غير المسموحة فوراً ---
+                        if (window.currentUserRole === 'Supervisor' && empData.permissions) {
                             const allowedTabs = empData.permissions.tabs || [];
+                            
                             document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
                                 const target = nav.getAttribute('data-target');
-                                // دائماً بنسيب الإحصائيات أو بنديله إذن، وباقي التابات بنشيك عليها
                                 if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
-                                    nav.style.display = 'none';
+                                    nav.remove(); // إزالة التاب نهائياً من DOM لمنع أي محاولة وصول
                                 }
                             });
+
+                            // إذا كان المشرف ملوش صلاحية على الإحصائيات، انقله فوراً لأول تاب متاح
+                            if (!allowedTabs.includes('analytics-view') && allowedTabs.length > 0) {
+                                const firstAllowedTab = allowedTabs[0];
+                                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                                const firstViewEl = document.getElementById(firstAllowedTab);
+                                if(firstViewEl) firstViewEl.classList.add('active');
+                                
+                                document.querySelectorAll('.nav-item').forEach(nav => {
+                                    nav.classList.remove('active');
+                                    if(nav.dataset.target === firstAllowedTab) nav.classList.add('active');
+                                });
+                            }
                         }
-                        // ---------------------------------
+                        // -------------------------------------------------------------
+
                         // --- تحديث بيانات الهيدر ---
                         const nameDisplay = document.getElementById("currentUserNameDisplay");
                         const avatar = document.getElementById("currentUserAvatar");
@@ -188,23 +204,19 @@ function formatDateOnly(ms) {
 }
 
 // ==========================================
-// التنقل بين الشاشات
-// ==========================================
-// ==========================================
-// التنقل بين الشاشات (مع فحص الصلاحيات أمنياً)
+// التنقل بين الشاشات (مع فحص أمني صارم)
 // ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         const targetView = item.dataset.target;
         if (!targetView) return;
         
-        // التحقق الأمني للمشرفين
+        // التحقق الأمني المانع للمشرفين
         if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
             const allowedTabs = window.currentEmpPermissions.tabs || [];
-            // لو التاب مش مسموح له بيه وفي نفس الوقت مش الإحصائيات (أو لو الإحصائيات ممنوعة) نمنعه
             if (targetView !== 'analytics-view' && !allowedTabs.includes(targetView)) {
                 window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
-                return; // وقف التنقل فوراً
+                return; 
             }
         }
         
@@ -218,6 +230,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
         document.getElementById('sidebar').classList.add('collapsed');
     });
 });
+
+window.goToOrdersTab = (tab = 'active') => {
+    document.querySelector('[data-target="orders-view"]').click();
+    window.switchOrderTab(tab);
+};
+
 // ==========================================
 // تقارير المبيعات
 // ==========================================
@@ -1366,7 +1384,6 @@ window.openEmployeeModal = () => {
     document.getElementById('employeeModal').style.display = "flex"; 
 };
 
-// دالة حفظ موظف وتوليد حساب له في الـ Auth أوتوماتيك
 window.saveEmployee = async () => { 
     let permissions = { tabs: [], canAdd: false, canEdit: false, canDelete: false, canChangeStatus: false };
     if (document.getElementById("empRole").value === 'Supervisor') {
