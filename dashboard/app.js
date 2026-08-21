@@ -166,7 +166,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
         if (window.innerWidth <= 768) {
             document.getElementById('sidebar').classList.add('collapsed');
         }
-});
 
 window.goToOrdersTab = (tab = 'active') => {
     document.querySelector('[data-target="orders-view"]').click();
