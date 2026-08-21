@@ -464,14 +464,24 @@ tr:hover { background-color: #f8fafc; }
 }
 
 /* ================= القائمة المنسدلة للملف الشخصي (تنسيق مرتب) ================= */
+/* ================= القائمة المنسدلة للملف الشخصي (شكل فخم) ================= */
+.user-profile { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    font-weight: 700; 
+    position: relative; /* ضروري عشان القائمة تكون مرتبطة بيه */
+    cursor: pointer;
+}
+
 .profile-dropdown {
     position: absolute;
     top: 55px;
-    left: 0;
+    left: 0; /* لتغيير اتجاه المحاذاة لو حاببها تحت الصورة مباشرة خليه right: 0 */
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 220px;
     display: none;
     flex-direction: column;
@@ -517,9 +527,7 @@ tr:hover { background-color: #f8fafc; }
 
 .dropdown-item.text-danger:hover { 
     background: #fef2f2; 
-}
-
-/* ==========================================
+}/* ==========================================
     دعم الشاشات الصغيرة والموبايل (Responsiveness)
 ========================================== */
 @media screen and (max-width: 768px) {
