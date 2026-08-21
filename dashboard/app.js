@@ -42,7 +42,7 @@ onAuthStateChanged(auth, (user) => {
         });
     } else {
         // تفعيل هذا السطر سيجبر أي شخص غير مسجل على الانتقال لصفحة تسجيل الدخول
-        // window.location.href = "login.html"; 
+       window.location.href = "login.html"; 
     }
 });
 
