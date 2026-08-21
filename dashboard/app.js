@@ -1174,10 +1174,6 @@ window.showVoucherUsers = (id) => {
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };    
-    
-    document.getElementById("voucherUsersModal").style.display = "flex";
-};
-
 window.filterVouchers = () => {
     const term = document.getElementById("searchVouchers").value.toLowerCase();
     const table = document.getElementById("vouchersTableBody"); 
