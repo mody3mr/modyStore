@@ -1751,4 +1751,23 @@ window.goToPendingOrders = () => {
             window.renderOrdersTable();
         }
     }, 50);
+    // ==========================================
+// تشغيل القائمة المنسدلة للملف الشخصي
+// ==========================================
+const profileBtn = document.getElementById('userProfileBtn');
+const profileDropdown = document.getElementById('profileDropdown');
+
+if (profileBtn && profileDropdown) {
+    profileBtn.addEventListener('click', (e) => {
+        profileDropdown.classList.toggle('show');
+        e.stopPropagation(); 
+    });
+
+    // قفل القائمة لو داس في أي مكان فاضي في الشاشة
+    document.addEventListener('click', (e) => {
+        if (!profileBtn.contains(e.target)) {
+            profileDropdown.classList.remove('show');
+        }
+    });
+}
 };
