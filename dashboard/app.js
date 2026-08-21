@@ -1174,7 +1174,6 @@ window.showVoucherUsers = (id) => {
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };    
-}
     
     document.getElementById("voucherUsersModal").style.display = "flex";
 };
