@@ -824,9 +824,6 @@ window.printDocument = (type) => {
             if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total) + " ج.م (مدفوع)";
         }
         {
-
-        document.body.className = 'print-mode-waybill';
-    } else {
         document.body.className = 'print-mode-invoice';
     }
     
