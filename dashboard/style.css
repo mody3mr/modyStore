@@ -123,69 +123,13 @@ body {
     align-items: center; 
     gap: 10px; 
     font-weight: 700; 
-    position: relative; /* ضروري عشان القائمة المنسدلة تظهر تحته */
+    position: relative; 
 }
 
 .user-profile img { 
     width: 40px; 
     height: 40px; 
     border-radius: 50%; 
-}
-
-/* ================= القائمة المنسدلة للملف الشخصي ================= */
-.profile-dropdown {
-    position: absolute;
-    top: 55px;
-    left: 0;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    width: 220px;
-    display: none;
-    flex-direction: column;
-    z-index: 1000;
-    overflow: hidden;
-    animation: fadeIn 0.2s ease-in-out;
-}
-
-.profile-dropdown.show { 
-    display: flex; 
-}
-
-.dropdown-header { 
-    padding: 15px; 
-    background: #f8fafc; 
-    text-align: right; 
-    border-bottom: 1px solid var(--border);
-}
-
-.dropdown-item {
-    padding: 12px 15px;
-    background: none;
-    border: none;
-    text-align: right;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    color: var(--text-dark);
-}
-
-.dropdown-item:hover { 
-    background: #f1f5f9; 
-}
-
-.dropdown-item.text-danger { 
-    color: var(--danger); 
-}
-
-.dropdown-item.text-danger:hover { 
-    background: #fef2f2; 
 }
 
 /* ================= مساحة العمل والتنقل ================= */
@@ -389,6 +333,7 @@ tr:hover { background-color: #f8fafc; }
 
 .product-info { display: flex; align-items: center; gap: 15px; }
 
+/* تكبير صور المنتجات بناءً على طلبك */
 .product-img { 
     width: 80px; 
     height: 80px; 
@@ -407,6 +352,7 @@ tr:hover { background-color: #f8fafc; }
     background: #f8fafc;
 }
 
+/* الشارات (Badges) */
 .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
 .badge-active { background-color: #dcfce7; color: #166534; }
 .badge-inactive { background-color: #fee2e2; color: #991b1b; }
@@ -414,6 +360,7 @@ tr:hover { background-color: #f8fafc; }
 
 .meta-info, .emp-details { font-size: 12px; color: #94a3b8; margin-top: 5px; font-weight: normal; }
 
+/* ================= زراير الإجراءات السريعة ================= */
 .actions { display: flex; gap: 10px; }
 .btn-action { 
     width: 35px; height: 35px; 
@@ -429,6 +376,7 @@ tr:hover { background-color: #f8fafc; }
 .btn-view { background-color: var(--secondary); }
 .btn-users { background-color: #8b5cf6; }
 
+/* ================= النوافذ (Modals) ================= */
 .modal-overlay { 
     display: none; position: fixed; top: 0; left: 0; 
     width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); 
@@ -461,6 +409,7 @@ tr:hover { background-color: #f8fafc; }
 .btn-cancel { background: #94a3b8; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: 'Cairo'; font-size: 15px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
+/* ================= تنسيقات خاصة بالطلبات ================= */
 .status-select { padding: 6px 10px; border-radius: 6px; font-family: 'Cairo'; font-weight: bold; border: 1px solid var(--border); outline: none; cursor: pointer; }
 .status-select:disabled { opacity: 0.6; cursor: not-allowed; }
 .status-pending { background: #fffbeb; color: #d97706; border-color: #fde68a; }
@@ -473,6 +422,7 @@ tr:hover { background-color: #f8fafc; }
 .order-item-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
 .order-item-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
+/* ================= التايم لاين لتتبع الطلب ================= */
 .order-timeline { display: flex; flex-direction: column; gap: 20px; border-right: 2px solid var(--secondary); padding-right: 20px; margin-right: 10px; }
 .tl-step { position: relative; }
 .tl-step::before { content: ''; position: absolute; right: -27px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: white; border: 3px solid var(--border); z-index: 1; }
@@ -481,9 +431,11 @@ tr:hover { background-color: #f8fafc; }
 .tl-title { font-weight: bold; font-size: 14px; color: var(--primary); }
 .tl-date { font-size: 11px; color: var(--text-light); margin-top: 3px; }
 
+/* سجل النشاطات */
 .log-time { color: #64748b; font-size: 12px; direction: ltr; display: inline-block; }
 .log-user { font-weight: bold; color: var(--primary); }
 
+/* ================= تقرير المبيعات ================= */
 .payment-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 8px; font-weight: 700; color: var(--text-dark);}
 .payment-row .amount { color: var(--primary); font-size: 16px; font-weight: 900;}
 .top-product-item { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border); }
@@ -494,33 +446,188 @@ tr:hover { background-color: #f8fafc; }
 .top-product-stats { font-size: 13px; color: #64748b; font-weight: 600;}
 .top-product-revenue { color: var(--success); font-weight: 900; font-size: 15px;}
 
+/* ================= طباعة الفاتورة والبوليصة ================= */
 @media print {
     body * { visibility: hidden; }
+    
+    /* طباعة الفاتورة */
     body.print-mode-invoice .print-invoice-area, 
     body.print-mode-invoice .print-invoice-area * { visibility: visible; }
     body.print-mode-invoice .screen-only { display: none !important; }
     body.print-mode-invoice .screen-only-flex { display: block !important; }
     body.print-mode-invoice .print-invoice-area { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; background: white; padding: 20px;}
+
+    /* طباعة بوليصة الشحن */
     body.print-mode-waybill .print-waybill-area,
     body.print-mode-waybill .print-waybill-area * { visibility: visible; }
     body.print-mode-waybill .print-waybill-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
-    .print-mode-invoice button { display: none !important; }
 }
 
+/* ================= القائمة المنسدلة للملف الشخصي (تنسيق مرتب) ================= */
+.profile-dropdown {
+    position: absolute;
+    top: 55px;
+    left: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    width: 220px;
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.profile-dropdown.show { 
+    display: flex; 
+}
+
+.dropdown-header { 
+    padding: 15px; 
+    background: #f8fafc; 
+    text-align: right; 
+    border-bottom: 1px solid var(--border);
+}
+
+.dropdown-item {
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    text-align: right;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    color: var(--text-dark);
+}
+
+.dropdown-item:hover { 
+    background: #f1f5f9; 
+}
+
+.dropdown-item.text-danger { 
+    color: var(--danger); 
+}
+
+.dropdown-item.text-danger:hover { 
+    background: #fef2f2; 
+}
+
+/* ==========================================
+    دعم الشاشات الصغيرة والموبايل (Responsiveness)
+========================================== */
 @media screen and (max-width: 768px) {
-    .sidebar { position: fixed; right: -260px; height: 100vh; z-index: 1000; transition: 0.3s ease; }
-    .sidebar.collapsed { right: 0; width: 260px; }
-    .sidebar.collapsed .nav-text { display: inline-block; }
-    .main-content { width: 100%; margin-right: 0; }
-    .topbar { padding: 15px; }
-    .stat-cards, .grid-2 { grid-template-columns: 1fr; }
-    .modal { width: 95%; margin: 10px; padding: 20px; }
-    .order-tabs, .custom-tabs { flex-direction: column; }
-    .order-tab-btn, .custom-tab-btn { width: 100%; margin-bottom: 5px; }
-    .card { overflow-x: auto; }
-    table { min-width: 600px; }
-    .page-header { flex-direction: column; align-items: flex-start; gap: 15px; }
-    .page-header div, .page-header input, .page-header button { width: 100%; }
-    .filter-bar { flex-direction: column; }
-    .filter-bar input, .filter-bar select { width: 100%; }
+    /* القائمة الجانبية */
+    .sidebar {
+        position: fixed;
+        right: -260px; /* إخفاء القائمة خارج الشاشة */
+        height: 100vh;
+        z-index: 1000;
+        transition: 0.3s ease;
+    }
+    
+    /* عند الضغط على زرار القائمة، نظهرها */
+    .sidebar.collapsed {
+        right: 0;
+        width: 260px;
+    }
+    
+    .sidebar.collapsed .nav-text {
+        display: inline-block; /* إظهار النصوص داخل القائمة */
+    }
+
+    /* المحتوى الرئيسي */
+    .main-content {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    /* الهيدر العلوي */
+    .topbar {
+        padding: 15px;
+    }
+
+    /* الكروت والإحصائيات */
+    .stat-cards {
+        grid-template-columns: 1fr; /* كارت واحد في كل صف */
+    }
+
+    .grid-2 {
+        grid-template-columns: 1fr; /* تحويل الشبكة لعمود واحد */
+    }
+
+    /* النوافذ المنبثقة (Modals) */
+    .modal {
+        width: 95%;
+        margin: 10px;
+        padding: 20px;
+    }
+
+    /* أزرار الطلبات (تابات) */
+    .order-tabs, .custom-tabs {
+        flex-direction: column;
+    }
+
+    .order-tab-btn, .custom-tab-btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    /* الجداول (للسماح بالسحب يميناً ويساراً) */
+    .card {
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 600px; /* منع انكماش الجدول وتداخله */
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .page-header div {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .page-header input, .page-header button {
+        width: 100%;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+    }
+    
+    .filter-bar input, .filter-bar select {
+        width: 100%;
+    }
+    @media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-mode-invoice #invoicePrintContainer, 
+    .print-mode-invoice #invoicePrintContainer * {
+        visibility: visible;
+    }
+    .print-mode-invoice #invoicePrintContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 20px;
+    }
+    /* إخفاء الأزرار أثناء الطباعة */
+    .print-mode-invoice button {
+        display: none !important;
+    }
+}
 }
