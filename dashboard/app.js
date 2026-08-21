@@ -129,6 +129,9 @@ function formatDateOnly(ms) {
 // ==========================================
 // التنقل بين الشاشات
 // ==========================================
+// ==========================================
+// التنقل بين الشاشات
+// ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         if (!item.dataset.target) {
@@ -139,6 +142,18 @@ document.querySelectorAll('.nav-item').forEach(item => {
             nav.classList.remove('active');
         });
         
+        item.classList.add('active');
+        
+        document.querySelectorAll('.view-section').forEach(view => {
+            view.classList.remove('active');
+        });
+        
+        document.getElementById(item.dataset.target).classList.add('active');
+
+        // التعديل: قفل القائمة الجانبية دائماً بعد اختيار أي تاب
+        document.getElementById('sidebar').classList.add('collapsed');
+    });
+});        
         item.classList.add('active');
         
         document.querySelectorAll('.view-section').forEach(view => {
@@ -663,16 +678,92 @@ window.viewOrderDetails = (orderDbId) => {
 };
 
 window.printDocument = (type) => {
+    const order = currentPrintOrder;
+    if (!order) return;
+
     if (type === 'waybill') {
-        const order = currentPrintOrder;
+        // ... (نفس كود البوليصة الخاص بك بدون تغيير) ...
+        JsBarcode("#topBarcode", order.displayId || order.orderId, { format: "CODE128", width: 2, height: 50, displayValue: true });
+        document.getElementById("qrCodeBox").innerHTML = "";
+        new QRCode(document.getElementById("qrCodeBox"), { text: "https://mody3mr.github.io/modytech/store", width: 55, height: 55 });
+        const allowOpenSelect = document.getElementById("wbAllowOpen");
+        if (allowOpenSelect) document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
+        document.getElementById("printCustName").innerText = order.customer.name;
         
-        JsBarcode("#topBarcode", order.displayId || order.orderId, { 
-            format: "CODE128", 
-            width: 2, 
-            height: 50, 
-            displayValue: true 
-        });
+        let addrParts = [];
+        if (order.customer && order.customer.address) addrParts = order.customer.address.split('-');
+        document.getElementById("printCity").innerText = order.customer.city || addrParts[0] || "غير محدد";
+        document.getElementById("printRegion").innerText = order.customer.region || addrParts[1] || "";
+        document.getElementById("printAddress").innerText = order.customer.address || "-";
         
+        if(document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = order.customer.building || "-";
+        if(document.getElementById("printFloor")) document.getElementById("printFloor").innerText = order.customer.floor || "-";
+        if(document.getElementById("printApartment")) document.getElementById("printApartment").innerText = order.customer.apartment || "-";
+        if(document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = order.customer.landmark || "-";
+        
+        document.getElementById("printPhone1").innerText = order.customer.phone || "-";
+        if(document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = order.customer.phone2 || "-";
+        
+        let descParts = [];
+        order.items.forEach(i => descParts.push(`${i.qty}x ${i.name}`));
+        document.getElementById("printProductsDesc").innerText = descParts.join(' ، ');
+        
+        let notesText = document.getElementById("wbNotes").value;
+        document.getElementById("printNotes").innerText = !notesText ? "لا يوجد" : notesText;
+
+        const codContainer = document.getElementById("codAmountContainer");
+        const paidContainer = document.getElementById("paidAmountContainer");
+        let payMethod = order.paymentMethod || "الدفع عند الاستلام (COD)";
+        
+        if (payMethod.includes("عند الاستلام") || payMethod.includes("COD") || payMethod.includes("كاش")) {
+            if (codContainer) codContainer.style.display = "block";
+            if (paidContainer) paidContainer.style.display = "none";
+            let codAmountEl = document.getElementById("printCodAmount");
+            if (codAmountEl) codAmountEl.innerText = Math.round(order.total) + " ج.م";
+        } else {
+            if (codContainer) codContainer.style.display = "none";
+            if (paidContainer) paidContainer.style.display = "block";
+            let payMethodLabel = document.getElementById("printPaymentMethodLabel");
+            if (payMethodLabel) payMethodLabel.innerText = payMethod;
+            let paidAmountEl = document.getElementById("printPaidAmount");
+            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total) + " ج.م (مدفوع)";
+        }
+        document.body.className = 'print-mode-waybill';
+    } else {
+        // --- التعديل: تعبئة بيانات الفاتورة المطبوعة ---
+        if(document.getElementById("invOrderId")) document.getElementById("invOrderId").innerText = "#" + (order.displayId || order.orderId);
+        if(document.getElementById("invDate")) document.getElementById("invDate").innerText = formatDateTime(order.createdAt);
+        if(document.getElementById("invCustName")) document.getElementById("invCustName").innerText = order.customer.name;
+        if(document.getElementById("invCustPhone")) document.getElementById("invCustPhone").innerText = order.customer.phone;
+        if(document.getElementById("invCustAddress")) document.getElementById("invCustAddress").innerText = order.customer.address;
+        
+        const invItemsList = document.getElementById("invItemsList"); // الـ tbody الخاص بجدول الفاتورة المطبوعة
+        if (invItemsList) {
+            invItemsList.innerHTML = "";
+            order.items.forEach(item => {
+                invItemsList.innerHTML += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.qty}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.price} ج.م</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.qty * item.price} ج.م</td>
+                    </tr>`;
+            });
+        }
+        
+        if(document.getElementById("invSubtotal")) document.getElementById("invSubtotal").innerText = order.subtotal + " ج.م";
+        if(document.getElementById("invDiscount")) document.getElementById("invDiscount").innerText = order.discount > 0 ? `-${Math.round(order.discount)} ج.م` : "0 ج.م";
+        if(document.getElementById("invTotal")) document.getElementById("invTotal").innerText = Math.round(order.total) + " ج.م";
+
+        document.body.className = 'print-mode-invoice';
+    }
+    
+    window.print();
+    
+    setTimeout(() => { 
+        document.body.className = ''; 
+    }, 500); 
+};        
         document.getElementById("qrCodeBox").innerHTML = "";
         new QRCode(document.getElementById("qrCodeBox"), { 
             text: "https://mody3mr.github.io/modytech/store", 
@@ -1629,13 +1720,29 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
     }
 });
 window.goToPendingOrders = () => {
-    document.querySelector('[data-target="orders-view"]').click();
+    // 1. إزالة التفعيل من كل التابات
+    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+    // 2. تفعيل تاب الطلبات في القائمة
+    const orderNavItem = document.querySelector('[data-target="orders-view"]');
+    if(orderNavItem) orderNavItem.classList.add('active');
+
+    // 3. إظهار قسم الطلبات وإخفاء الباقي
+    document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+    const ordersView = document.getElementById('orders-view');
+    if(ordersView) ordersView.classList.add('active');
+
+    // 4. قفل القائمة الجانبية
+    document.getElementById('sidebar').classList.add('collapsed');
+
+    // 5. تفعيل الطلبات الحالية والفلترة
     window.switchOrderTab('active');
     
-    // عشان يفلتر الجدول ويجيب "قيد المراجعة" بس
-    const statusF = document.getElementById('filterOrderStatus');
-    if (statusF) {
-        statusF.value = 'قيد المراجعة';
-        window.renderOrdersTable();
-    }
+    // تأخير بسيط لضمان تحميل العناصر ثم الفلترة
+    setTimeout(() => {
+        const statusF = document.getElementById('filterOrderStatus');
+        if (statusF) {
+            statusF.value = 'قيد المراجعة';
+            window.renderOrdersTable();
+        }
+    }, 50);
 };
