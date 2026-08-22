@@ -43,6 +43,64 @@ function sendPushNotification(title, body) {
 }
 
 // ==========================================
+// أدوات مساعدة (تنظيف البيانات + الطباعة + إشعار العميل)
+// ==========================================
+function cleanData(value) {
+    if (Array.isArray(value)) {
+        return value.map(v => cleanData(v)).filter(v => v !== undefined);
+    }
+    if (value && typeof value === 'object') {
+        const out = {};
+        Object.keys(value).forEach(k => {
+            const cleaned = cleanData(value[k]);
+            if (cleaned !== undefined) out[k] = cleaned;
+        });
+        return out;
+    }
+    if (value === undefined) return undefined;
+    if (typeof value === 'number' && isNaN(value)) return 0;
+    return value;
+}
+window.cleanData = cleanData;
+
+// طباعة عنصر واحد داخل حاوية الطباعة (printRoot) لمنع الصفحات البيضاء
+window.printNode = (node) => {
+    const root = document.getElementById('printRoot');
+    if (!node || !root) return;
+    const placeholder = document.createComment('print-placeholder');
+    node.parentNode.insertBefore(placeholder, node);
+    const prevDisplay = node.style.display;
+    node.style.display = 'block';
+    root.innerHTML = '';
+    root.appendChild(node);
+    window.print();
+    setTimeout(() => {
+        node.style.display = prevDisplay;
+        if (placeholder.parentNode) {
+            placeholder.parentNode.insertBefore(node, placeholder);
+            placeholder.remove();
+        }
+        root.innerHTML = '';
+    }, 800);
+};
+
+// إشعار العميل (يظهر في حسابه على الموقع)
+window.notifyCustomer = (order, title, message) => {
+    if (!order) return Promise.resolve();
+    const payload = cleanData({
+        orderDbId: order.dbId || null,
+        orderId: order.displayId || order.orderId || null,
+        phone: (order.customer && order.customer.phone) || null,
+        uid: order.userId || order.uid || null,
+        title: title,
+        message: message,
+        read: false,
+        timestamp: Date.now()
+    });
+    return push(ref(db, 'customerNotifications'), payload).catch(e => console.error(e));
+};
+
+// ==========================================
 // تسجيل الدخول الصارم وحماية الصلاحيات (Strict Auth)
 // ==========================================
 onAuthStateChanged(auth, (user) => {
@@ -673,7 +731,8 @@ window.renderOrdersTable = () => {
 
         let availableStatuses = [];
         if (window.currentUserRole === 'Admin' || isFreeChange) {
-            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي', 'مرتجع'];
+            // المرتجع مقفول هنا: بيتم فقط من تاب المرتجعات
+            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
         } else {
             if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
             else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
@@ -746,10 +805,12 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId)
                     update(ref(db, `orders/${orderId}`), { 
                         status: newStatus, 
                         cancelledAt: Date.now(),
-                        cancelReason: result.value 
+                        cancelReason: result.value,
+                        customerNotice: `تم إلغاء طلبك #${displayId} - السبب: ${result.value}`
                     }).then(() => {
+                        window.notifyCustomer(order, 'تم إلغاء طلبك', `تم إلغاء الطلب #${displayId} - السبب: ${result.value}`);
                         logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ملغي واسترداد المخزون بسبب: ${result.value}`);
-                        window.showAlert("تم الإلغاء واسترداد المخزون بنجاح", "success");
+                        window.showAlert("تم الإلغاء واسترداد المخزون وإشعار العميل", "success");
                     });
                 } else {
                     selectElement.value = oldStatus; 
@@ -769,7 +830,8 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId)
                         });
                     });
                 }
-                update(ref(db, `orders/${orderId}`), { status: newStatus, cancelledAt: Date.now(), cancelReason: reason });
+                update(ref(db, `orders/${orderId}`), { status: newStatus, cancelledAt: Date.now(), cancelReason: reason, customerNotice: `تم إلغاء طلبك #${displayId} - السبب: ${reason}` });
+                window.notifyCustomer(order, 'تم إلغاء طلبك', `تم إلغاء الطلب #${displayId} - السبب: ${reason}`);
                 logAction("تحديث حالة طلب", `إلغاء طلب #${displayId} واسترداد المخزون بسبب: ${reason}`);
             } else {
                 selectElement.value = oldStatus;
@@ -906,12 +968,27 @@ window.viewOrderDetails = (orderId) => {
     document.getElementById('invTotal').innerText = `${Math.round(order.total || 0)} ج.م`;
 
     // تجهيز بيانات الطباعة (بوليصة الشحن)
-    document.getElementById('printCustName').innerText = order.customer ? order.customer.name : '-';
-    document.getElementById('printCity').innerText = order.customer ? order.customer.city : '-';
-    document.getElementById('printRegion').innerText = order.customer ? (order.customer.region || '-') : '-';
-    document.getElementById('printAddress').innerText = order.customer ? order.customer.address : '-';
-    document.getElementById('printPhone1').innerText = order.customer ? order.customer.phone : '-';
-    document.getElementById('printPhone2').innerText = order.customer ? (order.customer.phone2 || '-') : '-';
+    const c = order.customer || {};
+    const val = (...keys) => {
+        for (const k of keys) {
+            if (c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== '') return String(c[k]);
+            if (c.address && typeof c.address === 'object' && c.address[k]) return String(c.address[k]);
+        }
+        return '-';
+    };
+    const addressText = (typeof c.address === 'object' && c.address) ? (c.address.street || c.address.details || '-') : (c.address || '-');
+
+    document.getElementById('printCustName').innerText = c.name || '-';
+    document.getElementById('printCity').innerText = val('city', 'governorate', 'محافظة');
+    document.getElementById('printRegion').innerText = val('region', 'area', 'zone');
+    document.getElementById('printAddress').innerText = addressText;
+    document.getElementById('printBuilding').innerText = val('building', 'buildingNo', 'mabna', 'مبنى');
+    document.getElementById('printFloor').innerText = val('floor', 'floorNo', 'dor', 'دور');
+    document.getElementById('printApartment').innerText = val('apartment', 'apartmentNo', 'flat', 'shaka', 'شقة');
+    document.getElementById('printLandmark').innerText = val('landmark', 'mark', 'nearest', 'علامة مميزة');
+    document.getElementById('printPhone1').innerText = c.phone || '-';
+    document.getElementById('printPhone2').innerText = c.phone2 || c.altPhone || '-';
+    
     
     const descParts = order.items ? order.items.map(i => `${i.qty}x ${i.name}`).join(' ، ') : '';
     document.getElementById('printProductsDesc').innerText = descParts;
@@ -927,36 +1004,46 @@ window.viewOrderDetails = (orderId) => {
         document.getElementById('printCodAmount').innerText = `${Math.round(order.total || 0)} ج.م`;
     }
 
+    // باركود شريطي كبير مالي عرض البوليصة يمين وشمال
     if (typeof JsBarcode !== 'undefined') {
         JsBarcode("#topBarcode", order.displayId || order.orderId, {
-            format: "CODE128", width: 3, height: 100, displayValue: true, fontSize: 24, margin: 10
+            format: "CODE128", width: 5, height: 120, displayValue: true, fontSize: 28, margin: 0
         });
+        const bcSvg = document.getElementById('topBarcode');
+        if (bcSvg) {
+            bcSvg.setAttribute('preserveAspectRatio', 'none');
+            bcSvg.style.width = '100%';
+            bcSvg.style.maxWidth = 'none';
+            bcSvg.style.height = '120px';
+        }
     }
-    
+
+    // QR كود لينك الموقع بحجم أكبر مالي مكانه
     const qrBox = document.getElementById('qrCodeBox');
     qrBox.innerHTML = '';
     if (typeof QRCode !== 'undefined') {
-        new QRCode(qrBox, { text: order.displayId || order.orderId, width: 80, height: 80 });
+        const qrLink = `https://mody3mr.github.io/modytech/?order=${order.displayId || order.orderId}`;
+        new QRCode(qrBox, { text: qrLink, width: 160, height: 160 });
+        const qrImg = qrBox.querySelector('img, canvas');
+        if (qrImg) { qrImg.style.width = '160px'; qrImg.style.height = '160px'; }
     }
+
+    // الوضع الافتراضي للسماح بفتح الشحنة = لا
+    const allowSel = document.getElementById('wbAllowOpen');
+    if (allowSel) allowSel.value = 'لا';
+    document.getElementById('printAllowOpen').innerText = 'لا';
 
     document.getElementById('orderDetailsModal').style.display = 'flex';
 };
 
 window.printDocument = (type) => {
     if (type === 'waybill') {
-        document.getElementById('printAllowOpen').innerText = document.getElementById('wbAllowOpen').value;
+        document.getElementById('printAllowOpen').innerText = document.getElementById('wbAllowOpen').value || 'لا';
         document.getElementById('printNotes').innerText = document.getElementById('wbNotes').value || 'لا يوجد';
-        document.body.classList.add('print-mode-waybill');
+        window.printNode(document.getElementById('waybillPrintArea'));
     } else if (type === 'invoice') {
-        document.body.classList.add('print-mode-invoice');
+        window.printNode(document.getElementById('invoicePrintContainer'));
     }
-    
-    window.print();
-    
-    setTimeout(() => {
-        document.body.classList.remove('print-mode-waybill');
-        document.body.classList.remove('print-mode-invoice');
-    }, 500);
 };
 
 // ==========================================
@@ -1091,7 +1178,7 @@ window.bulkPrintWaybills = () => {
                 <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
                     <div style="flex: 1; border-left: 2px solid black; padding-left: 10px; font-size: 18px;">
                         <strong>من:</strong> مودي ستور<br>
-                        <strong>السماح بالفتح:</strong> نعم
+                        <strong>السماح بالفتح:</strong> لا
                     </div>
                 </div>
 
@@ -1137,13 +1224,13 @@ window.bulkPrintWaybills = () => {
 
     processingOrders.forEach(order => {
         if (typeof JsBarcode !== 'undefined') {
-            JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.displayId || order.orderId, { format: "CODE128", width: 3, height: 100, displayValue: true });
+            JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.displayId || order.orderId, { format: "CODE128", width: 5, height: 120, displayValue: true, fontSize: 28, margin: 0 });
+            const bulkSvg = document.getElementById(`bulk-bc-${order.displayId || order.orderId}`);
+            if (bulkSvg) { bulkSvg.setAttribute('preserveAspectRatio', 'none'); bulkSvg.style.width = '100%'; bulkSvg.style.maxWidth = 'none'; }
         }
     });
     
-    document.body.classList.add('print-mode-bulk');
-    window.print();
-    setTimeout(() => { document.body.classList.remove('print-mode-bulk'); }, 500);
+    window.printNode(container);
 };
 
 // ==========================================
@@ -1236,21 +1323,33 @@ window.savePurchaseInvoice = () => {
     if(purItems.length === 0) return window.showAlert('الفاتورة فارغة!');
 
     // تم التأكد من عدم وجود بيانات فارغة (Undefined) تمنع الحفظ
-    const data = {
-        type: 'purchase', title: `فاتورة مشتريات (مورد: ${supplier})`, supplier: supplier, invoiceNo: invoiceNo,
-        items: purItems, shipping: shipping, amount: totalAmount, timestamp: Date.now(), user: currentUser || "مدير"
-    };
-
-    purItems.forEach(item => {
-        const pRef = ref(db, `products/${item.id}`);
-        get(pRef).then(snap => { if(snap.exists()) { update(pRef, { stock: (snap.val().stock || 0) + item.qty }); } });
+    const data = cleanData({
+        type: 'purchase',
+        title: `فاتورة مشتريات (مورد: ${supplier})`,
+        supplier: supplier,
+        invoiceNo: invoiceNo,
+        items: purItems.map(i => ({ id: i.id || '', name: i.name || 'منتج', qty: i.qty || 0, cost: i.cost || 0, total: i.total || 0 })),
+        shipping: shipping,
+        amount: totalAmount,
+        timestamp: Date.now(),
+        user: currentUser || "مدير"
     });
 
+    // نحفظ الفاتورة الأول، وبعد نجاح الحفظ نحدث المخزون
     push(ref(db, 'finance'), data).then(() => {
-        logAction("مشتريات", `إدخال فاتورة مشتريات بقيمة ${totalAmount} ج.م وتحديث المخزون`);
-        window.showAlert('تم الحفظ وتحديث المخزون', 'success');
+        purItems.forEach(item => {
+            if (!item.id) return;
+            const pRef = ref(db, `products/${item.id}`);
+            get(pRef).then(snap => { if(snap.exists()) { update(pRef, { stock: (snap.val().stock || 0) + item.qty }); } });
+        });
+        logAction("مشتريات", `إدخال فاتورة مشتريات رقم ${invoiceNo} بقيمة ${totalAmount} ج.م وتحديث المخزون`);
+        window.showAlert('تم إنشاء فاتورة المشتريات وتحديث المخزون', 'success');
+        purItems = [];
         closeModal('purchaseModal');
-    }).catch(err => window.showAlert('حدث خطأ أثناء الحفظ', 'error'));
+    }).catch(err => {
+        console.error(err);
+        window.showAlert('تعذر حفظ الفاتورة: ' + (err && err.message ? err.message : err), 'error');
+    });
 };
 window.openExpenseModal = () => {
     document.getElementById('expTitle').value = '';
@@ -1268,17 +1367,20 @@ window.saveExpense = () => {
         return window.showAlert('برجاء استكمال بيانات المصروف بشكل صحيح');
     }
 
-    push(ref(db, 'finance'), {
-        type: 'expense', 
-        title: title, 
-        amount: amount, 
-        notes: notes, 
-        timestamp: Date.now(), 
-        user: currentUser
-    }).then(() => {
+    push(ref(db, 'finance'), cleanData({
+        type: 'expense',
+        title: title,
+        amount: amount,
+        notes: notes || 'بدون ملاحظات',
+        timestamp: Date.now(),
+        user: currentUser || 'مدير'
+    })).then(() => {
         logAction("مصروفات", `تسجيل مصروف (${title}) بقيمة ${amount} ج.م`);
-        window.showAlert('تم تسجيل المصروف', 'success');
+        window.showAlert('تم تسجيل المصروف وإضافته للسجل', 'success');
         closeModal('expenseModal');
+    }).catch(err => {
+        console.error(err);
+        window.showAlert('تعذر حفظ المصروف: ' + (err && err.message ? err.message : err), 'error');
     });
 };
 
@@ -1423,12 +1525,19 @@ window.confirmReturnOrder = () => {
         });
     }
 
-    push(ref(db, 'returns'), retData).then(() => {
-        update(ref(db, `orders/${currentReturnOrderTemp.dbId}`), { status: 'مرتجع', returnedAt: Date.now() });
-        logAction('مرتجع', `استلام مرتجع لطلب #${currentReturnOrderTemp.displayId}`);
+    const orderRefTemp = currentReturnOrderTemp;
+    push(ref(db, 'returns'), cleanData(retData)).then(() => {
+        return update(ref(db, `orders/${orderRefTemp.dbId}`), { status: 'مرتجع', returnedAt: Date.now() });
+    }).then(() => {
+        window.notifyCustomer(orderRefTemp, 'تم استلام مرتجع طلبك', `تم تسجيل مرتجع للطلب #${orderRefTemp.displayId} بقيمة ${returnAmount} ج.م - السبب: ${reason}`);
+        logAction('مرتجع', `استلام مرتجع لطلب #${orderRefTemp.displayId} بقيمة ${returnAmount} ج.م`);
         window.showAlert('تم تسجيل المرتجع وتحديث حالة الطلب والمخزون', 'success');
         closeModal('newReturnModal');
-    }).catch(err => window.showAlert('حدث خطأ أثناء حفظ المرتجع', 'error'));
+        currentReturnOrderTemp = null;
+    }).catch(err => {
+        console.error(err);
+        window.showAlert('حدث خطأ أثناء حفظ المرتجع: ' + (err && err.message ? err.message : err), 'error');
+    });
 };
 onValue(ref(db, 'returns'), (snapshot) => {
     allReturns = [];
