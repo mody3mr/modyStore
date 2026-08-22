@@ -15,10 +15,8 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// حل مشكلة بقاء تسجيل الدخول: إجبار الجلسة على الانتهاء بإغلاق المتصفح
-setPersistence(auth, browserSessionPersistence).catch((error) => {
-    console.error("خطأ في ضبط جلسة المصادقة:", error);
-});
+// تأمين الجلسة: إجبار الموقع على طلب تسجيل الدخول عند فتح المتصفح من جديد
+setPersistence(auth, browserSessionPersistence).catch((error) => console.error(error));
 
 let currentUser = "جاري التحميل...";
 window.currentUserRole = "Supervisor"; 
@@ -98,8 +96,9 @@ onAuthStateChanged(auth, (user) => {
                     window.location.href = "login.html"; 
                 });
             }
-        }).catch((error) => {
-            console.error("خطأ في الاتصال بقاعدة البيانات أثناء المصادقة:", error);
+        }).catch((err) => {
+            console.error(err);
+            window.showAlert("قاعدة البيانات مغلقة! يرجى مراجعة Firebase Rules كما تم الشرح", "error");
         });
     } else {
         window.location.href = "login.html"; 
@@ -260,21 +259,17 @@ window.goToOrdersTab = (tab = 'active') => {
 let productCatalog = {}; 
 
 onValue(ref(db, 'products'), (snapshot) => {
-    try {
-        let activeCount = 0;
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                productCatalog[child.val().name] = child.val().imageUrl;
-                if (child.val().isActive) {
-                    activeCount++;
-                }
-            });
-        }
-        const statProd = document.getElementById('statTotalProducts');
-        if (statProd) statProd.innerText = activeCount;
-    } catch(error) {
-        console.error("خطأ في تحميل كاتالوج المنتجات:", error);
+    let activeCount = 0;
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            productCatalog[child.val().name] = child.val().imageUrl;
+            if (child.val().isActive) {
+                activeCount++;
+            }
+        });
     }
+    const statProd = document.getElementById('statTotalProducts');
+    if (statProd) statProd.innerText = activeCount;
 });
 
 window.openSalesReport = () => {
@@ -908,48 +903,44 @@ window.printDocument = (type) => {
 };
 
 onValue(ref(db, 'orders'), (snapshot) => {
-    try {
-        allOrders = [];
-        let totalRev = 0;
-        let pending = 0;
-        let ordersCount = 0;
-        
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                let o = child.val(); 
-                o.dbId = child.key; 
-                allOrders.push(o);
-                ordersCount++;
-                
-                if (o.status !== 'ملغي') {
-                    totalRev += (o.total || 0);
-                }
-                if (o.status === 'قيد المراجعة') {
-                    pending++;
-                }
-            });
+    allOrders = [];
+    let totalRev = 0;
+    let pending = 0;
+    let ordersCount = 0;
+    
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            let o = child.val(); 
+            o.dbId = child.key; 
+            allOrders.push(o);
+            ordersCount++;
             
-            allOrders.sort((a, b) => a.createdAt - b.createdAt);
-            allOrders.forEach((order, index) => {
-                order.displayId = String(index + 1).padStart(4, '0');
-            });
-            
-            allOrders.reverse();
-        }
+            if (o.status !== 'ملغي') {
+                totalRev += (o.total || 0);
+            }
+            if (o.status === 'قيد المراجعة') {
+                pending++;
+            }
+        });
         
-        if (document.getElementById('statTotalOrders')) document.getElementById('statTotalOrders').innerText = ordersCount;
-        if (document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
-        if (document.getElementById('statPendingOrders')) document.getElementById('statPendingOrders').innerText = pending;
+        allOrders.sort((a, b) => a.createdAt - b.createdAt);
+        allOrders.forEach((order, index) => {
+            order.displayId = String(index + 1).padStart(4, '0');
+        });
         
-        if (typeof initCharts !== 'undefined') {
-            initCharts();
-            updateChartsData();
-        }
-        
-        window.renderOrdersTable();
-    } catch (error) {
-        console.error("خطأ في تحميل الطلبات:", error);
+        allOrders.reverse();
     }
+    
+    if (document.getElementById('statTotalOrders')) document.getElementById('statTotalOrders').innerText = ordersCount;
+    if (document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
+    if (document.getElementById('statPendingOrders')) document.getElementById('statPendingOrders').innerText = pending;
+    
+    if (typeof initCharts !== 'undefined') {
+        initCharts();
+        updateChartsData();
+    }
+    
+    window.renderOrdersTable();
 });
 
 // ==========================================
@@ -1108,17 +1099,13 @@ window.filterProducts = () => {
 };
 
 onValue(ref(db, 'products'), (snapshot) => {
-    try {
-        allProducts = [];
-        if (snapshot.exists()) {
-            snapshot.forEach(child => { 
-                allProducts.push({ id: child.key, ...child.val() }); 
-            });
-        }
-        window.filterProducts();
-    } catch (error) {
-        console.error("خطأ في تحميل المنتجات:", error);
+    allProducts = [];
+    if (snapshot.exists()) {
+        snapshot.forEach(child => { 
+            allProducts.push({ id: child.key, ...child.val() }); 
+        });
     }
+    window.filterProducts();
 });
 
 window.deleteProduct = (id, name) => {
@@ -1276,17 +1263,13 @@ window.filterCategories = () => {
 };
 
 onValue(ref(db, 'categories'), (snapshot) => { 
-    try {
-        allCategories = []; 
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                allCategories.push({ id: child.key, ...child.val() });
-            });
-        }
-        window.filterCategories();
-    } catch (error) {
-        console.error("خطأ في تحميل الأقسام:", error);
+    allCategories = []; 
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            allCategories.push({ id: child.key, ...child.val() });
+        });
     }
+    window.filterCategories();
 });
 
 // ==========================================
@@ -1476,17 +1459,13 @@ window.filterVouchers = () => {
 };
 
 onValue(ref(db, 'vouchers'), (snapshot) => { 
-    try {
-        allVouchers = []; 
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                allVouchers.push({ id: child.key, ...child.val() });
-            });
-        }
-        window.filterVouchers();
-    } catch (error) {
-        console.error("خطأ في تحميل الكوبونات:", error);
+    allVouchers = []; 
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            allVouchers.push({ id: child.key, ...child.val() });
+        });
     }
+    window.filterVouchers();
 });
 
 // ==========================================
@@ -1513,6 +1492,7 @@ window.openEmployeeModal = () => {
     document.getElementById('employeeModal').style.display = "flex"; 
 };
 
+// دالة حفظ موظف وتوليد حساب له في Firebase Auth أوتوماتيك
 window.saveEmployee = async () => { 
     if (window.currentUserRole !== 'Admin') {
         return window.showAlert("إدارة الموظفين مخصصة لمدير النظام فقط!", "error");
@@ -1564,6 +1544,7 @@ window.saveEmployee = async () => {
         }
 
         try {
+            // إنشاء تطبيق فايربيس مؤقت لإنشاء حساب الموظف بدون تسجيل خروج المدير
             const secondaryApp = initializeApp(firebaseConfig, "SecondaryAppInstance");
             const secondaryAuth = getAuth(secondaryApp);
             
@@ -1690,21 +1671,17 @@ window.filterEmployees = () => {
 };
 
 onValue(ref(db, 'employees'), (snapshot) => { 
-    try {
-        allEmployees = []; 
-        const filterUserDropdown = document.getElementById("filterLogUser");
-        if (filterUserDropdown) filterUserDropdown.innerHTML = "<option value=''>كل الموظفين</option>";
-        if (snapshot.exists()) {
-            snapshot.forEach(child => {
-                let e = { id: child.key, ...child.val() };
-                allEmployees.push(e);
-                if (filterUserDropdown) filterUserDropdown.innerHTML += `<option value="${e.name}">${e.name}</option>`;
-            });
-        }
-        window.filterEmployees();
-    } catch (error) {
-        console.error("خطأ في تحميل الموظفين:", error);
+    allEmployees = []; 
+    const filterUserDropdown = document.getElementById("filterLogUser");
+    if (filterUserDropdown) filterUserDropdown.innerHTML = "<option value=''>كل الموظفين</option>";
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            let e = { id: child.key, ...child.val() };
+            allEmployees.push(e);
+            if (filterUserDropdown) filterUserDropdown.innerHTML += `<option value="${e.name}">${e.name}</option>`;
+        });
     }
+    window.filterEmployees();
 });
 
 // ==========================================
@@ -1775,38 +1752,30 @@ window.exportLogsToExcel = () => {
 };
 
 onValue(ref(db, 'logs'), (snapshot) => { 
-    try {
-        allLogs = [];
-        if (snapshot.exists()) { 
-            snapshot.forEach(child => {
-                allLogs.push({ id: child.key, ...child.val() });
-            }); 
-            allLogs.reverse();
-        }
-        
-        if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
-            document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
-        }
-        
-        if (currentLogTab === 'current') window.filterLogs();
-    } catch (error) {
-        console.error("خطأ في تحميل سجل النشاطات:", error);
+    allLogs = [];
+    if (snapshot.exists()) { 
+        snapshot.forEach(child => {
+            allLogs.push({ id: child.key, ...child.val() });
+        }); 
+        allLogs.reverse();
     }
+    
+    if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
+        document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
+    }
+    
+    if (currentLogTab === 'current') window.filterLogs();
 });
 
 onValue(ref(db, 'archived_logs'), (snapshot) => { 
-    try {
-        allArchivedLogs = [];
-        if (snapshot.exists()) { 
-            snapshot.forEach(child => {
-                allArchivedLogs.push({ id: child.key, ...child.val() });
-            }); 
-            allArchivedLogs.reverse();
-        }
-        if (currentLogTab === 'archived') window.filterLogs();
-    } catch (error) {
-        console.error("خطأ في تحميل الأرشيف:", error);
+    allArchivedLogs = [];
+    if (snapshot.exists()) { 
+        snapshot.forEach(child => {
+            allArchivedLogs.push({ id: child.key, ...child.val() });
+        }); 
+        allArchivedLogs.reverse();
     }
+    if (currentLogTab === 'archived') window.filterLogs();
 });
 
 window.archiveLogsAll = () => {
@@ -1932,33 +1901,29 @@ window.saveSettings = () => {
 };
 
 onValue(ref(db, 'storeSettings'), (snapshot) => {
-    try {
-        if (snapshot.exists()) {
-            const d = snapshot.val();
-            if (document.getElementById("setStoreName")) document.getElementById("setStoreName").value = d.name || "";
-            if (document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
-            if (document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
-            if (document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
-            if (document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
-            if (document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
-            if (document.getElementById("setCopyright")) document.getElementById("setCopyright").value = d.copyright || "";
-            
-            if (d.social) {
-                if (document.getElementById("setFb")) document.getElementById("setFb").value = d.social.facebook || "";
-                if (document.getElementById("setInsta")) document.getElementById("setInsta").value = d.social.instagram || "";
-                if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
-                if (document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
-            }
-
-            if (d.paymentMethods) {
-                if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
-                if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
-                if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
-                if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
-            }
+    if (snapshot.exists()) {
+        const d = snapshot.val();
+        if (document.getElementById("setStoreName")) document.getElementById("setStoreName").value = d.name || "";
+        if (document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
+        if (document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
+        if (document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
+        if (document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
+        if (document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
+        if (document.getElementById("setCopyright")) document.getElementById("setCopyright").value = d.copyright || "";
+        
+        if (d.social) {
+            if (document.getElementById("setFb")) document.getElementById("setFb").value = d.social.facebook || "";
+            if (document.getElementById("setInsta")) document.getElementById("setInsta").value = d.social.instagram || "";
+            if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
+            if (document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
         }
-    } catch (error) {
-        console.error("خطأ في تحميل الإعدادات:", error);
+
+        if (d.paymentMethods) {
+            if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
+            if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
+            if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
+            if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
+        }
     }
 });
 
