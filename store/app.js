@@ -76,7 +76,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         }
 
         // بيانات الفوتر
-        // بيانات الفوتر
         if (storeSettings.name) document.getElementById("footerName").innerText = storeSettings.name;
         
         // الإيميل
@@ -110,7 +109,9 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             if(storeSettings.social.instagram) { ig.href = storeSettings.social.instagram; ig.style.display = "flex"; } else { ig.style.display = "none"; }
             if(storeSettings.social.telegram) { tg.href = storeSettings.social.telegram; tg.style.display = "flex"; } else { tg.style.display = "none"; }
             if(storeSettings.social.whatsapp) { wa.href = `https://wa.me/${storeSettings.social.whatsapp.replace(/\D/g,'')}`; wa.style.display = "flex"; } else { wa.style.display = "none"; }
-        }});
+        }
+    }
+});
 
 // ==== أسعار الشحن ====
 onValue(ref(db, 'shipping'), (snapshot) => {
@@ -197,13 +198,11 @@ window.renderProducts = (filterType) => {
             priceHtml = `<span class="product-price"><span class="old-price" style="font-size:16px;">${p.price}</span> ${p.discountPrice} <span>ج.م</span></span>`;
             badgeHtml = `<div class="discount-badge">خصم ${p.price - p.discountPrice} ج.م</div>`;
             
-            // إضافة عداد الأيام لو موجود عرض
             if(p.offerDays) {
                 countdownHtml = `<div class="offer-countdown"><i class="fas fa-stopwatch"></i> ينتهي العرض خلال: <span>${p.offerDays} أيام</span></div>`;
             }
         }
         
-        // التحقق من المخزون وتغيير الزرار
         let btnHtml = '';
         if (p.stock === 0) {
             badgeHtml += `<div class="discount-badge" style="background:var(--accent); color:white; left:15px; right:auto;">نفذت الكمية</div>`;
@@ -212,7 +211,6 @@ window.renderProducts = (filterType) => {
             btnHtml = `<button class="add-to-cart" onclick="event.stopPropagation(); addToCart('${p.id}', '${p.name}', ${p.effectivePrice}, '${p.imageUrl}', ${p.stock || 0})">إضافة للسلة <i class="fas fa-cart-plus"></i></button>`;
         }
 
-        // الأنيميشن متضاف عبر استايل التأخير الزمني animation-delay
         grid.innerHTML += `
             <div class="product-card" style="animation-delay: ${index * 0.05}s" onclick="openProductDetails('${p.id}')">
                 ${badgeHtml}
@@ -728,6 +726,7 @@ window.editCustomerOrder = (dbId) => {
         }
     });
 };
+
 // حقوق الملكية المشفرة (لا يمكن تعديلها برمجياً بسهولة)
 const cArr = [169, 32, 50, 48, 50, 54, 32, 1578, 1605, 32, 1575, 1604, 1573, 1606, 1588, 1575, 1569, 32, 1576, 1608, 1575, 1587, 1591, 1577, 32, 124, 32, 1605, 1581, 1605, 1583, 32, 1593, 1605, 1585, 1608, 32, 1575, 1576, 1585, 1575, 1607, 1610, 1605, 32, 124, 32, 1605, 1608, 1583, 1610, 32, 1587, 1578, 1608, 1585];
 const lArr = [104, 116, 116, 112, 115, 58, 47, 47, 119, 97, 46, 109, 101, 47, 43, 50, 48, 49, 48, 57, 52, 50, 54, 52, 50, 48, 54];
