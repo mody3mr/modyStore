@@ -19,14 +19,13 @@
     <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن والسكانر -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script> <!-- مكتبة الإسكانر -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <!-- مكتبة تصدير الاكسيل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- أكواد الستايل الخاصة بإخفاء أسهم التمرير وتظبيط الطباعة -->
     <style>
-        /* إخفاء أسهم شريط التمرير (الطلوع والنزول) نهائياً */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -47,7 +46,7 @@
             height: 0;
         }
 
-        /* تظبيط شكل الطباعة للفواتير والبوليصة */
+        /* تظبيط شكل الطباعة للفواتير والبوليصة بناءً على طلبك */
         @media print {
             body * {
                 visibility: hidden;
@@ -64,10 +63,11 @@
                 top: 0;
                 width: 100%;
                 margin: 0;
-                padding: 0;
+                padding: 15px;
+                background: white;
             }
 
-            /* طباعة بوليصة الشحن */
+            /* طباعة بوليصة الشحن (إخفاء كل شيء وإظهار البوليصة فقط) */
             body.print-mode-waybill .print-waybill-area, 
             body.print-mode-waybill .print-waybill-area * {
                 visibility: visible;
@@ -105,6 +105,9 @@
 </head>
 <body>
 
+    <!-- ملف الصوت الخاص بالسكانر -->
+    <audio id="barcodeBeep" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+
     <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar" id="sidebar">
         <div class="brand">
@@ -113,42 +116,37 @@
         </div>
         <ul class="nav-links">
             <li class="nav-item active" data-target="analytics-view">
-                <i class="fas fa-chart-pie"></i> 
-                <span class="nav-text">الإحصائيات</span>
+                <i class="fas fa-chart-pie"></i> <span class="nav-text">الإحصائيات</span>
             </li>
             <li class="nav-item" data-target="orders-view">
-                <i class="fas fa-shopping-cart"></i> 
-                <span class="nav-text">الطلبات</span>
+                <i class="fas fa-shopping-cart"></i> <span class="nav-text">الطلبات</span>
+            </li>
+            <li class="nav-item" data-target="finance-view">
+                <i class="fas fa-wallet"></i> <span class="nav-text">المشتريات والمصروفات</span>
+            </li>
+            <li class="nav-item" data-target="returns-view">
+                <i class="fas fa-undo"></i> <span class="nav-text">المرتجعات</span>
             </li>
             <li class="nav-item" data-target="products-view">
-                <i class="fas fa-box-open"></i> 
-                <span class="nav-text">المنتجات</span>
+                <i class="fas fa-box-open"></i> <span class="nav-text">المنتجات</span>
             </li>
             <li class="nav-item" data-target="categories-view">
-                <i class="fas fa-tags"></i> 
-                <span class="nav-text">الأقسام</span>
+                <i class="fas fa-tags"></i> <span class="nav-text">الأقسام</span>
             </li>
             <li class="nav-item" data-target="vouchers-view">
-                <i class="fas fa-ticket-alt"></i> 
-                <span class="nav-text">الكوبونات</span>
+                <i class="fas fa-ticket-alt"></i> <span class="nav-text">الكوبونات</span>
             </li>
-            <!-- التاب الجديد الخاص بأسعار الشحن -->
             <li class="nav-item" data-target="shipping-view">
-                <i class="fas fa-truck-fast"></i> 
-                <span class="nav-text">أسعار الشحن</span>
+                <i class="fas fa-truck-fast"></i> <span class="nav-text">أسعار الشحن</span>
             </li>
             <li class="nav-item" data-target="employees-view">
-                <i class="fas fa-users"></i> 
-                <span class="nav-text">الموظفين</span>
+                <i class="fas fa-users"></i> <span class="nav-text">الموظفين</span>
             </li>
             <li class="nav-item" data-target="logs-view">
-                <i class="fas fa-history"></i> 
-                <span class="nav-text">سجل النشاطات</span>
+                <i class="fas fa-history"></i> <span class="nav-text">سجل النشاطات</span>
             </li>
-            <!-- التاب الخاص بالإعدادات -->
             <li class="nav-item" data-target="settings-view">
-                <i class="fas fa-cog"></i> 
-                <span class="nav-text">الإعدادات</span>
+                <i class="fas fa-cog"></i> <span class="nav-text">الإعدادات</span>
             </li>
         </ul>
     </aside>
@@ -160,14 +158,16 @@
                 <i class="fas fa-bars"></i>
             </div>
             
-            <!-- أزرار الهيدر -->
             <div style="display: flex; align-items: center; gap: 20px;">
-                <!-- جرس الإشعارات للنواقص -->
+                <!-- جرس الإشعارات للنواقص وتحديد كمقروء -->
                 <div class="user-profile" id="notifBtn" style="position: relative; cursor: pointer;">
                     <i class="fas fa-bell" style="font-size: 22px; color: #64748b;"></i>
                     <span id="notifCount" style="position:absolute; top:-5px; right:-8px; background:var(--danger); color:white; font-size:11px; padding:2px 6px; border-radius:50%; display:none;">0</span>
                     <div class="profile-dropdown" id="notifDropdown" style="width: 280px; right: auto; left: 0;">
-                        <div class="dropdown-header"><strong style="color:var(--danger);">نواقص المنتجات ⚠️</strong></div>
+                        <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color:var(--danger);">نواقص المنتجات ⚠️</strong>
+                            <button id="markNotifReadBtn" onclick="markNotificationsAsRead(event)" style="background:var(--bg); border:1px solid var(--border); border-radius:4px; font-size:11px; padding:4px 8px; cursor:pointer; font-family:'Cairo'; font-weight:bold;">تعليم كمقروء</button>
+                        </div>
                         <div id="notifList" style="max-height: 250px; overflow-y: auto; padding: 10px; font-size: 13px;">
                             <div style="text-align:center; color:#94a3b8;">لا توجد نواقص حالياً</div>
                         </div>
@@ -178,7 +178,6 @@
                     <span id="currentUserNameDisplay">جاري التحميل...</span>
                     <img id="currentUserAvatar" src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" alt="المستخدم">
                     
-                    <!-- القائمة المنسدلة (Dropdown) -->
                     <div class="profile-dropdown" id="profileDropdown">
                         <div class="dropdown-header">
                             <strong id="dropdownName">جاري التحميل...</strong>
@@ -243,7 +242,6 @@
                     <div class="card" style="padding: 20px;">
                         <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات (آخر 7 أيام)</h3>
                         <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;"><canvas id="salesChart"></canvas></div>
-                        <!-- جدول آخر 7 أيام -->
                         <table style="width: 100%; text-align: right; border-collapse: collapse; font-size: 14px;">
                             <thead>
                                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
@@ -268,11 +266,9 @@
                 <div class="page-header" style="display:flex; flex-wrap:wrap; gap:10px;">
                     <h2 class="page-title">إدارة الطلبات</h2>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <!-- زرار الإسكانر الجديد -->
                         <button class="btn-save" style="background-color: #8b5cf6;" onclick="openScannerModal()">
                             <i class="fas fa-qrcode"></i> سكانر الشحن
                         </button>
-                        <!-- زرار الطباعة المجمعة الجديد -->
                         <button class="btn-save" style="background-color: var(--primary);" onclick="bulkPrintWaybills()">
                             <i class="fas fa-print"></i> طباعة بوليصات (جاري التجهيز)
                         </button>
@@ -284,7 +280,6 @@
                     <button class="custom-tab-btn" id="tabArchivedOrders" onclick="switchOrderTab('archived', this)">أرشيف الطلبات</button>
                 </div>
 
-                <!-- كارد عدد الطلبات الموجودة في البحث -->
                 <div class="stat-card" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: inline-block;">
                     <h3 style="margin: 0; font-size: 16px;">الطلبات المعروضة حالياً: <span id="filteredOrdersCount" style="color: var(--primary); font-weight: bold; font-size: 20px;">0</span></h3>
                 </div>
@@ -324,6 +319,94 @@
                         <tbody id="ordersTableBody">
                             <tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
                         </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- التاب الجديد 1: المشتريات والمصروفات (الماليات) -->
+            <div id="finance-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header" style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <h2 class="page-title">المشتريات والمصروفات (الماليات)</h2>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-save" style="background-color: var(--success);" onclick="openPurchaseModal()"><i class="fas fa-file-invoice-dollar"></i> فاتورة مشتريات (تزود المخزون)</button>
+                        <button class="btn-save" style="background-color: var(--danger);" onclick="openExpenseModal()"><i class="fas fa-money-bill-wave"></i> إضافة مصروفات</button>
+                    </div>
+                </div>
+
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" onclick="switchFinanceTab('all', this)">كل العمليات</button>
+                    <button class="custom-tab-btn" onclick="switchFinanceTab('purchases', this)">المشتريات فقط</button>
+                    <button class="custom-tab-btn" onclick="switchFinanceTab('expenses', this)">المصروفات فقط</button>
+                </div>
+
+                <div class="filter-bar">
+                    <input type="text" id="searchFinance" placeholder="بحث بالبيان أو رقم الفاتورة..." onkeyup="renderFinanceTable()">
+                    <input type="month" id="filterFinanceMonth" onchange="renderFinanceTable()">
+                </div>
+
+                <div class="stat-cards" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="stat-card" style="padding: 15px;">
+                        <div class="stat-icon" style="color: #ef4444; background: #fef2f2; width: 40px; height: 40px; font-size: 18px;"><i class="fas fa-minus-circle"></i></div>
+                        <div class="stat-info">
+                            <h3 style="font-size: 12px;">إجمالي المصروفات والمشتريات</h3>
+                            <p id="statTotalExpenses" style="font-size: 18px;">0 ج.م</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>البيان / المورد</th>
+                                <th>القيمة</th>
+                                <th>بواسطة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- التاب الجديد 2: المرتجعات -->
+            <div id="returns-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header">
+                    <h2 class="page-title">إدارة المرتجعات</h2>
+                    <button class="btn-save" style="background-color: var(--accent);" onclick="openNewReturnModal()"><i class="fas fa-undo"></i> إنشاء طلب مرتجع جديد</button>
+                </div>
+
+                <div class="custom-tabs">
+                    <button class="custom-tab-btn active" id="tabCurrentReturns" onclick="switchReturnsTab('current', this)">المرتجعات الحالية</button>
+                    <button class="custom-tab-btn" id="tabArchivedReturns" onclick="switchReturnsTab('archived', this)">أرشيف المرتجعات</button>
+                </div>
+
+                <div class="filter-bar">
+                    <input type="text" id="searchReturns" placeholder="بحث برقم الطلب الأصلي..." onkeyup="renderReturnsTable()">
+                    <input type="date" id="filterReturnDate" onchange="renderReturnsTable()">
+                    <select id="filterReturnStatus" onchange="renderReturnsTable()">
+                        <option value="">كل الحالات</option>
+                        <option value="قيد الانتظار">قيد الانتظار</option>
+                        <option value="تم استلام المرتجع">تم استلام المرتجع</option>
+                        <option value="مرفوض">مرفوض</option>
+                    </select>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>رقم الطلب الأصلي</th>
+                                <th>تاريخ المرتجع</th>
+                                <th>السبب</th>
+                                <th>قيمة المرتجع</th>
+                                <th>حالة المرتجع</th>
+                                <th>التفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="returnsTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -387,7 +470,7 @@
                         <thead>
                             <tr>
                                 <th>اسم القسم</th>
-                                <th>عدد المنتجات بداخله</th> <!-- التعديل الجديد -->
+                                <th>عدد المنتجات بداخله</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
                             </tr>
@@ -431,7 +514,7 @@
                 </div>
             </div>
 
-            <!-- شاشة الشحن الجديدة -->
+            <!-- شاشة الشحن -->
             <div id="shipping-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">أسعار الشحن والمحافظات</h2>
@@ -524,7 +607,7 @@
                 </div>
             </div>
 
-            <!-- 8. شاشة الإعدادات الجديدة -->
+            <!-- 8. شاشة الإعدادات -->
             <div id="settings-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إعدادات المتجر</h2>
@@ -532,10 +615,6 @@
                 <div class="grid-2">
                     <div class="card" style="padding: 20px;">
                         <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-store"></i> الإعدادات الأساسية</h3>
-                        <div class="input-group">
-                            <label>اسم المتجر</label>
-                            <input type="text" id="setStoreName" placeholder="ModyStore">
-                        </div>
                         <div class="input-group">
                             <label>شريط الأخبار (يظهر أعلى الموقع للعملاء)</label>
                             <input type="text" id="setNewsTicker" placeholder="مثال: خصم 20% لفترة محدودة...">
@@ -550,28 +629,43 @@
                         <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-address-card"></i> بيانات التواصل (الفوتر)</h3>
                         <div class="input-group"><label>رقم التليفون الأساسي</label><input type="text" id="setPhone" dir="ltr"></div>
                         <div class="input-group"><label>البريد الإلكتروني</label><input type="email" id="setEmail" dir="ltr"></div>
-                        <div class="input-group"><label>العنوان</label><input type="text" id="setAddress"></div>
-                        <div class="input-group"><label>حقوق الملكية (Copyright)</label><input type="text" id="setCopyright" placeholder="© 2026 ModyStore"></div>
+                        <div class="input-group"><label>العنوان التفصيلي</label><input type="text" id="setAddress"></div>
                     </div>
 
-                    <!-- قسم طرق الدفع الجديد -->
                     <div class="card" style="padding: 20px; grid-column: span 2;">
                         <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-money-check-alt"></i> طرق الدفع المتاحة</h3>
                         <div class="grid-2">
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayCod" style="width:20px; height:20px;"> الدفع عند الاستلام (COD)</label>
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayWallet" style="width:20px; height:20px;"> محفظة إلكترونية (فودافون كاش...)</label>
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayInsta" style="width:20px; height:20px;"> إنستا باي (InstaPay)</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayCod" style="width:20px; height:20px;"> كاش (عند الاستلام)</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayWallet" style="width:20px; height:20px;"> محفظة إلكترونية</label>
+                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayInsta" style="width:20px; height:20px;"> إنستا باي</label>
                             <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayVisa" style="width:20px; height:20px;"> فيزا / بطاقة ائتمان</label>
                         </div>
                     </div>
                     
                     <div class="card" style="padding: 20px; grid-column: span 2;">
                         <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-share-alt"></i> روابط السوشيال ميديا</h3>
+                        <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">قم بتفعيل الزر بجانب الشبكة التي تريد إظهارها في المتجر، ثم ضع الرابط الخاص بك.</p>
                         <div class="grid-2">
-                            <div class="input-group"><label><i class="fab fa-facebook" style="color: #1877F2;"></i> فيسبوك</label><input type="text" id="setFb" dir="ltr" placeholder="رابط الصفحة..."></div>
-                            <div class="input-group"><label><i class="fab fa-instagram" style="color: #E4405F;"></i> انستجرام</label><input type="text" id="setInsta" dir="ltr" placeholder="رابط الحساب..."></div>
-                            <div class="input-group"><label><i class="fab fa-telegram" style="color: #0088cc;"></i> تليجرام</label><input type="text" id="setTelegram" dir="ltr" placeholder="رابط القناة / الحساب..."></div>
-                            <div class="input-group"><label><i class="fab fa-whatsapp" style="color: #25D366;"></i> واتساب</label><input type="text" id="setWhatsapp" dir="ltr" placeholder="رقم الواتساب بالصيغة الدولية..."></div>
+                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
+                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableFb"> <i class="fab fa-facebook" style="color: #1877F2;"></i> فيسبوك</label>
+                                <input type="text" id="setFb" dir="ltr" placeholder="رابط الصفحة...">
+                            </div>
+                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
+                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableInsta"> <i class="fab fa-instagram" style="color: #E4405F;"></i> انستجرام</label>
+                                <input type="text" id="setInsta" dir="ltr" placeholder="رابط الحساب...">
+                            </div>
+                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
+                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableTg"> <i class="fab fa-telegram" style="color: #0088cc;"></i> تليجرام</label>
+                                <input type="text" id="setTelegram" dir="ltr" placeholder="رابط القناة...">
+                            </div>
+                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
+                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableWa"> <i class="fab fa-whatsapp" style="color: #25D366;"></i> واتساب</label>
+                                <input type="text" id="setWhatsapp" dir="ltr" placeholder="رقم الموبايل الدولي...">
+                            </div>
+                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
+                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableTiktok"> <i class="fab fa-tiktok" style="color: #000;"></i> تيك توك</label>
+                                <input type="text" id="setTiktok" dir="ltr" placeholder="رابط الحساب...">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -594,7 +688,6 @@
                 
                 <div class="report-filters" style="display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 10px; border-radius: 10px; flex-wrap: wrap; align-items: center;">
                     <button class="order-tab-btn active" id="btnFilterToday" onclick="generateReport('today', this)">اليوم</button>
-                    <!-- زرار أسبوع الجديد -->
                     <button class="order-tab-btn" id="btnFilterWeek" onclick="generateReport('week', this)">أسبوع</button>
                     <button class="order-tab-btn" id="btnFilterMonth" onclick="generateReport('month', this)">هذا الشهر</button>
                     <button class="order-tab-btn" id="btnFilterAll" onclick="generateReport('all', this)">كل الأوقات</button>
@@ -602,7 +695,6 @@
                     <span style="color: var(--text-light); font-weight: bold; margin: 0 10px;">أو اختر يوماً محدد:</span>
                     <input type="date" id="reportSpecificDate" onchange="generateReport('specific', this)" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-family: 'Cairo'; flex: 1; outline: none;">
                     
-                    <!-- أزرار التصدير -->
                     <div style="flex-basis: 100%; display: flex; gap: 10px; margin-top: 10px;">
                         <button onclick="exportReportToExcel()" style="background-color: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-file-excel"></i> تصدير Excel
@@ -632,24 +724,25 @@
             </div>
         </div>
 
-        <!-- ================= سكانر تغيير الحالة ================= -->
+        <!-- ================= سكانر تأكيد الشحن ================= -->
         <div class="modal-overlay" id="scannerModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 450px;">
                 <h3><i class="fas fa-qrcode"></i> سكانر لتأكيد الشحن</h3>
-                <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">قم بتوجيه الكاميرا أو جهاز الـ Scanner لباركود الفاتورة لتحويل الطلب إلى "تم الشحن" أوتوماتيكياً.</p>
-                <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--border);"></div>
+                <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">قم بتوجيه قارئ الباركود على بوليصة الشحن. يوجد فاصل زمني لمنع التكرار.</p>
+                <!-- تعديل شكل المستطيل ليناسب الباركود الشريطي -->
+                <div id="qr-reader" style="width: 100%; aspect-ratio: 2/1; border-radius: 8px; overflow: hidden; border: 2px solid var(--border);"></div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('scannerModal'); stopScanner();">إغلاق وإيقاف الكاميرا</button>
                 </div>
             </div>
         </div>
 
-        <!-- ================= تفاصيل الطلب وإدخال بيانات بوليصة الشحن ================= -->
+        <!-- ================= تفاصيل الطلب وخيارات الطباعة ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
-            <div class="modal print-invoice-area animate__animated animate__zoomIn" style="width: 800px;">
+            <div class="modal animate__animated animate__zoomIn" style="width: 800px;">
                 <h3 id="orderModalTitle">تفاصيل الطلب</h3>
                 
-                <div class="grid-2 screen-only-flex">
+                <div class="grid-2">
                     <div>
                         <div style="margin-bottom: 15px;">
                             <strong>العميل:</strong> <span id="oName"></span><br>
@@ -657,7 +750,6 @@
                             <strong>العنوان:</strong> <span id="oAddress"></span><br>
                             <strong>المحافظة:</strong> <span id="oCity" style="color: var(--secondary);"></span><br>
                             <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span><br>
-                            <!-- الرقم السري -->
                             <strong>الرقم السري للعميل:</strong> <span id="oSecretCode" style="color: var(--danger); font-weight: bold; font-size: 18px; letter-spacing: 2px;"></span>
                         </div>
                         
@@ -672,21 +764,16 @@
                         </div>
                     </div>
 
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);" class="screen-only">
-                        <!-- مساحة سبب الإلغاء -->
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
                         <div id="oCancelReasonBox" style="display: none; background: #fee2e2; border: 1px solid #f87171; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
                             <strong style="color: #b91c1c;"><i class="fas fa-exclamation-circle"></i> سبب الإلغاء:</strong>
                             <p id="oCancelReasonText" style="color: #991b1b; margin-top: 5px; font-weight: bold;"></p>
                         </div>
                         
                         <strong style="color: var(--primary); margin-bottom: 10px; display: block;">خيارات بوليصة الشحن:</strong>
-                        
                         <div class="input-group">
                             <label>السماح بفتح الشحنة؟</label>
-                            <select id="wbAllowOpen">
-                                <option value="نعم">نعم</option>
-                                <option value="لا">لا</option>
-                            </select>
+                            <select id="wbAllowOpen"><option value="نعم">نعم</option><option value="لا">لا</option></select>
                         </div>
                         <div class="input-group">
                             <label>ملاحظات للمندوب</label>
@@ -698,201 +785,241 @@
                     </div>
                 </div>
 
-                <div class="modal-actions screen-only">
+                <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
-                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')">
-                        <i class="fas fa-truck"></i> طباعة البوليصة
-                    </button>
-                    <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')">
-                        <i class="fas fa-print"></i> طباعة الفاتورة
-                    </button>
+                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> طباعة البوليصة</button>
+                    <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')"><i class="fas fa-print"></i> طباعة الفاتورة</button>
                 </div>
             </div>
         </div>
 
         <!-- ================= تصميم بوليصة الشحن للطباعة ================= -->
-        <div id="waybillPrintArea" class="print-waybill-area" style="display:none;">
-            <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 2px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 10px;">
-                <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                    <div style="font-size: 24px; font-weight: 900; margin-bottom: 5px;">ModyStore <i class="fas fa-bolt"></i></div>
-                    <svg id="topBarcode" style="height: 50px !important; width: 80%; max-width: 250px; margin: 0 auto;"></svg>
+        <div id="waybillPrintArea" class="print-waybill-area" style="display:none; background:white;">
+            <!-- تم التعديل لتأخذ البوليصة مساحة الورقة كلها والباركود يكون كبير -->
+            <div class="bosta-waybill" style="width: 100%; height: 100%; border: 3px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 20px; box-sizing: border-box;">
+                <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
+                    <div style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">ModyStore <i class="fas fa-bolt"></i></div>
+                    <!-- الباركود بحجم كبير جداً -->
+                    <svg id="topBarcode" style="width: 100%; height: 120px; max-width: none; margin: 0 auto;"></svg>
                 </div>
 
-                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                    <div style="flex: 1; border-left: 1px solid black; padding-left: 5px;">
+                <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1; border-left: 2px solid black; padding-left: 10px; font-size: 18px;">
                         <strong>من:</strong> مودي ستور<br>
                         <strong>السماح بالفتح:</strong> <span id="printAllowOpen">نعم</span>
                     </div>
-                    <div style="flex: 1; padding-right: 5px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
+                    <div style="flex: 1; padding-right: 10px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
                 </div>
 
-                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 14px;">
-                    <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:16px;"></span><br>
+                <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
+                    <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:24px;"></span><br>
                     <strong>المحافظة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
                     <strong>العنوان:</strong> <span id="printAddress"></span><br>
                     <strong>مبنى:</strong> <span id="printBuilding">-</span> | <strong>دور:</strong> <span id="printFloor">-</span> | <strong>شقة:</strong> <span id="printApartment">-</span><br>
                     <strong>علامة مميزة:</strong> <span id="printLandmark">-</span>
                 </div>
 
-                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                    <div style="flex: 1; border-left: 1px solid black;">
-                        <strong>تليفون:</strong> <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:16px;"></span>
+                <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
+                    <div style="flex: 1; border-left: 2px solid black;">
+                        <strong>تليفون:</strong> <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:22px;"></span>
                     </div>
-                    <div style="flex: 1; padding-right: 5px;">
+                    <div style="flex: 1; padding-right: 10px;">
                         <strong>تليفون آخر:</strong> <span id="printPhone2" dir="ltr">-</span>
                     </div>
                 </div>
 
-                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 13px;">
+                <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 18px;">
                     <strong>الوصف:</strong> <span id="printProductsDesc"></span><br>
                     <strong>ملاحظات:</strong> <span id="printNotes"></span>
                 </div>
 
-                <div id="codAmountContainer" style="text-align: center; border: 2px solid black; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
-                    <strong style="font-size:14px;">المبلغ المطلوب تحصيله (COD)</strong><br>
-                    <span id="printCodAmount" style="font-size:24px; font-weight:900;"></span>
+                <div id="codAmountContainer" style="text-align: center; border: 3px solid black; padding: 20px; margin-bottom: 15px; border-radius: 12px;">
+                    <strong style="font-size:20px;">المبلغ المطلوب تحصيله (COD)</strong><br>
+                    <span id="printCodAmount" style="font-size:40px; font-weight:900;"></span>
                 </div>
 
-                <div id="paidAmountContainer" style="text-align: center; font-size: 16px; display:none; background-color: #f8fafc; padding: 10px; border: 2px solid black; border-radius: 8px; margin-bottom: 10px;">
+                <div id="paidAmountContainer" style="text-align: center; font-size: 20px; display:none; background-color: #f8fafc; padding: 20px; border: 3px solid black; border-radius: 12px; margin-bottom: 15px;">
                     <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> <br>
                     <strong>القيمة:</strong> <span id="printPaidAmount" style="font-weight:bold;"></span>
                 </div>
 
-                <div style="text-align: center; font-weight: bold; margin-top: 15px; font-size: 14px;">
-                    شكراً لثقتكم بنا <span style="color: red; font-size: 18px;">❤️</span>
+                <div style="text-align: center; font-weight: bold; margin-top: 20px; font-size: 20px;">
+                    شكراً لثقتكم بنا <span style="color: red; font-size: 24px;">❤️</span>
                 </div>
             </div>
+        </div>
+        
+        <!-- ================= تصميم الفاتورة المنفصلة ================= -->
+        <div id="invoicePrintContainer" class="print-invoice-area" style="display:none; background:white; color:black; font-family:'Cairo';">
+            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
+                <h1 style="margin: 0; font-size: 28px;">ModyStore</h1>
+                <p style="margin: 5px 0 0 0; font-size: 16px;">فاتورة طلب عميل</p>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                <div>
+                    <strong>العميل:</strong> <span id="invCustName"></span><br>
+                    <strong>التليفون:</strong> <span id="invCustPhone" dir="ltr"></span><br>
+                    <strong>العنوان:</strong> <span id="invCustAddress"></span>
+                </div>
+                <div style="text-align: left;">
+                    <strong>رقم الفاتورة:</strong> <span id="invOrderId"></span><br>
+                    <strong>التاريخ:</strong> <span id="invDate"></span>
+                </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; text-align: center;">
+                <thead>
+                    <tr style="background-color: #f1f5f9;">
+                        <th style="padding: 10px; border: 1px solid black; text-align: right;">المنتج</th>
+                        <th style="padding: 10px; border: 1px solid black;">الكمية</th>
+                        <th style="padding: 10px; border: 1px solid black;">السعر</th>
+                        <th style="padding: 10px; border: 1px solid black;">المجموع</th>
+                    </tr>
+                </thead>
+                <tbody id="invItemsList"></tbody>
+            </table>
+            <div style="text-align: left; font-size: 16px; border-top: 2px solid black; padding-top: 10px;">
+                <p style="margin: 5px 0;"><strong>الإجمالي الفرعي:</strong> <span id="invSubtotal"></span></p>
+                <p style="margin: 5px 0; color: var(--accent);"><strong>الخصم:</strong> <span id="invDiscount"></span></p>
+                <p style="margin: 10px 0 0 0; font-size: 22px; font-weight: bold;"><strong>الصافي للدفع:</strong> <span id="invTotal"></span></p>
+            </div>
+            <div style="text-align: center; margin-top: 40px; font-size: 14px; border-top: 1px dashed black; padding-top: 15px;">شكراً لتسوقكم معنا!</div>
         </div>
 
         <!-- ================= حاوية الطباعة المجمعة ================= -->
         <div id="bulkPrintContainer" class="bulk-print-container" style="display:none; background:white;"></div>
 
-        <!-- ================= النوافذ العادية ================= -->
+        <!-- ================= النوافذ المنبثقة الجديدة للماليات والمرتجعات ================= -->
+        
+        <!-- فاتورة مشتريات جديدة -->
+        <div class="modal-overlay" id="purchaseModal">
+            <div class="modal animate__animated animate__zoomIn" style="width: 700px;">
+                <h3><i class="fas fa-cart-arrow-down" style="color:var(--success);"></i> إدخال فاتورة مشتريات بضاعة</h3>
+                <div class="grid-2">
+                    <div class="input-group"><label>اسم المورد / الشركة</label><input type="text" id="purSupplier" placeholder="مثال: شركة النور..."></div>
+                    <div class="input-group"><label>رقم الفاتورة الخارجي (اختياري)</label><input type="text" id="purInvoiceNo"></div>
+                </div>
+                
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
+                    <label style="font-weight:bold; color:var(--primary); display:block; margin-bottom:10px;">إضافة منتجات للفاتورة:</label>
+                    <div class="grid-2" style="align-items:end;">
+                        <div class="input-group" style="margin:0;"><label>المنتج</label><select id="purProductSelect"><option value="">اختر المنتج...</option></select></div>
+                        <div class="input-group" style="margin:0;"><label>الكمية المستلمة</label><input type="number" id="purQty" value="1" min="1"></div>
+                        <div class="input-group" style="margin:0;"><label>تكلفة القطعة (عليك)</label><input type="number" id="purCost" value="0"></div>
+                        <button class="btn-save" onclick="addPurchaseItem()" style="height:44px; margin:0;">إضافة للقائمة</button>
+                    </div>
+                </div>
+                
+                <table style="margin-bottom: 15px; font-size: 13px;">
+                    <thead><tr><th>المنتج</th><th>الكمية</th><th>تكلفة الوحدة</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+                    <tbody id="purItemsList"></tbody>
+                </table>
+                
+                <div class="grid-2" style="align-items:center;">
+                    <div class="input-group" style="margin:0;"><label>مصاريف شحن/نقل البضاعة</label><input type="number" id="purShipping" value="0" onkeyup="calculatePurTotal()"></div>
+                    <div style="text-align:left; font-size:18px; font-weight:900; color:var(--primary);">الإجمالي: <span id="purTotalAmount">0</span> ج.م</div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('purchaseModal')">إلغاء</button>
+                    <button class="btn-save" style="background:var(--success);" onclick="savePurchaseInvoice()">حفظ وإضافة للمخزون</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- إضافة مصروف عام -->
+        <div class="modal-overlay" id="expenseModal">
+            <div class="modal animate__animated animate__zoomIn">
+                <h3><i class="fas fa-money-bill-wave" style="color:var(--danger);"></i> تسجيل مصروف خارجي</h3>
+                <div class="input-group"><label>بيان المصروف (عشان إيه؟)</label><input type="text" id="expTitle" placeholder="مثال: كهرباء، أكياس تغليف..."></div>
+                <div class="input-group"><label>التكلفة (ج.م)</label><input type="number" id="expAmount" min="1"></div>
+                <div class="input-group"><label>ملاحظات إضافية</label><textarea id="expNotes" rows="2"></textarea></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('expenseModal')">إلغاء</button>
+                    <button class="btn-save" style="background:var(--danger);" onclick="saveExpense()">تسجيل المصروف</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- إنشاء مرتجع جديد -->
+        <div class="modal-overlay" id="newReturnModal">
+            <div class="modal animate__animated animate__zoomIn" style="width: 600px;">
+                <h3><i class="fas fa-undo"></i> طلب استرجاع منتجات</h3>
+                <div class="input-group" style="display:flex; gap:10px;">
+                    <input type="text" id="returnSearchOrderInput" placeholder="أدخل رقم الطلب الأصلي للبحث..." style="flex:1;">
+                    <button class="btn-save" onclick="searchOrderForReturn()">بحث <i class="fas fa-search"></i></button>
+                </div>
+                
+                <div id="returnOrderDetailsDiv" style="display:none; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:15px;">
+                    <div style="margin-bottom:10px;"><strong>بيانات العميل:</strong> <span id="retCustName"></span> - <span id="retCustPhone" dir="ltr"></span></div>
+                    <label style="font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">اختر المنتجات المراد إرجاعها:</label>
+                    <div id="retOrderItemsList" style="margin-bottom: 15px;"></div>
+                    <div class="input-group">
+                        <label>سبب المرتجع (إجباري)</label>
+                        <select id="returnReasonSelect">
+                            <option value="">اختر السبب...</option>
+                            <option value="العميل رفض الاستلام">العميل رفض الاستلام (لم يعجبه / تأخير)</option>
+                            <option value="منتج تالف / عيب صناعة">منتج تالف / عيب صناعة</option>
+                            <option value="منتج خطأ">تم إرسال منتج بالخطأ</option>
+                            <option value="سبب آخر">سبب آخر (اكتب في الملاحظات)</option>
+                        </select>
+                    </div>
+                    <div class="input-group"><label>ملاحظات الاسترجاع</label><textarea id="returnNotes" rows="2"></textarea></div>
+                    <div class="input-group" style="display:flex; align-items:center; gap:10px; background:#fffbeb; padding:10px; border-radius:6px; color:#d97706; font-weight:bold;">
+                        <input type="checkbox" id="returnStockToggle" checked style="width:18px; height:18px;">
+                        <label style="margin:0; cursor:pointer;" for="returnStockToggle">إرجاع كمية المنتجات المستردة إلى المخزون (Stock) فوراً</label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('newReturnModal')">إلغاء</button>
+                    <button class="btn-save" id="btnConfirmReturn" style="display:none; background:var(--accent);" onclick="confirmReturnOrder()">تأكيد المرتجع</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- معاينة تفاصيل المرتجع -->
+        <div class="modal-overlay" id="viewReturnModal">
+            <div class="modal animate__animated animate__zoomIn">
+                <h3>تفاصيل المرتجع</h3>
+                <div id="viewReturnContent"></div>
+                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('viewReturnModal')">إغلاق</button></div>
+            </div>
+        </div>
+
+        <!-- ================= النوافذ القديمة (منتج، قسم، شحن، كوبون، موظف) ================= -->
         
         <!-- إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal animate__animated animate__zoomIn">
                 <h3 id="productModalTitle">إضافة منتج جديد</h3>
-                <!-- الرسالة اللي هتظهر للمشرف اللي معندوش صلاحية التعديل الكلي -->
                 <div id="stockOnlyAlert" style="display:none; background:#fffbeb; color:#d97706; padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px; font-weight:bold; text-align:center;">
                     بناءً على صلاحياتك، يمكنك فقط (زيادة) مخزون هذا المنتج ولن يتم حفظ أي تعديلات أخرى.
                 </div>
-                <div class="input-group">
-                    <label>اسم المنتج</label>
-                    <input type="text" id="prodName">
-                </div>
+                <div class="input-group"><label>اسم المنتج</label><input type="text" id="prodName"></div>
                 <div class="grid-2">
+                    <div class="input-group"><label>السعر الأساسي</label><input type="number" id="prodPrice"></div>
+                    <div class="input-group"><label style="color: var(--accent);">سعر العرض (اختياري)</label><input type="number" id="prodDiscountPrice"></div>
                     <div class="input-group">
-                        <label>السعر الأساسي</label>
-                        <input type="number" id="prodPrice">
+                        <label>المخزون (الكمية المتاحة)</label><input type="number" id="prodStock" value="10">
+                        <div id="addStockDiv" style="display:none; margin-top:5px;"><label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label><input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1"></div>
                     </div>
-                    <div class="input-group">
-                        <label style="color: var(--accent);">سعر العرض (اختياري)</label>
-                        <input type="number" id="prodDiscountPrice">
-                    </div>
-                    <!-- حقل المخزون الجديد -->
-                    <div class="input-group">
-                        <label>المخزون (الكمية المتاحة)</label>
-                        <input type="number" id="prodStock" value="10">
-                        <!-- مكان لكتابة الكمية المضافة للمشرف -->
-                        <div id="addStockDiv" style="display:none; margin-top:5px;">
-                            <label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label>
-                            <input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1">
-                        </div>
-                    </div>
-                    <!-- حقل أيام انتهاء العرض -->
-                    <div class="input-group">
-                        <label>أيام انتهاء العرض (اختياري)</label>
-                        <input type="number" id="prodOfferDays" placeholder="مثال: 7">
-                    </div>
+                    <div class="input-group"><label>أيام انتهاء العرض (اختياري)</label><input type="number" id="prodOfferDays" placeholder="مثال: 7"></div>
                 </div>
-                <div class="input-group">
-                    <label>القسم</label>
-                    <select id="prodCategory"></select>
-                </div>
-                <div class="input-group">
-                    <label>الوصف التفصيلي</label>
-                    <textarea id="prodDesc" rows="4"></textarea>
-                </div>
-                <div class="input-group">
-                    <label>رابط الصورة</label>
-                    <input type="text" id="prodImage">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveProduct()">حفظ</button>
-                </div>
+                <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
+                <div class="input-group"><label>الوصف التفصيلي</label><textarea id="prodDesc" rows="4"></textarea></div>
+                <div class="input-group"><label>رابط الصورة</label><input type="text" id="prodImage"></div>
+                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button><button class="btn-save" onclick="saveProduct()">حفظ</button></div>
             </div>
         </div>
         
-        <!-- إضافة/تعديل قسم -->
-        <div class="modal-overlay" id="categoryModal">
-            <div class="modal animate__animated animate__zoomIn">
-                <h3 id="catModalTitle">إضافة قسم</h3>
-                <div class="input-group">
-                    <label>الاسم</label>
-                    <input type="text" id="catNameInput">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeModal('categoryModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveCategory()">حفظ</button>
-                </div>
-            </div>
-        </div>
+        <!-- قسم -->
+        <div class="modal-overlay" id="categoryModal"><div class="modal animate__animated animate__zoomIn"><h3 id="catModalTitle">إضافة قسم</h3><div class="input-group"><label>الاسم</label><input type="text" id="catNameInput"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('categoryModal')">إلغاء</button><button class="btn-save" onclick="saveCategory()">حفظ</button></div></div></div>
 
-        <!-- إضافة/تعديل محافظة شحن -->
-        <div class="modal-overlay" id="shippingModal">
-            <div class="modal animate__animated animate__zoomIn">
-                <h3 id="shipModalTitle">إضافة محافظة</h3>
-                <div class="input-group">
-                    <label>اسم المحافظة / المنطقة</label>
-                    <input type="text" id="shipGovName">
-                </div>
-                <div class="input-group">
-                    <label>سعر الشحن (ج.م)</label>
-                    <input type="number" id="shipPrice">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeModal('shippingModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveShipping()">حفظ</button>
-                </div>
-            </div>
-        </div>
+        <!-- شحن -->
+        <div class="modal-overlay" id="shippingModal"><div class="modal animate__animated animate__zoomIn"><h3 id="shipModalTitle">إضافة محافظة</h3><div class="input-group"><label>اسم المحافظة / المنطقة</label><input type="text" id="shipGovName"></div><div class="input-group"><label>سعر الشحن (ج.م)</label><input type="number" id="shipPrice"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('shippingModal')">إلغاء</button><button class="btn-save" onclick="saveShipping()">حفظ</button></div></div></div>
         
-        <!-- إنشاء/تعديل كوبون -->
-        <div class="modal-overlay" id="voucherModal">
-            <div class="modal animate__animated animate__zoomIn">
-                <h3 id="voucherModalTitle">إنشاء كود</h3>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>الكود</label>
-                        <input type="text" id="voucherCode" style="text-transform: uppercase;">
-                    </div>
-                    <div class="input-group">
-                        <label>القيمة</label>
-                        <input type="number" id="voucherValue">
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>النوع</label>
-                        <select id="voucherType">
-                            <option value="percentage">نسبة (%)</option>
-                            <option value="fixed">مبلغ ثابت</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>حد الاستخدام (عدد الأشخاص)</label>
-                        <input type="number" id="voucherLimit" value="1" min="1">
-                        <small style="color:var(--text-light); font-size:11px;">الكود هيقف أوتوماتيك بعد العدد ده</small>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveVoucher()">حفظ</button>
-                </div>
-            </div>
-        </div>
+        <!-- كوبون -->
+        <div class="modal-overlay" id="voucherModal"><div class="modal animate__animated animate__zoomIn"><h3 id="voucherModalTitle">إنشاء كود</h3><div class="grid-2"><div class="input-group"><label>الكود</label><input type="text" id="voucherCode" style="text-transform: uppercase;"></div><div class="input-group"><label>القيمة</label><input type="number" id="voucherValue"></div></div><div class="grid-2"><div class="input-group"><label>النوع</label><select id="voucherType"><option value="percentage">نسبة (%)</option><option value="fixed">مبلغ ثابت</option></select></div><div class="input-group"><label>حد الاستخدام</label><input type="number" id="voucherLimit" value="1" min="1"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button><button class="btn-save" onclick="saveVoucher()">حفظ</button></div></div></div>
 
         <!-- عرض مستخدمي الكوبون -->
         <div class="modal-overlay" id="voucherUsersModal">
@@ -905,82 +1032,37 @@
             </div>
         </div>
 
-        <!-- إضافة/تعديل موظف (مع نظام الصلاحيات والباسورد) -->
+        <!-- موظف -->
         <div class="modal-overlay" id="employeeModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 700px;">
                 <h3 id="empModalTitle">إضافة موظف / مشرف</h3>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>الاسم</label>
-                        <input type="text" id="empName">
-                    </div>
-                    <div class="input-group">
-                        <label>تليفون</label>
-                        <input type="tel" id="empPhone">
-                    </div>
-                </div>
-                
-                <!-- بيانات تسجيل الدخول الجديدة -->
+                <div class="grid-2"><div class="input-group"><label>الاسم</label><input type="text" id="empName"></div><div class="input-group"><label>تليفون</label><input type="tel" id="empPhone"></div></div>
                 <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe;">
-                    <strong style="color:var(--secondary); display:block; margin-bottom:10px;"><i class="fas fa-lock"></i> بيانات تسجيل الدخول للوحة:</strong>
-                    <div class="grid-2">
-                        <div class="input-group">
-                            <label>البريد الإلكتروني</label>
-                            <input type="email" id="empEmail" dir="ltr" placeholder="example@modystore.com">
-                        </div>
-                        <div class="input-group">
-                            <label>كلمة المرور</label>
-                            <input type="text" id="empPass" dir="ltr" placeholder="رقم سري قوي...">
-                        </div>
-                    </div>
+                    <strong style="color:var(--secondary); display:block; margin-bottom:10px;"><i class="fas fa-lock"></i> بيانات تسجيل الدخول:</strong>
+                    <div class="grid-2"><div class="input-group"><label>البريد الإلكتروني</label><input type="email" id="empEmail" dir="ltr"></div><div class="input-group"><label>كلمة المرور</label><input type="text" id="empPass" dir="ltr"></div></div>
                 </div>
-
-                <div class="input-group">
-                    <label>الدور الوظيفي (الصلاحية)</label>
-                    <select id="empRole" onchange="toggleEmployeePermissionsUI()">
-                        <option value="Admin">مدير (Admin) - صلاحيات كاملة</option>
-                        <option value="Supervisor">مشرف (Supervisor) - تحديد الصلاحيات</option>
-                    </select>
-                </div>
-
-                <!-- واجهة تحديد الصلاحيات للمشرف مفصلة ودقيقة -->
+                <div class="input-group"><label>الدور الوظيفي</label><select id="empRole" onchange="toggleEmployeePermissionsUI()"><option value="Admin">مدير (Admin) - صلاحيات كاملة</option><option value="Supervisor">مشرف (Supervisor) - تحديد الصلاحيات</option></select></div>
                 <div id="permissionsUI" style="display:none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
-                    
-                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">1. الأقسام المسموح بظهورها ودخولها:</label>
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary);">1. الأقسام المسموح بظهورها ودخولها:</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                         <label><input type="checkbox" class="perm-tab" value="orders-view"> الطلبات</label>
+                        <label><input type="checkbox" class="perm-tab" value="finance-view"> المشتريات والمصروفات</label>
+                        <label><input type="checkbox" class="perm-tab" value="returns-view"> المرتجعات</label>
                         <label><input type="checkbox" class="perm-tab" value="products-view"> المنتجات</label>
                         <label><input type="checkbox" class="perm-tab" value="categories-view"> الأقسام</label>
                         <label><input type="checkbox" class="perm-tab" value="vouchers-view"> الكوبونات</label>
                         <label><input type="checkbox" class="perm-tab" value="shipping-view"> أسعار الشحن</label>
                     </div>
-                    
-                    <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
-                    
-                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">2. صلاحيات إدارة الطلبات:</label>
-                    <div style="margin-bottom: 15px; font-size: 13px;">
-                        <label style="display:flex; align-items:flex-start; gap:8px;">
-                            <input type="checkbox" id="permChangeOrderStatus" style="margin-top:4px;">
-                            <span><b>السماح بالتعديل الحر لحالة الطلب:</b> إذا تم التحديد، يمكنه تغيير الحالة لأي شيء بحرية (حتى الإلغاء أو الرجوع للخلف).<br> <span style="color:var(--danger);">إذا لم يتم التحديد، سيسمح له فقط بالتحويل المتسلسل للأمام (مراجعة ➔ تجهيز ➔ شحن ➔ تسليم) ولن يمكنه الرجوع أبداً.</span></span>
-                        </label>
-                    </div>
-
-                    <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
-
-                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">3. صلاحيات إدارة المنتجات والكوبونات والشحن:</label>
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary);">2. صلاحيات إدارة الطلبات:</label>
+                    <div style="margin-bottom: 15px; font-size: 13px;"><label><input type="checkbox" id="permChangeOrderStatus"> <b>السماح بالتعديل الحر لحالة الطلب</b></label></div>
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary);">3. صلاحيات إدارة المنتجات والكوبونات والشحن:</label>
                     <div style="display: grid; grid-template-columns: 1fr; gap: 10px; font-size: 14px;">
-                        <label><input type="checkbox" id="permAdd"> <b>إضافة جديد</b> (إنشاء منتجات، كوبونات، شحن)</label>
-                        <label><input type="checkbox" id="permEdit"> <b>التعديل الكلي</b> (تعديل تفاصيل وأسعار وحالات المنتجات والكوبونات بحرية)</label>
-                        <small style="color: #d97706; margin-right: 25px; margin-top:-5px; margin-bottom:5px;">* إذا لم يتم التحديد، سيسمح للمشرف فقط بزيادة المخزون في المنتجات دون تعديل أي بيانات أخرى.</small>
-                        <label><input type="checkbox" id="permDelete"> <b>حذف</b> (الحذف النهائي للعناصر)</label>
+                        <label><input type="checkbox" id="permAdd"> <b>إضافة جديد</b></label>
+                        <label><input type="checkbox" id="permEdit"> <b>التعديل الكلي</b></label>
+                        <label><input type="checkbox" id="permDelete"> <b>حذف</b></label>
                     </div>
-
                 </div>
-
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button>
-                    <button class="btn-save" onclick="saveEmployee()">حفظ</button>
-                </div>
+                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button><button class="btn-save" onclick="saveEmployee()">حفظ</button></div>
             </div>
         </div>
 
