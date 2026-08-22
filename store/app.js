@@ -76,20 +76,41 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         }
 
         // بيانات الفوتر
-        if (storeSettings.name) document.getElementById("footerName").innerHTML = `<i class="fas fa-bolt"></i> ${storeSettings.name}`;
-        if (storeSettings.address) document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> ${storeSettings.address}`;
-        if (storeSettings.phone) document.getElementById("footerPhone").innerHTML = `<i class="fas fa-phone"></i> ${storeSettings.phone}`;
-        if (storeSettings.copyright) document.getElementById("footerCopy").innerText = storeSettings.copyright;
+        // بيانات الفوتر
+        if (storeSettings.name) document.getElementById("footerName").innerText = storeSettings.name;
+        
+        // الإيميل
+        if (storeSettings.email) {
+            document.getElementById("footerEmail").innerHTML = `<i class="far fa-envelope"></i> <span class="info-text" dir="ltr">${storeSettings.email}</span>`;
+            document.getElementById("footerEmail").style.display = "flex";
+        } else {
+            document.getElementById("footerEmail").style.display = "none";
+        }
 
+        // التليفون
+        if (storeSettings.phone) {
+            document.getElementById("footerPhone").innerHTML = `<i class="fas fa-mobile-alt"></i> <span class="info-text" dir="ltr">${storeSettings.phone}</span>`;
+            document.getElementById("footerPhone").style.display = "flex";
+        } else {
+            document.getElementById("footerPhone").style.display = "none";
+        }
+
+        // العنوان
+        if (storeSettings.address) {
+            document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="info-text">${storeSettings.address}</span>`;
+            document.getElementById("footerAddress").style.display = "flex";
+        } else {
+            document.getElementById("footerAddress").style.display = "none";
+        }
+
+        // السوشيال ميديا
         if (storeSettings.social) {
             const fb = document.getElementById("socFb"), ig = document.getElementById("socInsta"), tg = document.getElementById("socTg"), wa = document.getElementById("socWa");
-            if(storeSettings.social.facebook) { fb.href = storeSettings.social.facebook; fb.style.display = "flex"; }
-            if(storeSettings.social.instagram) { ig.href = storeSettings.social.instagram; ig.style.display = "flex"; }
-            if(storeSettings.social.telegram) { tg.href = storeSettings.social.telegram; tg.style.display = "flex"; }
-            if(storeSettings.social.whatsapp) { wa.href = `https://wa.me/${storeSettings.social.whatsapp.replace(/\D/g,'')}`; wa.style.display = "flex"; }
-        }
-    }
-});
+            if(storeSettings.social.facebook) { fb.href = storeSettings.social.facebook; fb.style.display = "flex"; } else { fb.style.display = "none"; }
+            if(storeSettings.social.instagram) { ig.href = storeSettings.social.instagram; ig.style.display = "flex"; } else { ig.style.display = "none"; }
+            if(storeSettings.social.telegram) { tg.href = storeSettings.social.telegram; tg.style.display = "flex"; } else { tg.style.display = "none"; }
+            if(storeSettings.social.whatsapp) { wa.href = `https://wa.me/${storeSettings.social.whatsapp.replace(/\D/g,'')}`; wa.style.display = "flex"; } else { wa.style.display = "none"; }
+        }});
 
 // ==== أسعار الشحن ====
 onValue(ref(db, 'shipping'), (snapshot) => {
