@@ -15,7 +15,6 @@
             <a href="#" class="logo"><i class="fas fa-bolt"></i> مودي ستور</a>
             
             <div style="display: flex; gap: 15px; align-items: center;">
-                <!-- زرار الدارك مود -->
                 <div class="theme-toggle" onclick="toggleTheme()" title="الوضع الليلي/النهاري">
                     <i id="themeIcon" class="fas fa-moon"></i>
                 </div>
@@ -29,7 +28,6 @@
                 </div>
             </div>
         </div>
-        <!-- الشريط الإخباري تم نقله هنا أسفل الهيدر -->
         <div id="newsTicker" class="news-ticker"></div>
     </header>
 
@@ -50,7 +48,6 @@
     </div>
 
     <!-- الفوتر السفلي الجديد -->
-    <!-- الفوتر السفلي الجديد (شكل داكن ومطابق للصورة) -->
     <footer class="store-footer dark-theme-footer">
         <div class="footer-content">
             <div class="footer-info">
@@ -71,7 +68,8 @@
             <a href="#" id="devCopyLink" target="_blank"></a>
         </div>
     </footer>
-    <!-- باقي النوافذ المنبثقة (Modal) والسلة الجانبية زي ما هي -->
+
+    <!-- نافذة تفاصيل المنتج -->
     <div class="product-modal" id="productDetailsModal">
         <div class="product-modal-content">
             <div class="close-product-modal" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
@@ -97,8 +95,8 @@
         </div>
     </div>
 
-    <!-- السلة الجانبية -->
-    <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    <!-- السلة الجانبية (تم تفعيل إغلاق القوائم عند الضغط عليها) -->
+    <div class="overlay" id="overlay" onclick="closeOverlay()"></div>
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
             <h3><i class="fas fa-shopping-cart"></i> سلة المشتريات</h3>
@@ -142,9 +140,10 @@
             <div class="input-wrapper"><textarea id="custAddress" class="checkout-input" rows="2" placeholder="العنوان بالتفصيل السردي (وصف للمندوب)"></textarea><i class="fas fa-map-marker-alt"></i></div>
             <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
-                <select id="paymentMethod" class="checkout-input"><option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option></select>
+                <select id="paymentMethod" class="checkout-input"><option value="كاش">💵 كاش</option></select>
             </div>
-            <button class="confirm-btn" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
+            <!-- تم إرجاع زرار التأكيد والإرسال -->
+            <button class="confirm-btn" id="submitOrderBtn" onclick="sendOrder()">تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i></button>
             <div class="cancel-btn" onclick="document.getElementById('checkoutModal').style.display='none'; document.getElementById('cartSidebar').classList.add('open');">إلغاء والعودة للسلة</div>
         </div>
         <div id="successScreen" class="success-msg">
@@ -152,7 +151,7 @@
             <h3 style="color: var(--success); margin-bottom: 10px;">تم استلام طلبك بنجاح!</h3>
             <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم التتبع السري لطلبك هو: <strong id="successOrderId" style="color:var(--title-color);"></strong></p>
             <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">احتفظ بالرقم السري لتتمكن من تتبع أو تعديل طلبك لاحقاً.</p>
-            <button class="confirm-btn" style="background: var(--title-color);" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
+            <button class="confirm-btn" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
         </div>
     </div>
 
