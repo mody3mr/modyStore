@@ -16,18 +16,35 @@
     <!-- مكتبة الرسوم البيانية Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن -->
+    <!-- مكتبات الباركود والـ QR Code لبوليصة الشحن والسكانر -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script> <!-- مكتبة الإسكانر -->
     
     <!-- مكتبة تصدير الاكسيل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- أكواد الستايل الخاصة بإخفاء أسهم التمرير وتظبيط الطباعة -->
     <style>
-        /* إخفاء أسهم شريط التمرير (الطلوع والنزول) */
+        /* إخفاء أسهم شريط التمرير (الطلوع والنزول) نهائياً */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
         ::-webkit-scrollbar-button {
             display: none !important;
+            width: 0;
+            height: 0;
         }
 
         /* تظبيط شكل الطباعة للفواتير والبوليصة */
@@ -64,6 +81,25 @@
                 margin: 0;
                 padding: 0;
             }
+
+            /* طباعة بوليصات مجمعة */
+            body.print-mode-bulk .bulk-print-container,
+            body.print-mode-bulk .bulk-print-container * {
+                visibility: visible;
+            }
+            body.print-mode-bulk .bulk-print-container {
+                position: absolute; left: 0; top: 0; width: 100%; display: block !important;
+            }
+
+            /* طباعة تقرير الـ PDF بدون شاشة بيضاء */
+            body.print-mode-report #salesReportModal,
+            body.print-mode-report #salesReportModal * {
+                visibility: visible;
+            }
+            body.print-mode-report #salesReportModal {
+                position: absolute; left: 0; top: 0; width: 100%; box-shadow: none;
+            }
+            body.print-mode-report .report-filters, body.print-mode-report .close-btn { display: none !important; }
         }
     </style>
 </head>
@@ -96,6 +132,11 @@
                 <i class="fas fa-ticket-alt"></i> 
                 <span class="nav-text">الكوبونات</span>
             </li>
+            <!-- التاب الجديد الخاص بأسعار الشحن -->
+            <li class="nav-item" data-target="shipping-view">
+                <i class="fas fa-truck-fast"></i> 
+                <span class="nav-text">أسعار الشحن</span>
+            </li>
             <li class="nav-item" data-target="employees-view">
                 <i class="fas fa-users"></i> 
                 <span class="nav-text">الموظفين</span>
@@ -104,7 +145,7 @@
                 <i class="fas fa-history"></i> 
                 <span class="nav-text">سجل النشاطات</span>
             </li>
-            <!-- التاب الجديد الخاص بالإعدادات -->
+            <!-- التاب الخاص بالإعدادات -->
             <li class="nav-item" data-target="settings-view">
                 <i class="fas fa-cog"></i> 
                 <span class="nav-text">الإعدادات</span>
@@ -118,22 +159,38 @@
             <div id="sidebarToggle" style="color: #64748b; font-weight: 600; cursor: pointer; font-size: 22px;">
                 <i class="fas fa-bars"></i>
             </div>
-           <div class="user-profile" id="userProfileBtn" style="position: relative; cursor: pointer;">
-    <span id="currentUserNameDisplay">جاري التحميل...</span>
-    <img id="currentUserAvatar" src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" alt="المستخدم">
-    
-    <!-- القائمة المنسدلة (Dropdown) -->
-    <div class="profile-dropdown" id="profileDropdown">
-        <div class="dropdown-header">
-            <strong id="dropdownName">جاري التحميل...</strong>
-            <span id="dropdownRole" style="display:block; font-size:12px; color:var(--text-light);"></span>
-        </div>
-        <hr style="border:none; border-top:1px solid var(--border); margin:5px 0;">
-        <button onclick="logout()" class="dropdown-item text-danger">
-            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-        </button>
-    </div>
-</div>
+            
+            <!-- أزرار الهيدر -->
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <!-- جرس الإشعارات للنواقص -->
+                <div class="user-profile" id="notifBtn" style="position: relative; cursor: pointer;">
+                    <i class="fas fa-bell" style="font-size: 22px; color: #64748b;"></i>
+                    <span id="notifCount" style="position:absolute; top:-5px; right:-8px; background:var(--danger); color:white; font-size:11px; padding:2px 6px; border-radius:50%; display:none;">0</span>
+                    <div class="profile-dropdown" id="notifDropdown" style="width: 280px; right: auto; left: 0;">
+                        <div class="dropdown-header"><strong style="color:var(--danger);">نواقص المنتجات ⚠️</strong></div>
+                        <div id="notifList" style="max-height: 250px; overflow-y: auto; padding: 10px; font-size: 13px;">
+                            <div style="text-align:center; color:#94a3b8;">لا توجد نواقص حالياً</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-profile" id="userProfileBtn" style="position: relative; cursor: pointer;">
+                    <span id="currentUserNameDisplay">جاري التحميل...</span>
+                    <img id="currentUserAvatar" src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" alt="المستخدم">
+                    
+                    <!-- القائمة المنسدلة (Dropdown) -->
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <strong id="dropdownName">جاري التحميل...</strong>
+                            <span id="dropdownRole" style="display:block; font-size:12px; color:var(--text-light);"></span>
+                        </div>
+                        <hr style="border:none; border-top:1px solid var(--border); margin:5px 0;">
+                        <button onclick="logout()" class="dropdown-item text-danger">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                        </button>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div class="workspace">
@@ -208,8 +265,18 @@
 
             <!-- 2. شاشة الطلبات -->
             <div id="orders-view" class="view-section animate__animated animate__fadeIn">
-                <div class="page-header">
+                <div class="page-header" style="display:flex; flex-wrap:wrap; gap:10px;">
                     <h2 class="page-title">إدارة الطلبات</h2>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <!-- زرار الإسكانر الجديد -->
+                        <button class="btn-save" style="background-color: #8b5cf6;" onclick="openScannerModal()">
+                            <i class="fas fa-qrcode"></i> سكانر الشحن
+                        </button>
+                        <!-- زرار الطباعة المجمعة الجديد -->
+                        <button class="btn-save" style="background-color: var(--primary);" onclick="bulkPrintWaybills()">
+                            <i class="fas fa-print"></i> طباعة بوليصات (جاري التجهيز)
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="custom-tabs">
@@ -265,7 +332,7 @@
             <div id="products-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة المنتجات</h2>
-                    <button class="btn-add" onclick="openProductModal()">
+                    <button class="btn-add" id="btnAddProduct" onclick="openProductModal()">
                         <i class="fas fa-plus"></i> إضافة منتج
                     </button>
                 </div>
@@ -310,7 +377,7 @@
                     <h2 class="page-title">إدارة الأقسام</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchCategories" placeholder="بحث باسم القسم..." onkeyup="filterCategories()" class="filter-bar" style="margin: 0; padding: 10px; border-radius: 8px; outline: none; border: 1px solid var(--border);">
-                        <button class="btn-add btn-cat" onclick="openCategoryModal()">
+                        <button class="btn-add btn-cat" id="btnOpenCategoryModal" onclick="openCategoryModal()">
                             <i class="fas fa-plus"></i> إضافة قسم
                         </button>
                     </div>
@@ -320,6 +387,7 @@
                         <thead>
                             <tr>
                                 <th>اسم القسم</th>
+                                <th>عدد المنتجات بداخله</th> <!-- التعديل الجديد -->
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
                             </tr>
@@ -333,7 +401,7 @@
             <div id="vouchers-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الكوبونات</h2>
-                    <button class="btn-add btn-voucher" onclick="openVoucherModal()">
+                    <button class="btn-add btn-voucher" id="btnAddVoucher" onclick="openVoucherModal()">
                         <i class="fas fa-ticket-alt"></i> إنشاء كود
                     </button>
                 </div>
@@ -363,13 +431,36 @@
                 </div>
             </div>
 
+            <!-- شاشة الشحن الجديدة -->
+            <div id="shipping-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header">
+                    <h2 class="page-title">أسعار الشحن والمحافظات</h2>
+                    <button class="btn-add" onclick="openShippingModal()">
+                        <i class="fas fa-plus"></i> إضافة محافظة
+                    </button>
+                </div>
+                <div class="card" style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>المحافظة</th>
+                                <th>سعر الشحن</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shippingTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 6. شاشة الموظفين -->
             <div id="employees-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header">
                     <h2 class="page-title">إدارة الموظفين</h2>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchEmployees" placeholder="بحث باسم الموظف، الهاتف..." onkeyup="filterEmployees()" class="filter-bar" style="margin: 0; padding: 10px; border-radius: 8px; outline: none; border: 1px solid var(--border);">
-                        <button class="btn-add btn-emp" onclick="openEmployeeModal()">
+                        <button class="btn-add btn-emp" id="btnOpenEmployeeModal" onclick="openEmployeeModal()">
                             <i class="fas fa-user-plus"></i> إضافة موظف
                         </button>
                     </div>
@@ -541,6 +632,18 @@
             </div>
         </div>
 
+        <!-- ================= سكانر تغيير الحالة ================= -->
+        <div class="modal-overlay" id="scannerModal">
+            <div class="modal animate__animated animate__zoomIn" style="width: 450px;">
+                <h3><i class="fas fa-qrcode"></i> سكانر لتأكيد الشحن</h3>
+                <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">قم بتوجيه الكاميرا أو جهاز الـ Scanner لباركود الفاتورة لتحويل الطلب إلى "تم الشحن" أوتوماتيكياً.</p>
+                <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--border);"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('scannerModal'); stopScanner();">إغلاق وإيقاف الكاميرا</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ================= تفاصيل الطلب وإدخال بيانات بوليصة الشحن ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
             <div class="modal print-invoice-area animate__animated animate__zoomIn" style="width: 800px;">
@@ -552,6 +655,7 @@
                             <strong>العميل:</strong> <span id="oName"></span><br>
                             <strong>التليفون:</strong> <span id="oPhone" dir="ltr"></span><br>
                             <strong>العنوان:</strong> <span id="oAddress"></span><br>
+                            <strong>المحافظة:</strong> <span id="oCity" style="color: var(--secondary);"></span><br>
                             <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span><br>
                             <!-- الرقم السري -->
                             <strong>الرقم السري للعميل:</strong> <span id="oSecretCode" style="color: var(--danger); font-weight: bold; font-size: 18px; letter-spacing: 2px;"></span>
@@ -562,8 +666,9 @@
                         
                         <div style="text-align: right; font-size: 16px; margin-top: 15px;">
                             <div>الإجمالي الفرعي: <span id="oSubtotal"></span></div>
+                            <div id="oShippingDiv" style="color: var(--primary);">الشحن: <span id="oShipping"></span></div>
                             <div id="oDiscountDiv" style="color: var(--accent); display:none;">الخصم: <span id="oDiscount"></span></div>
-                            <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 5px;">الإجمالي: <span id="oTotal"></span></div>
+                            <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 5px;">الإجمالي الصافي: <span id="oTotal"></span></div>
                         </div>
                     </div>
 
@@ -623,7 +728,7 @@
 
                 <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 14px;">
                     <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:16px;"></span><br>
-                    <strong>المدينة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
+                    <strong>المحافظة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
                     <strong>العنوان:</strong> <span id="printAddress"></span><br>
                     <strong>مبنى:</strong> <span id="printBuilding">-</span> | <strong>دور:</strong> <span id="printFloor">-</span> | <strong>شقة:</strong> <span id="printApartment">-</span><br>
                     <strong>علامة مميزة:</strong> <span id="printLandmark">-</span>
@@ -659,12 +764,19 @@
             </div>
         </div>
 
+        <!-- ================= حاوية الطباعة المجمعة ================= -->
+        <div id="bulkPrintContainer" class="bulk-print-container" style="display:none; background:white;"></div>
+
         <!-- ================= النوافذ العادية ================= -->
         
         <!-- إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal animate__animated animate__zoomIn">
                 <h3 id="productModalTitle">إضافة منتج جديد</h3>
+                <!-- الرسالة اللي هتظهر للمشرف اللي معندوش صلاحية التعديل الكلي -->
+                <div id="stockOnlyAlert" style="display:none; background:#fffbeb; color:#d97706; padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px; font-weight:bold; text-align:center;">
+                    بناءً على صلاحياتك، يمكنك فقط (زيادة) مخزون هذا المنتج ولن يتم حفظ أي تعديلات أخرى.
+                </div>
                 <div class="input-group">
                     <label>اسم المنتج</label>
                     <input type="text" id="prodName">
@@ -682,6 +794,11 @@
                     <div class="input-group">
                         <label>المخزون (الكمية المتاحة)</label>
                         <input type="number" id="prodStock" value="10">
+                        <!-- مكان لكتابة الكمية المضافة للمشرف -->
+                        <div id="addStockDiv" style="display:none; margin-top:5px;">
+                            <label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label>
+                            <input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1">
+                        </div>
                     </div>
                     <!-- حقل أيام انتهاء العرض -->
                     <div class="input-group">
@@ -719,6 +836,25 @@
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('categoryModal')">إلغاء</button>
                     <button class="btn-save" onclick="saveCategory()">حفظ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- إضافة/تعديل محافظة شحن -->
+        <div class="modal-overlay" id="shippingModal">
+            <div class="modal animate__animated animate__zoomIn">
+                <h3 id="shipModalTitle">إضافة محافظة</h3>
+                <div class="input-group">
+                    <label>اسم المحافظة / المنطقة</label>
+                    <input type="text" id="shipGovName">
+                </div>
+                <div class="input-group">
+                    <label>سعر الشحن (ج.م)</label>
+                    <input type="number" id="shipPrice">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('shippingModal')">إلغاء</button>
+                    <button class="btn-save" onclick="saveShipping()">حفظ</button>
                 </div>
             </div>
         </div>
@@ -771,7 +907,7 @@
 
         <!-- إضافة/تعديل موظف (مع نظام الصلاحيات والباسورد) -->
         <div class="modal-overlay" id="employeeModal">
-            <div class="modal animate__animated animate__zoomIn" style="width: 600px;">
+            <div class="modal animate__animated animate__zoomIn" style="width: 700px;">
                 <h3 id="empModalTitle">إضافة موظف / مشرف</h3>
                 <div class="grid-2">
                     <div class="input-group">
@@ -807,23 +943,38 @@
                     </select>
                 </div>
 
-                <!-- واجهة تحديد الصلاحيات للمشرف -->
+                <!-- واجهة تحديد الصلاحيات للمشرف مفصلة ودقيقة -->
                 <div id="permissionsUI" style="display:none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">ما يمكنه رؤيته:</label>
+                    
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">1. الأقسام المسموح بظهورها ودخولها:</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                         <label><input type="checkbox" class="perm-tab" value="orders-view"> الطلبات</label>
                         <label><input type="checkbox" class="perm-tab" value="products-view"> المنتجات</label>
                         <label><input type="checkbox" class="perm-tab" value="categories-view"> الأقسام</label>
                         <label><input type="checkbox" class="perm-tab" value="vouchers-view"> الكوبونات</label>
+                        <label><input type="checkbox" class="perm-tab" value="shipping-view"> أسعار الشحن</label>
                     </div>
+                    
                     <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--primary);">ما يمكنه فعله:</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <label><input type="checkbox" id="permAdd"> إضافة (إنشاء)</label>
-                        <label><input type="checkbox" id="permEdit"> تعديل</label>
-                        <label><input type="checkbox" id="permDelete"> حذف</label>
-                        <label><input type="checkbox" id="permStatus"> تغيير حالات الطلبات</label>
+                    
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">2. صلاحيات إدارة الطلبات:</label>
+                    <div style="margin-bottom: 15px; font-size: 13px;">
+                        <label style="display:flex; align-items:flex-start; gap:8px;">
+                            <input type="checkbox" id="permChangeOrderStatus" style="margin-top:4px;">
+                            <span><b>السماح بالتعديل الحر لحالة الطلب:</b> إذا تم التحديد، يمكنه تغيير الحالة لأي شيء بحرية (حتى الإلغاء أو الرجوع للخلف).<br> <span style="color:var(--danger);">إذا لم يتم التحديد، سيسمح له فقط بالتحويل المتسلسل للأمام (مراجعة ➔ تجهيز ➔ شحن ➔ تسليم) ولن يمكنه الرجوع أبداً.</span></span>
+                        </label>
                     </div>
+
+                    <hr style="border: none; border-top: 1px dashed #ccc; margin-bottom: 10px;">
+
+                    <label style="font-weight: 800; display: block; margin-bottom: 10px; color: var(--primary); font-size: 15px;">3. صلاحيات إدارة المنتجات والكوبونات والشحن:</label>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; font-size: 14px;">
+                        <label><input type="checkbox" id="permAdd"> <b>إضافة جديد</b> (إنشاء منتجات، كوبونات، شحن)</label>
+                        <label><input type="checkbox" id="permEdit"> <b>التعديل الكلي</b> (تعديل تفاصيل وأسعار وحالات المنتجات والكوبونات بحرية)</label>
+                        <small style="color: #d97706; margin-right: 25px; margin-top:-5px; margin-bottom:5px;">* إذا لم يتم التحديد، سيسمح للمشرف فقط بزيادة المخزون في المنتجات دون تعديل أي بيانات أخرى.</small>
+                        <label><input type="checkbox" id="permDelete"> <b>حذف</b> (الحذف النهائي للعناصر)</label>
+                    </div>
+
                 </div>
 
                 <div class="modal-actions">
