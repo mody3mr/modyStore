@@ -790,6 +790,173 @@ window.updateOrderStatus = (orderId, selectElement, displayId, oldStatus) => {
     });
 };
 
+// ==========================================
+// عرض تفاصيل الطلب والطباعة (الدوال التي كانت ناقصة)
+// ==========================================
+window.viewOrderDetails = (orderId) => {
+    const order = allOrders.find(o => o.dbId === orderId);
+    if (!order) return window.showAlert('لم يتم العثور على الطلب!', 'error');
+
+    // تعبئة البيانات في المودال
+    document.getElementById('orderModalTitle').innerText = `تفاصيل الطلب #${order.displayId || order.orderId}`;
+    document.getElementById('oName').innerText = order.customer ? order.customer.name : '-';
+    document.getElementById('oPhone').innerText = order.customer ? order.customer.phone : '-';
+    document.getElementById('oAddress').innerText = order.customer ? order.customer.address : '-';
+    document.getElementById('oCity').innerText = order.customer ? order.customer.city : '-';
+    document.getElementById('oPayment').innerText = order.paymentMethod || 'الدفع عند الاستلام';
+    document.getElementById('oSecretCode').innerText = order.secretCode || '-';
+
+    // قائمة المنتجات
+    const itemsList = document.getElementById('oItemsList');
+    itemsList.innerHTML = '';
+    let subtotal = 0;
+    if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+            itemsList.innerHTML += `
+                <div class="order-item-row">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span>${item.qty * item.price} ج.م</span>
+                </div>`;
+            subtotal += (item.qty * item.price);
+        });
+    }
+
+    // الإجماليات
+    document.getElementById('oSubtotal').innerText = `${subtotal} ج.م`;
+    document.getElementById('oShipping').innerText = `${order.shippingCost || 0} ج.م`;
+    
+    const discountDiv = document.getElementById('oDiscountDiv');
+    if (order.discount && order.discount > 0) {
+        discountDiv.style.display = 'block';
+        document.getElementById('oDiscount').innerText = `${order.discount} ج.م`;
+    } else {
+        discountDiv.style.display = 'none';
+    }
+    
+    document.getElementById('oTotal').innerText = `${Math.round(order.total || 0)} ج.م`;
+
+    // سبب الإلغاء إن وجد
+    const cancelBox = document.getElementById('oCancelReasonBox');
+    if (order.status === 'ملغي' && order.cancelReason) {
+        cancelBox.style.display = 'block';
+        document.getElementById('oCancelReasonText').innerText = order.cancelReason;
+    } else {
+        cancelBox.style.display = 'none';
+    }
+
+    // مسار الطلب (التايم لاين)
+    const timeline = document.getElementById('oTimeline');
+    timeline.innerHTML = '';
+    const steps = [
+        { label: 'تم الطلب', time: order.createdAt, done: true },
+        { label: 'جاري التجهيز', time: order.processedAt, done: !!order.processedAt },
+        { label: 'تم الشحن', time: order.shippedAt, done: !!order.shippedAt },
+        { label: 'تم التسليم', time: order.deliveredAt, done: !!order.deliveredAt }
+    ];
+
+    if (order.status === 'ملغي') {
+        steps.push({ label: 'تم الإلغاء', time: order.cancelledAt, done: true, cancel: true });
+    } else if (order.status === 'مرتجع') {
+        steps.push({ label: 'تم الاسترجاع', time: order.returnedAt, done: true, cancel: true });
+    }
+
+    steps.forEach(step => {
+        if (step.done) {
+            let stepClass = step.cancel ? 'cancel' : 'done';
+            timeline.innerHTML += `
+                <div class="tl-step ${stepClass}">
+                    <div class="tl-title">${step.label}</div>
+                    <div class="tl-date">${formatDateTime(step.time)}</div>
+                </div>`;
+        } else {
+            timeline.innerHTML += `
+                <div class="tl-step">
+                    <div class="tl-title" style="color: #94a3b8;">${step.label}</div>
+                </div>`;
+        }
+    });
+
+    // تجهيز بيانات الطباعة (الفاتورة)
+    document.getElementById('invCustName').innerText = order.customer ? order.customer.name : '-';
+    document.getElementById('invCustPhone').innerText = order.customer ? order.customer.phone : '-';
+    document.getElementById('invCustAddress').innerText = `${order.customer ? order.customer.city : ''} - ${order.customer ? order.customer.address : ''}`;
+    document.getElementById('invOrderId').innerText = `#${order.displayId || order.orderId}`;
+    document.getElementById('invDate').innerText = formatDateOnly(order.createdAt);
+    
+    const invItemsList = document.getElementById('invItemsList');
+    invItemsList.innerHTML = '';
+    if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+            invItemsList.innerHTML += `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid black; text-align: right;">${item.name}</td>
+                    <td style="padding: 10px; border: 1px solid black;">${item.qty}</td>
+                    <td style="padding: 10px; border: 1px solid black;">${item.price} ج</td>
+                    <td style="padding: 10px; border: 1px solid black;">${item.qty * item.price} ج</td>
+                </tr>`;
+        });
+    }
+    document.getElementById('invSubtotal').innerText = `${subtotal} ج.م`;
+    document.getElementById('invDiscount').innerText = order.discount ? `${order.discount} ج.م` : '0 ج.م';
+    document.getElementById('invTotal').innerText = `${Math.round(order.total || 0)} ج.م`;
+
+    // تجهيز بيانات الطباعة (بوليصة الشحن)
+    document.getElementById('printCustName').innerText = order.customer ? order.customer.name : '-';
+    document.getElementById('printCity').innerText = order.customer ? order.customer.city : '-';
+    document.getElementById('printRegion').innerText = order.customer ? (order.customer.region || '-') : '-';
+    document.getElementById('printAddress').innerText = order.customer ? order.customer.address : '-';
+    document.getElementById('printPhone1').innerText = order.customer ? order.customer.phone : '-';
+    document.getElementById('printPhone2').innerText = order.customer ? (order.customer.phone2 || '-') : '-';
+    
+    const descParts = order.items ? order.items.map(i => `${i.qty}x ${i.name}`).join(' ، ') : '';
+    document.getElementById('printProductsDesc').innerText = descParts;
+
+    if (order.paymentMethod && !order.paymentMethod.includes("كاش") && !order.paymentMethod.includes("استلام")) {
+        document.getElementById('codAmountContainer').style.display = 'none';
+        document.getElementById('paidAmountContainer').style.display = 'block';
+        document.getElementById('printPaymentMethodLabel').innerText = order.paymentMethod;
+        document.getElementById('printPaidAmount').innerText = `${Math.round(order.total || 0)} ج.م (مدفوع)`;
+    } else {
+        document.getElementById('codAmountContainer').style.display = 'block';
+        document.getElementById('paidAmountContainer').style.display = 'none';
+        document.getElementById('printCodAmount').innerText = `${Math.round(order.total || 0)} ج.م`;
+    }
+
+    if (typeof JsBarcode !== 'undefined') {
+        JsBarcode("#topBarcode", order.displayId || order.orderId, {
+            format: "CODE128", width: 3, height: 100, displayValue: true, fontSize: 24, margin: 10
+        });
+    }
+    
+    const qrBox = document.getElementById('qrCodeBox');
+    qrBox.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(qrBox, { text: order.displayId || order.orderId, width: 80, height: 80 });
+    }
+
+    document.getElementById('orderDetailsModal').style.display = 'flex';
+};
+
+window.printDocument = (type) => {
+    if (type === 'waybill') {
+        document.getElementById('printAllowOpen').innerText = document.getElementById('wbAllowOpen').value;
+        document.getElementById('printNotes').innerText = document.getElementById('wbNotes').value || 'لا يوجد';
+        document.body.classList.add('print-mode-waybill');
+    } else if (type === 'invoice') {
+        document.body.classList.add('print-mode-invoice');
+    }
+    
+    window.print();
+    
+    setTimeout(() => {
+        document.body.classList.remove('print-mode-waybill');
+        document.body.classList.remove('print-mode-invoice');
+    }, 500);
+};
+
+// ==========================================
+// استكمال جلب الطلبات
+// ==========================================
 onValue(ref(db, 'orders'), (snapshot) => {
     try {
         allOrders = [];
@@ -919,7 +1086,7 @@ window.bulkPrintWaybills = () => {
                 <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
                     <div style="flex: 1; border-left: 2px solid black; padding-left: 10px; font-size: 18px;">
                         <strong>من:</strong> مودي ستور<br>
-                        <strong>السماح بالفتح:</strong> נعم
+                        <strong>السماح بالفتح:</strong> نعم
                     </div>
                 </div>
 
