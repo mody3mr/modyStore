@@ -6,6 +6,7 @@
     <title>مودي استور | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- تم إرجاع اسم ملف التصميم لأصله -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -110,7 +111,6 @@
             
             <div class="checkout-row">
                 <div class="input-wrapper">
-                    <!-- تحويل المحافظة لقائمة منسدلة لسحب البيانات من الداش بورد -->
                     <select id="custCity" class="checkout-input" onchange="updateShippingCost()">
                         <option value="">اختر المحافظة / المدينة...</option>
                     </select>
@@ -130,7 +130,6 @@
             <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
                 <select id="paymentMethod" class="checkout-input">
-                    <!-- الخيارات سيتم تحميلها ديناميكياً من الداش بورد -->
                     <option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>
                 </select>
             </div>
@@ -176,6 +175,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- تم إرجاع اسم ملف الجافاسكريبت لأصله -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
