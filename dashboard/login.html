@@ -93,14 +93,14 @@
 
         .input-group input {
             width: 100%;
-            padding: 12px 15px 12px 40px; /* مساحة للأيقونة */
+            padding: 12px 15px 12px 40px;
             border: 2px solid var(--border);
             border-radius: 8px;
             font-family: 'Cairo';
             outline: none;
             background: #f8fafc;
             transition: 0.3s;
-            direction: ltr; /* عشان الإيميل والباسورد إنجليزي */
+            direction: ltr; 
             text-align: left;
         }
 
@@ -118,7 +118,6 @@
             font-size: 16px;
         }
 
-        /* زرار إظهار الباسورد */
         .toggle-password {
             position: absolute;
             right: 15px;
@@ -163,7 +162,6 @@
             box-shadow: none;
         }
 
-        /* شكل التحميل */
         .loader {
             border: 3px solid rgba(255,255,255,0.3);
             border-top: 3px solid white;
@@ -228,7 +226,7 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
-        // إعدادات قاعدة البيانات (نفس الموجودة في app.js)
+        // إعدادات قاعدة البيانات
         const firebaseConfig = {
             apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
             authDomain: "modytech-850c2.firebaseapp.com",
@@ -242,7 +240,7 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // التحقق إذا كان المستخدم مسجل دخول بالفعل، يحوله للوحة التحكم مباشرة
+        // التحقق إذا كان المستخدم مسجل دخول بالفعل
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 window.location.href = "index.html";
@@ -281,7 +279,7 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. التحقق من حالة الموظف في الداتا بيز (هل حسابه نشط؟)
+                // 2. التحقق من حالة الموظف في الداتا بيز 
                 const snapshot = await get(ref(db, 'employees'));
                 let isUserActive = false;
                 let userName = "موظف";
@@ -307,7 +305,6 @@
                         window.location.href = "index.html";
                     });
                 } else {
-                    // الحساب غير نشط أو مش موجود في الداتا بيز
                     await signOut(auth); // خروجه فوراً
                     Swal.fire({
                         title: 'عفواً!',
