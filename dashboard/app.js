@@ -21,12 +21,14 @@ setPersistence(auth, browserSessionPersistence).catch((error) => console.error(e
 let currentUser = "جاري التحميل...";
 window.currentUserRole = "Supervisor"; 
 window.currentEmpPermissions = null;
+window.currentEmpUid = null;
 
 // ==========================================
 // تسجيل الدخول الصارم وحماية الصلاحيات (Strict Auth)
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        window.currentEmpUid = user.uid;
         get(ref(db, 'employees')).then((snapshot) => {
             let found = false;
             if (snapshot.exists()) {
@@ -45,14 +47,15 @@ onAuthStateChanged(auth, (user) => {
                             document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
                                 const target = nav.getAttribute('data-target');
                                 if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
+                                    nav.style.display = 'none';
                                     nav.remove();
                                 }
                             });
 
                             // إخفاء وحماية الأزرار الحساسة (إضافة / تعديل / حذف) للمشرفين
                             if (!window.currentEmpPermissions.canAdd) {
-                                document.querySelectorAll('.btn-add, #btnOpenProductModal, #btnOpenCategoryModal, #btnOpenVoucherModal, #btnOpenEmployeeModal').forEach(btn => {
-                                    btn.style.display = 'none';
+                                document.querySelectorAll('.btn-add, #btnAddProduct, #btnOpenCategoryModal, #btnAddVoucher, #btnOpenEmployeeModal').forEach(btn => {
+                                    if(btn) btn.style.display = 'none';
                                 });
                             }
 
@@ -98,7 +101,6 @@ onAuthStateChanged(auth, (user) => {
             }
         }).catch((err) => {
             console.error(err);
-            window.showAlert("قاعدة البيانات مغلقة! يرجى مراجعة Firebase Rules كما تم الشرح", "error");
         });
     } else {
         window.location.href = "login.html"; 
@@ -112,11 +114,85 @@ window.logout = () => {
 };
 
 // ==========================================
-// القائمة الجانبية 
+// القائمة الجانبية (ومشكلة الموبايل)
 // ==========================================
 document.getElementById('sidebarToggle').addEventListener('click', () => {
     document.getElementById('sidebar').classList.toggle('collapsed');
 });
+
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const targetView = item.dataset.target;
+        if (!targetView) return;
+        
+        // التحقق الأمني المانع للمشرفين
+        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+            const allowedTabs = window.currentEmpPermissions.tabs || [];
+            if (targetView !== 'analytics-view' && !allowedTabs.includes(targetView)) {
+                window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
+                return; 
+            }
+        }
+        
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+        const targetEl = document.getElementById(targetView);
+        if (targetEl) targetEl.classList.add('active');
+
+        // قفل القائمة أوتوماتيك في الموبايل
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('collapsed');
+        } else {
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+    });
+});
+
+// ==========================================
+// الإشعارات والنواقص
+// ==========================================
+const notifBtn = document.getElementById('notifBtn');
+const notifDropdown = document.getElementById('notifDropdown');
+
+if (notifBtn && notifDropdown) {
+    notifBtn.addEventListener('click', (e) => {
+        notifDropdown.classList.toggle('show');
+        e.stopPropagation();
+    });
+    document.addEventListener('click', (e) => {
+        if (!notifBtn.contains(e.target)) notifDropdown.classList.remove('show');
+    });
+}
+
+function updateNotifications() {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifCount');
+    if(!list || !badge) return;
+
+    let lowStockProds = allProducts.filter(p => (p.stock || 0) <= 5 && p.isActive);
+    
+    if (lowStockProds.length > 0) {
+        badge.style.display = 'block';
+        badge.innerText = lowStockProds.length;
+        list.innerHTML = '';
+        lowStockProds.forEach(p => {
+            list.innerHTML += `
+                <div style="border-bottom: 1px solid var(--border); padding: 8px 0; display:flex; align-items:center; gap:10px;">
+                    <img src="${p.imageUrl}" style="width:30px; height:30px; border-radius:4px; object-fit:cover;">
+                    <div>
+                        <strong style="color:var(--text-dark); display:block;">${p.name}</strong>
+                        <span style="color:var(--danger); font-weight:bold;">الكمية المتبقية: ${p.stock || 0}</span>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        badge.style.display = 'none';
+        list.innerHTML = '<div style="text-align:center; color:#94a3b8;">لا توجد نواقص حالياً</div>';
+    }
+}
 
 // ==========================================
 // النوافذ الاحترافية (Custom Popups)
@@ -178,9 +254,7 @@ window.closeConfirm = () => {
 const confirmBtnEl = document.getElementById("confirmBtn");
 if (confirmBtnEl) {
     confirmBtnEl.addEventListener("click", () => {
-        if (confirmCallback) {
-            confirmCallback();
-        }
+        if (confirmCallback) confirmCallback();
         closeConfirm();
     });
 }
@@ -200,11 +274,8 @@ function logAction(actionName, details) {
 function formatDateTime(ms) {
     if (!ms) return "";
     return new Date(ms).toLocaleString('ar-EG', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+        year: 'numeric', month: 'short', day: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
     });
 }
 
@@ -212,34 +283,6 @@ function formatDateOnly(ms) {
     if (!ms) return "";
     return new Date(ms).toLocaleDateString('ar-EG');
 }
-
-// ==========================================
-// التنقل بين الشاشات (مع فحص أمني صارم)
-// ==========================================
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        const targetView = item.dataset.target;
-        if (!targetView) return;
-        
-        // التحقق الأمني المانع للمشرفين
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-            const allowedTabs = window.currentEmpPermissions.tabs || [];
-            if (targetView !== 'analytics-view' && !allowedTabs.includes(targetView)) {
-                window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
-                return; 
-            }
-        }
-        
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        item.classList.add('active');
-        
-        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-        const targetEl = document.getElementById(targetView);
-        if (targetEl) targetEl.classList.add('active');
-
-        document.getElementById('sidebar').classList.add('collapsed');
-    });
-});
 
 window.goToOrdersTab = (tab = 'active') => {
     if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
@@ -254,23 +297,9 @@ window.goToOrdersTab = (tab = 'active') => {
 };
 
 // ==========================================
-// تقارير المبيعات
+// تقارير المبيعات (حساب الصافي والمبيعات الفردية)
 // ==========================================
 let productCatalog = {}; 
-
-onValue(ref(db, 'products'), (snapshot) => {
-    let activeCount = 0;
-    if (snapshot.exists()) {
-        snapshot.forEach(child => {
-            productCatalog[child.val().name] = child.val().imageUrl;
-            if (child.val().isActive) {
-                activeCount++;
-            }
-        });
-    }
-    const statProd = document.getElementById('statTotalProducts');
-    if (statProd) statProd.innerText = activeCount;
-});
 
 window.openSalesReport = () => {
     document.getElementById("salesReportModal").style.display = "flex";
@@ -315,7 +344,7 @@ window.generateReport = (filterType, element) => {
         end = Date.now();
     }
 
-    let filteredTotal = 0;
+    let filteredTotal = 0; // الإجمالي الصافي اللي دخل الدرج
     let paymentStats = { 
         "الدفع عند الاستلام (COD)": 0, 
         "محفظة إلكترونية": 0, 
@@ -328,14 +357,14 @@ window.generateReport = (filterType, element) => {
         if (order.status === 'ملغي') return;
         
         if (order.createdAt >= start && order.createdAt <= end) {
-            filteredTotal += (order.total || 0);
-            const pMethod = order.paymentMethod;
+            filteredTotal += (order.total || 0); // الصافي
+            const pMethod = order.paymentMethod || "";
             
-            if (pMethod && pMethod.includes("محفظة")) {
+            if (pMethod.includes("محفظة")) {
                 paymentStats["محفظة إلكترونية"] += order.total;
-            } else if (pMethod && pMethod.includes("إنستا")) {
+            } else if (pMethod.includes("إنستا")) {
                 paymentStats["إنستا باي (InstaPay)"] += order.total;
-            } else if (pMethod && pMethod.includes("فيزا")) {
+            } else if (pMethod.includes("فيزا")) {
                 paymentStats["فيزا / بطاقة ائتمان"] += order.total;
             } else {
                 paymentStats["الدفع عند الاستلام (COD)"] += order.total;
@@ -347,7 +376,7 @@ window.generateReport = (filterType, element) => {
                         productSales[item.name] = { 
                             name: item.name, 
                             qty: 0, 
-                            revenue: 0, 
+                            revenue: 0, // الإيراد الخام للمنتج من غير الخصومات الكلية
                             img: productCatalog[item.name] || 'https://via.placeholder.com/50' 
                         };
                     }
@@ -380,6 +409,7 @@ window.generateReport = (filterType, element) => {
                 <span><i class="fas fa-credit-card text-primary"></i> فيزا</span> 
                 <span class="amount">${Math.round(paymentStats["فيزا / بطاقة ائتمان"])} ج</span>
             </div>
+            <div style="font-size:11px; color:#94a3b8; text-align:center; margin-top:5px;">* الصافي بعد الشحن والخصومات</div>
         `;
     }
 
@@ -408,7 +438,7 @@ window.filterReportProducts = () => {
                     <div class="top-product-title">${p.name}</div>
                     <div class="top-product-stats">تم بيع ${p.qty} قطعة</div>
                 </div>
-                <div class="top-product-revenue">${Math.round(p.revenue)} ج.م</div>
+                <div class="top-product-revenue" title="مبيعات المنتج الخام">${Math.round(p.revenue)} ج.م</div>
             </div>`;
     });
 };
@@ -420,7 +450,7 @@ window.exportReportToExcel = () => {
     let formattedData = currentReportProducts.map(p => ({
         "اسم المنتج": p.name,
         "الكمية المباعة": p.qty,
-        "الإيرادات (ج.م)": Math.round(p.revenue)
+        "إيراد المنتج (قبل الخصم)": Math.round(p.revenue)
     }));
     let worksheet = XLSX.utils.json_to_sheet(formattedData);
     let workbook = XLSX.utils.book_new();
@@ -430,11 +460,13 @@ window.exportReportToExcel = () => {
 };
 
 window.exportReportToPDF = () => {
+    document.body.classList.add('print-mode-report');
     window.print();
+    setTimeout(() => { document.body.classList.remove('print-mode-report'); }, 500);
 };
 
 // ==========================================
-// الرسوم البيانية
+// الرسوم البيانية (Bar Chart)
 // ==========================================
 let salesChart = null;
 let ordersChart = null;
@@ -445,8 +477,8 @@ function initCharts() {
     
     if (ctxSales && !salesChart) {
         salesChart = new Chart(ctxSales, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'المبيعات (ج.م)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
+            type: 'bar', // تم التحويل لأعمدة
+            data: { labels: [], datasets: [{ label: 'المبيعات (ج.م)', data: [], backgroundColor: '#3b82f6', borderRadius: 4 }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
@@ -463,21 +495,6 @@ function initCharts() {
 function updateChartsData() {
     if (!salesChart || !ordersChart || typeof allOrders === 'undefined') return;
     let counts = { pending: 0, processing: 0, shipped: 0, delivered: 0 };
-    allOrders.forEach(o => {
-        if (o.status === 'قيد المراجعة') counts.pending++;
-        if (o.status === 'جاري التجهيز') counts.processing++;
-        if (o.status === 'تم الشحن') counts.shipped++;
-        if (o.status === 'تم تسليمه') counts.delivered++;
-    });
-    ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
-    ordersChart.update();
-    render7DaysSales();
-}
-
-function render7DaysSales() {
-    const tableBody = document.getElementById('last7DaysTableBody');
-    if (!tableBody) return;
-    tableBody.innerHTML = "";
     
     let daysStats = {};
     for (let i = 6; i >= 0; i--) {
@@ -487,28 +504,45 @@ function render7DaysSales() {
         daysStats[dateStr] = { count: 0, revenue: 0 };
     }
 
-    allOrders.forEach(order => {
-        if (order.status === 'ملغي') return;
-        let orderDate = new Date(order.createdAt).toLocaleDateString('ar-EG');
-        if (daysStats[orderDate]) {
-            daysStats[orderDate].count++;
-            daysStats[orderDate].revenue += order.total;
+    allOrders.forEach(o => {
+        if (o.status === 'قيد المراجعة') counts.pending++;
+        if (o.status === 'جاري التجهيز') counts.processing++;
+        if (o.status === 'تم الشحن') counts.shipped++;
+        if (o.status === 'تم تسليمه') counts.delivered++;
+        
+        if (o.status !== 'ملغي') {
+            let orderDate = new Date(o.createdAt).toLocaleDateString('ar-EG');
+            if (daysStats[orderDate]) {
+                daysStats[orderDate].count++;
+                daysStats[orderDate].revenue += o.total;
+            }
         }
     });
 
-    Object.keys(daysStats).forEach(date => {
-        tableBody.innerHTML += `
-            <tr>
-                <td>${date}</td>
-                <td>${daysStats[date].count}</td>
-                <td style="font-weight:bold; color:var(--primary);">${Math.round(daysStats[date].revenue)} ج.م</td>
-            </tr>
-        `;
-    });
+    ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
+    ordersChart.update();
+
+    salesChart.data.labels = Object.keys(daysStats);
+    salesChart.data.datasets[0].data = Object.values(daysStats).map(d => Math.round(d.revenue));
+    salesChart.update();
+
+    const tableBody = document.getElementById('last7DaysTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = "";
+        Object.keys(daysStats).reverse().forEach(date => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${daysStats[date].count}</td>
+                    <td style="font-weight:bold; color:var(--primary);">${Math.round(daysStats[date].revenue)} ج.م</td>
+                </tr>
+            `;
+        });
+    }
 }
 
 // ==========================================
-// إدارة الطلبات
+// إدارة الطلبات (الطباعة المجمعة، الإسكانر، الصلاحيات)
 // ==========================================
 let allOrders = [];
 let currentOrderTab = 'active';
@@ -552,23 +586,17 @@ window.renderOrdersTable = () => {
         let dateMatch = true;
         if (dateFilter) {
             let oDate = new Date(order.createdAt).toISOString().split('T')[0];
-            if (oDate !== dateFilter) {
-                dateMatch = false;
-            }
+            if (oDate !== dateFilter) dateMatch = false;
         }
 
         let payMatch = true;
         if (paymentFilter) {
-            if (!(order.paymentMethod || "").includes(paymentFilter)) {
-                payMatch = false;
-            }
+            if (!(order.paymentMethod || "").includes(paymentFilter)) payMatch = false;
         }
         
         let statMatch = true;
         if (statusFilter) {
-            if (order.status !== statusFilter) {
-                statMatch = false;
-            }
+            if (order.status !== statusFilter) statMatch = false;
         }
 
         return tabMatch && searchMatch && dateMatch && payMatch && statMatch;
@@ -589,11 +617,34 @@ window.renderOrdersTable = () => {
         else if (order.status === 'تم الشحن') statusClass = 'status-shipped';
         else if (order.status === 'تم تسليمه') statusClass = 'status-delivered';
         
-        // التحقق من صلاحية تغيير حالة الطلب
+        // التحقق من صلاحية تغيير حالة الطلب بدقة
         let canChangeStatus = true;
+        let isFreeChange = false;
+        
         if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-            canChangeStatus = !!window.currentEmpPermissions.canChangeStatus;
+            canChangeStatus = window.currentEmpPermissions.canChangeStatus !== undefined ? window.currentEmpPermissions.canChangeStatus : true;
+            isFreeChange = !!window.currentEmpPermissions.canChangeStatus; // لو متفعلة، يقدر يغير براحته للوراء والأمام
         }
+
+        let availableStatuses = [];
+        if (window.currentUserRole === 'Admin' || isFreeChange) {
+            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
+        } else {
+            // المشرف اللي معندوش تعديل حر بيمشي متسلسل للأمام بس
+            if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
+            else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
+            else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
+            else availableStatuses = [order.status];
+        }
+
+        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}', '${order.displayId || order.orderId}')" ${(!canChangeStatus || availableStatuses.length === 1) ? 'disabled' : ''}>`;
+        ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
+            if (availableStatuses.includes(st) || st === order.status) {
+                let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':'❌';
+                sHtml += `<option value="${st}" ${order.status === st ? 'selected' : ''}>${icon} ${st}</option>`;
+            }
+        });
+        sHtml += `</select>`;
 
         table.innerHTML += `
             <tr>
@@ -604,29 +655,7 @@ window.renderOrdersTable = () => {
                 </td>
                 <td dir="ltr" class="meta-info">${formatDateTime(order.createdAt)}</td>
                 <td style="font-weight:bold; color:var(--secondary);">${Math.round(order.total || 0)} ج.م</td>
-                <td>
-                    ${(() => {
-                       let availableStatuses = [];
-                        if (window.currentUserRole === 'Admin') {
-                            availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
-                        } else {
-                            if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
-                            else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
-                            else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
-                            else availableStatuses = [order.status];
-                        }
-                        
-                        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}', '${order.displayId || order.orderId}')" ${(!canChangeStatus || availableStatuses.length === 1) ? 'disabled' : ''}>`;
-                        ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
-                            if (availableStatuses.includes(st) || st === order.status) {
-                                let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':'❌';
-                                sHtml += `<option value="${st}" ${order.status === st ? 'selected' : ''}>${icon} ${st}</option>`;
-                            }
-                        });
-                        sHtml += `</select>`;
-                        return sHtml;
-                    })()}
-                </td>
+                <td>${sHtml}</td>
                 <td>
                     <button class="btn-action btn-view" onclick="viewOrderDetails('${order.dbId}')">
                         <i class="fas fa-eye"></i>
@@ -637,12 +666,6 @@ window.renderOrdersTable = () => {
 };
 
 window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId) => {
-    // تحقق أمني إضافي
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canChangeStatus) {
-        selectElement.value = oldStatus;
-        return window.showAlert("عفواً، ليس لديك صلاحية لتغيير حالة الطلبات!", "error");
-    }
-
     const newStatus = selectElement.value;
     
     if (newStatus === 'ملغي') {
@@ -682,16 +705,7 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId)
             }
         }
     } else {
-        if (window.currentUserRole === 'Supervisor') {
-            window.showConfirm(`هل تريد إرسال طلب للمدير لتغيير حالة الطلب إلى "${newStatus}"؟`, () => {
-                push(ref(db, 'order_requests'), { orderId, requestedStatus: newStatus, requestedBy: currentUser, timestamp: Date.now() });
-                window.showAlert("تم إرسال الطلب للمدير بنجاح!", "success");
-                selectElement.value = oldStatus; 
-            });
-            selectElement.value = oldStatus; 
-        } else {
-            updateOrderStatus(orderId, selectElement, displayId); 
-        }
+        window.updateOrderStatus(orderId, selectElement, displayId); 
     }
 };
 
@@ -712,7 +726,83 @@ window.updateOrderStatus = (orderId, selectElement, displayId) => {
 };
 
 // ==========================================
-// تجهيز بوليصة الشحن وتفاصيل الطلب
+// الإسكانر (لتغيير حالة الطلب أوتوماتيك لتم الشحن)
+// ==========================================
+let html5QrcodeScanner = null;
+window.openScannerModal = () => {
+    document.getElementById('scannerModal').style.display = 'flex';
+    html5QrcodeScanner = new Html5Qrcode("qr-reader");
+    html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+            let order = allOrders.find(o => o.displayId === decodedText || o.orderId === decodedText);
+            if(order) {
+                if(order.status === 'تم الشحن' || order.status === 'تم تسليمه') {
+                    window.showAlert('هذا الطلب مشحون أو مسلم بالفعل!', 'warning');
+                } else {
+                    update(ref(db, `orders/${order.dbId}`), { status: 'تم الشحن', shippedAt: Date.now() });
+                    window.showAlert('تم تحويل الطلب لـ تم الشحن بنجاح!', 'success');
+                    logAction("سكانر شحن", `تأكيد شحن طلب #${order.displayId} عبر السكانر`);
+                }
+                setTimeout(() => { window.stopScanner(); window.closeModal('scannerModal'); }, 1500);
+            } else {
+                window.showAlert('لم يتم العثور على الطلب!', 'error');
+            }
+        },
+        (error) => { /* ignore */ }
+    ).catch(err => {
+        console.error(err);
+        window.showAlert('لم نتمكن من الوصول للكاميرا!', 'error');
+    });
+};
+
+window.stopScanner = () => {
+    if(html5QrcodeScanner) { 
+        html5QrcodeScanner.stop().catch(err => console.log(err)); 
+        html5QrcodeScanner = null; 
+    }
+};
+
+// ==========================================
+// الطباعة المجمعة للبوليصات
+// ==========================================
+window.bulkPrintWaybills = () => {
+    let processingOrders = allOrders.filter(o => o.status === 'جاري التجهيز');
+    if (processingOrders.length === 0) return window.showAlert("لا توجد طلبات (جاري التجهيز) لطباعتها!", "warning");
+    
+    let container = document.getElementById("bulkPrintContainer");
+    if(!container) return;
+    container.innerHTML = "";
+    
+    processingOrders.forEach(order => {
+        let descParts = order.items ? order.items.map(i => `${i.qty}x ${i.name}`).join(' ، ') : '';
+        let codAmount = order.paymentMethod && !order.paymentMethod.includes("كاش") ? "مدفوع إلكترونياً" : `${Math.round(order.total || 0)} ج.م`;
+        
+        let html = `
+        <div style="page-break-after: always; padding: 20px; font-family: 'Cairo', sans-serif; direction: rtl; width:100%; max-width:400px; margin:0 auto; border:2px solid black; margin-bottom:20px;">
+            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                <h2>ModyStore ⚡</h2>
+                <div style="font-size:20px; letter-spacing:2px; font-weight:bold;">*${order.displayId || order.orderId}*</div>
+            </div>
+            <p><strong>إلى:</strong> ${order.customer ? order.customer.name : ''}</p>
+            <p><strong>العنوان:</strong> ${order.customer ? order.customer.address : ''}</p>
+            <p><strong>المحافظة:</strong> ${order.customer ? order.customer.city : ''}</p>
+            <p><strong>تليفون:</strong> ${order.customer ? order.customer.phone : ''}</p>
+            <hr>
+            <p><strong>المحتوى:</strong> ${descParts}</p>
+            <div style="text-align: center; border: 2px solid black; padding: 10px; margin-top: 10px;">
+                <strong>المطلوب تحصيله (COD)</strong><br><span style="font-size:24px; font-weight:bold;">${codAmount}</span>
+            </div>
+        </div>`;
+        container.innerHTML += html;
+    });
+    
+    document.body.classList.add('print-mode-bulk');
+    window.print();
+    setTimeout(() => { document.body.classList.remove('print-mode-bulk'); }, 500);
+};
+
+// ==========================================
+// تجهيز بوليصة الشحن وتفاصيل الطلب الفردي
 // ==========================================
 let currentPrintOrder = null;
 
@@ -726,6 +816,9 @@ window.viewOrderDetails = (orderDbId) => {
     document.getElementById("oName").innerText = order.customer ? order.customer.name : "-";
     document.getElementById("oPhone").innerText = order.customer ? order.customer.phone : "-";
     document.getElementById("oAddress").innerText = order.customer ? order.customer.address : "-";
+    if (document.getElementById("oCity")) {
+        document.getElementById("oCity").innerText = order.customer ? order.customer.city : "-";
+    }
     document.getElementById("oPayment").innerText = order.paymentMethod || "دفع عند الاستلام";
 
     if (document.getElementById("oSecretCode")) {
@@ -755,6 +848,9 @@ window.viewOrderDetails = (orderDbId) => {
     }
 
     document.getElementById("oSubtotal").innerText = `${order.subtotal || 0} ج.م`;
+    if (document.getElementById("oShipping")) {
+        document.getElementById("oShipping").innerText = `${order.shippingCost || 0} ج.م`;
+    }
     
     if (order.discount > 0) {
         document.getElementById("oDiscountDiv").style.display = "block";
@@ -821,17 +917,9 @@ window.printDocument = (type) => {
         if (allowOpenSelect) document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
         if (order.customer) {
             document.getElementById("printCustName").innerText = order.customer.name || "-";
-            let addrParts = [];
-            if (order.customer.address) addrParts = order.customer.address.split('-');
-            document.getElementById("printCity").innerText = order.customer.city || addrParts[0] || "غير محدد";
-            document.getElementById("printRegion").innerText = order.customer.region || addrParts[1] || "";
+            document.getElementById("printCity").innerText = order.customer.city || "-";
+            if (document.getElementById("printRegion")) document.getElementById("printRegion").innerText = order.customer.region || "";
             document.getElementById("printAddress").innerText = order.customer.address || "-";
-            
-            if (document.getElementById("printBuilding")) document.getElementById("printBuilding").innerText = order.customer.building || "-";
-            if (document.getElementById("printFloor")) document.getElementById("printFloor").innerText = order.customer.floor || "-";
-            if (document.getElementById("printApartment")) document.getElementById("printApartment").innerText = order.customer.apartment || "-";
-            if (document.getElementById("printLandmark")) document.getElementById("printLandmark").innerText = order.customer.landmark || "-";
-            
             document.getElementById("printPhone1").innerText = order.customer.phone || "-";
             if (document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = order.customer.phone2 || "-";
         }
@@ -903,48 +991,52 @@ window.printDocument = (type) => {
 };
 
 onValue(ref(db, 'orders'), (snapshot) => {
-    allOrders = [];
-    let totalRev = 0;
-    let pending = 0;
-    let ordersCount = 0;
-    
-    if (snapshot.exists()) {
-        snapshot.forEach(child => {
-            let o = child.val(); 
-            o.dbId = child.key; 
-            allOrders.push(o);
-            ordersCount++;
+    try {
+        allOrders = [];
+        let totalRev = 0;
+        let pending = 0;
+        let ordersCount = 0;
+        
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                let o = child.val(); 
+                o.dbId = child.key; 
+                allOrders.push(o);
+                ordersCount++;
+                
+                if (o.status !== 'ملغي') {
+                    totalRev += (o.total || 0);
+                }
+                if (o.status === 'قيد المراجعة') {
+                    pending++;
+                }
+            });
             
-            if (o.status !== 'ملغي') {
-                totalRev += (o.total || 0);
-            }
-            if (o.status === 'قيد المراجعة') {
-                pending++;
-            }
-        });
+            allOrders.sort((a, b) => a.createdAt - b.createdAt);
+            allOrders.forEach((order, index) => {
+                order.displayId = String(index + 1).padStart(4, '0');
+            });
+            
+            allOrders.reverse();
+        }
         
-        allOrders.sort((a, b) => a.createdAt - b.createdAt);
-        allOrders.forEach((order, index) => {
-            order.displayId = String(index + 1).padStart(4, '0');
-        });
+        if (document.getElementById('statTotalOrders')) document.getElementById('statTotalOrders').innerText = ordersCount;
+        if (document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
+        if (document.getElementById('statPendingOrders')) document.getElementById('statPendingOrders').innerText = pending;
         
-        allOrders.reverse();
+        if (typeof initCharts !== 'undefined') {
+            initCharts();
+            updateChartsData();
+        }
+        
+        window.renderOrdersTable();
+    } catch(err) {
+        console.error(err);
     }
-    
-    if (document.getElementById('statTotalOrders')) document.getElementById('statTotalOrders').innerText = ordersCount;
-    if (document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').innerText = Math.round(totalRev) + " ج.م";
-    if (document.getElementById('statPendingOrders')) document.getElementById('statPendingOrders').innerText = pending;
-    
-    if (typeof initCharts !== 'undefined') {
-        initCharts();
-        updateChartsData();
-    }
-    
-    window.renderOrdersTable();
 });
 
 // ==========================================
-// إدارة المنتجات
+// إدارة المنتجات (إضافة/تعديل بصلاحيات دقيقة)
 // ==========================================
 let editingProductId = null;
 let allProducts = [];
@@ -965,18 +1057,46 @@ window.openProductModal = () => {
     document.getElementById("productModalTitle").innerText = "إضافة منتج جديد";
     document.getElementById("prodName").value = ""; 
     document.getElementById("prodPrice").value = "";
-    document.getElementById("prodDiscountPrice").value = ""; 
+    if (document.getElementById("prodDiscountPrice")) document.getElementById("prodDiscountPrice").value = ""; 
     if (document.getElementById("prodStock")) document.getElementById("prodStock").value = "10";
     if (document.getElementById("prodOfferDays")) document.getElementById("prodOfferDays").value = "";
     document.getElementById("prodDesc").value = ""; 
     document.getElementById("prodImage").value = ""; 
+
+    if (document.getElementById('stockOnlyAlert')) document.getElementById('stockOnlyAlert').style.display = 'none';
+    if (document.getElementById('addStockDiv')) document.getElementById('addStockDiv').style.display = 'none';
+    
+    document.getElementById("prodName").disabled = false;
+    document.getElementById("prodPrice").disabled = false;
+    if (document.getElementById("prodStock")) document.getElementById("prodStock").disabled = false;
+    document.getElementById("prodCategory").disabled = false;
+
     document.getElementById("productModal").style.display = "flex";
 };
 
 window.saveProduct = () => {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? window.currentEmpPermissions.canEdit : false;
+
+    // حالة: المشرف بيعدل بس معندوش صلاحية التعديل الكلي (هيزود مخزون بس)
+    if (editingProductId && isSup && !canEditFull) {
+        let addStockVal = document.getElementById("prodAddStockOnly") ? document.getElementById("prodAddStockOnly").value : 0;
+        if(!addStockVal || addStockVal < 1) return window.showAlert("برجاء كتابة رقم صحيح للإضافة");
+        
+        const p = allProducts.find(x => x.id === editingProductId);
+        let newStock = (p.stock || 0) + parseInt(addStockVal);
+        
+        update(ref(db, `products/${editingProductId}`), { stock: newStock }).then(() => {
+            window.closeModal('productModal');
+            window.showAlert("تم زيادة المخزون بنجاح!", "success");
+            logAction("زيادة مخزون", `إضافة ${addStockVal} قطعة لمنتج: ${p.name}`);
+        });
+        return;
+    }
+
     const name = document.getElementById("prodName").value.trim();
     const price = document.getElementById("prodPrice").value;
-    const discountPrice = document.getElementById("prodDiscountPrice").value;
+    const discountPrice = document.getElementById("prodDiscountPrice") ? document.getElementById("prodDiscountPrice").value : "";
     const category = document.getElementById("prodCategory").value;
     const description = document.getElementById("prodDesc").value;
     const image = document.getElementById("prodImage").value;
@@ -987,10 +1107,7 @@ window.saveProduct = () => {
         return window.showAlert("الاسم والسعر والقسم مطلوبين!");
     }
     
-    let parsedDiscount = null;
-    if (discountPrice) {
-        parsedDiscount = Number(discountPrice);
-    }
+    let parsedDiscount = discountPrice ? Number(discountPrice) : null;
 
     const data = { 
         name: name, 
@@ -1004,7 +1121,7 @@ window.saveProduct = () => {
     };
 
     if (editingProductId) {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+        if (isSup && !canEditFull) {
             return window.showAlert("ليس لديك صلاحية لتعديل المنتجات!", "error");
         }
         update(ref(db, `products/${editingProductId}`), data).then(() => {
@@ -1013,7 +1130,7 @@ window.saveProduct = () => {
             logAction("تعديل منتج", `تعديل بيانات المنتج: ${data.name}`);
         });
     } else {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+        if (isSup && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
             return window.showAlert("ليس لديك صلاحية لإضافة منتجات جديدة!", "error");
         }
         data.isActive = true; 
@@ -1047,10 +1164,10 @@ window.filterProducts = () => {
         return textMatch && catMatch && offerMatch && tabMatch;
     });
 
+    const isSup = window.currentUserRole === 'Supervisor';
     let canEdit = true;
     let canDelete = true;
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-        canEdit = !!window.currentEmpPermissions.canEdit;
+    if (isSup && window.currentEmpPermissions) {
         canDelete = !!window.currentEmpPermissions.canDelete;
     }
     
@@ -1081,10 +1198,10 @@ window.filterProducts = () => {
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                 <td>
                     <div class="actions">
-                        ${canEdit ? `
                         <button class="btn-action btn-edit" onclick="editProduct('${p.id}')">
                             <i class="fas fa-pen"></i>
                         </button>
+                        ${(!isSup || window.currentEmpPermissions.canEdit) ? `
                         <button class="btn-action btn-hide" style="background-color: ${toggleBg}" onclick="toggleProduct('${p.id}', ${p.isActive}, '${p.name}')">
                             <i class="fas ${toggleIcon}"></i>
                         </button>` : ''}
@@ -1099,13 +1216,22 @@ window.filterProducts = () => {
 };
 
 onValue(ref(db, 'products'), (snapshot) => {
-    allProducts = [];
-    if (snapshot.exists()) {
-        snapshot.forEach(child => { 
-            allProducts.push({ id: child.key, ...child.val() }); 
-        });
+    try {
+        allProducts = [];
+        productCatalog = {};
+        if (snapshot.exists()) {
+            snapshot.forEach(child => { 
+                let p = { id: child.key, ...child.val() };
+                allProducts.push(p); 
+                productCatalog[p.name] = p.imageUrl;
+            });
+        }
+        window.filterProducts();
+        updateNotifications();
+        if(typeof window.filterCategories !== 'undefined') window.filterCategories(); // التحديث في الأقسام
+    } catch(err) {
+        console.error(err);
     }
-    window.filterProducts();
 });
 
 window.deleteProduct = (id, name) => {
@@ -1130,16 +1256,13 @@ window.toggleProduct = (id, status, name) => {
 };
 
 window.editProduct = (id) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
-        return window.showAlert("ليس لديك صلاحية لتعديل المنتجات!", "error");
-    }
     editingProductId = id; 
     const p = allProducts.find(x => x.id === id);
     if (!p) return;
     
     document.getElementById("prodName").value = p.name; 
     document.getElementById("prodPrice").value = p.price;
-    document.getElementById("prodDiscountPrice").value = p.discountPrice || ""; 
+    if (document.getElementById("prodDiscountPrice")) document.getElementById("prodDiscountPrice").value = p.discountPrice || ""; 
     if (document.getElementById("prodStock")) document.getElementById("prodStock").value = p.stock || 0;
     if (document.getElementById("prodOfferDays")) document.getElementById("prodOfferDays").value = p.offerDays || "";
     document.getElementById("prodDesc").value = p.description || "";
@@ -1149,12 +1272,34 @@ window.editProduct = (id) => {
         if (document.getElementById("prodCategory")) document.getElementById("prodCategory").value = p.category;
     }, 100);
     
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? window.currentEmpPermissions.canEdit : false;
+    
+    if (isSup && !canEditFull) {
+        if (document.getElementById('stockOnlyAlert')) document.getElementById('stockOnlyAlert').style.display = 'block';
+        if (document.getElementById('addStockDiv')) document.getElementById('addStockDiv').style.display = 'block';
+        if (document.getElementById("prodAddStockOnly")) document.getElementById("prodAddStockOnly").value = "";
+        
+        document.getElementById("prodName").disabled = true;
+        document.getElementById("prodPrice").disabled = true;
+        if (document.getElementById("prodStock")) document.getElementById("prodStock").disabled = true;
+        document.getElementById("prodCategory").disabled = true;
+    } else {
+        if (document.getElementById('stockOnlyAlert')) document.getElementById('stockOnlyAlert').style.display = 'none';
+        if (document.getElementById('addStockDiv')) document.getElementById('addStockDiv').style.display = 'none';
+        
+        document.getElementById("prodName").disabled = false;
+        document.getElementById("prodPrice").disabled = false;
+        if (document.getElementById("prodStock")) document.getElementById("prodStock").disabled = false;
+        document.getElementById("prodCategory").disabled = false;
+    }
+
     document.getElementById("productModalTitle").innerText = "تعديل المنتج"; 
     document.getElementById('productModal').style.display = "flex";
 };
 
 // ==========================================
-// الأقسام
+// الأقسام (وظهور عدد المنتجات بداخلها)
 // ==========================================
 let editingCatId = null; 
 let allCategories = [];
@@ -1238,9 +1383,12 @@ window.filterCategories = () => {
         let badgeClass = c.isActive ? 'badge-active' : 'badge-inactive';
         let badgeText = c.isActive ? 'مفعل' : 'مخفي';
         
+        let prodCount = allProducts.filter(p => p.category === c.name).length; // حساب عدد المنتجات
+        
         table.innerHTML += `
             <tr>
                 <td><b>${c.name}</b></td>
+                <td style="color:var(--secondary); font-weight:bold;">${prodCount} منتج</td>
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                 <td>
                     <div class="actions">
@@ -1263,13 +1411,79 @@ window.filterCategories = () => {
 };
 
 onValue(ref(db, 'categories'), (snapshot) => { 
-    allCategories = []; 
+    try {
+        allCategories = []; 
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                allCategories.push({ id: child.key, ...child.val() });
+            });
+        }
+        window.filterCategories();
+    } catch(err) {
+        console.error(err);
+    }
+});
+
+// ==========================================
+// أسعار الشحن والمحافظات (الجديدة)
+// ==========================================
+let allShipping = [];
+
+window.openShippingModal = () => { 
+    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+        return window.showAlert("ليس لديك صلاحية للإضافة!", "error");
+    }
+    document.getElementById('shipGovName').value = "";
+    document.getElementById('shipPrice').value = "";
+    document.getElementById('shippingModal').style.display = "flex"; 
+};
+
+window.saveShipping = () => {
+    const name = document.getElementById("shipGovName").value.trim();
+    const price = document.getElementById("shipPrice").value;
+    if(!name || !price) return window.showAlert("الاسم والسعر مطلوبين!");
+    
+    push(ref(db, 'shipping'), { name: name, price: Number(price), isActive: true }).then(() => { 
+        window.closeModal('shippingModal'); 
+        window.showAlert("تم إضافة المحافظة بنجاح"); 
+    });
+};
+
+window.deleteShipping = (id) => { 
+    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canDelete) {
+        return window.showAlert("ليس لديك صلاحية للحذف!", "error");
+    }
+    window.showConfirm("هل أنت متأكد من حذف هذه المحافظة؟", () => { 
+        remove(ref(db, `shipping/${id}`)); 
+    });
+};
+
+onValue(ref(db, 'shipping'), (snapshot) => {
+    const table = document.getElementById('shippingTableBody');
+    if(!table) return; 
+    table.innerHTML = "";
+    
     if (snapshot.exists()) {
+        let canDelete = true;
+        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+            canDelete = !!window.currentEmpPermissions.canDelete;
+        }
+
         snapshot.forEach(child => {
-            allCategories.push({ id: child.key, ...child.val() });
+            let s = {id: child.key, ...child.val()};
+            table.innerHTML += `
+                <tr>
+                    <td><b>${s.name}</b></td>
+                    <td style="color:var(--secondary); font-weight:bold;">${s.price} ج.م</td>
+                    <td><span class="badge badge-active">مفعل</span></td>
+                    <td>
+                        <div class="actions">
+                            ${canDelete ? `<button class="btn-action btn-delete" onclick="deleteShipping('${s.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                    </td>
+                </tr>`;
         });
     }
-    window.filterCategories();
 });
 
 // ==========================================
@@ -1459,13 +1673,17 @@ window.filterVouchers = () => {
 };
 
 onValue(ref(db, 'vouchers'), (snapshot) => { 
-    allVouchers = []; 
-    if (snapshot.exists()) {
-        snapshot.forEach(child => {
-            allVouchers.push({ id: child.key, ...child.val() });
-        });
+    try {
+        allVouchers = []; 
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                allVouchers.push({ id: child.key, ...child.val() });
+            });
+        }
+        window.filterVouchers();
+    } catch(err) {
+        console.error(err);
     }
-    window.filterVouchers();
 });
 
 // ==========================================
@@ -1492,7 +1710,6 @@ window.openEmployeeModal = () => {
     document.getElementById('employeeModal').style.display = "flex"; 
 };
 
-// دالة حفظ موظف وتوليد حساب له في Firebase Auth أوتوماتيك
 window.saveEmployee = async () => { 
     if (window.currentUserRole !== 'Admin') {
         return window.showAlert("إدارة الموظفين مخصصة لمدير النظام فقط!", "error");
@@ -1547,7 +1764,6 @@ window.saveEmployee = async () => {
             const secondaryApp = initializeApp(firebaseConfig, "SecondaryAppInstance");
             const secondaryAuth = getAuth(secondaryApp);
             
-            // إنشاء الحساب وجلب الـ UID
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, emailVal, passVal);
             const newUid = userCredential.user.uid;
             
@@ -1564,7 +1780,6 @@ window.saveEmployee = async () => {
                 createdAt: Date.now() 
             };
             
-            // هنا التعديل: حفظ بيانات الموظف باستخدام الـ UID كمعرف أساسي
             await set(ref(db, `employees/${newUid}`), newEmpData);
             
             window.closeModal('employeeModal');
@@ -1585,6 +1800,7 @@ window.saveEmployee = async () => {
         }
     }
 };
+
 window.editEmployee = (id) => {
     if (window.currentUserRole !== 'Admin') {
         return window.showAlert("ليس لديك صلاحية لتعديل الموظفين!", "error");
@@ -1673,17 +1889,21 @@ window.filterEmployees = () => {
 };
 
 onValue(ref(db, 'employees'), (snapshot) => { 
-    allEmployees = []; 
-    const filterUserDropdown = document.getElementById("filterLogUser");
-    if (filterUserDropdown) filterUserDropdown.innerHTML = "<option value=''>كل الموظفين</option>";
-    if (snapshot.exists()) {
-        snapshot.forEach(child => {
-            let e = { id: child.key, ...child.val() };
-            allEmployees.push(e);
-            if (filterUserDropdown) filterUserDropdown.innerHTML += `<option value="${e.name}">${e.name}</option>`;
-        });
+    try {
+        allEmployees = []; 
+        const filterUserDropdown = document.getElementById("filterLogUser");
+        if (filterUserDropdown) filterUserDropdown.innerHTML = "<option value=''>كل الموظفين</option>";
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                let e = { id: child.key, ...child.val() };
+                allEmployees.push(e);
+                if (filterUserDropdown) filterUserDropdown.innerHTML += `<option value="${e.name}">${e.name}</option>`;
+            });
+        }
+        window.filterEmployees();
+    } catch(err) {
+        console.error(err);
     }
-    window.filterEmployees();
 });
 
 // ==========================================
@@ -1754,30 +1974,38 @@ window.exportLogsToExcel = () => {
 };
 
 onValue(ref(db, 'logs'), (snapshot) => { 
-    allLogs = [];
-    if (snapshot.exists()) { 
-        snapshot.forEach(child => {
-            allLogs.push({ id: child.key, ...child.val() });
-        }); 
-        allLogs.reverse();
+    try {
+        allLogs = [];
+        if (snapshot.exists()) { 
+            snapshot.forEach(child => {
+                allLogs.push({ id: child.key, ...child.val() });
+            }); 
+            allLogs.reverse();
+        }
+        
+        if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
+            document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
+        }
+        
+        if (currentLogTab === 'current') window.filterLogs();
+    } catch(err) {
+        console.error(err);
     }
-    
-    if (window.currentUserRole === 'Admin' && document.getElementById("btnDeleteAllLogs")) {
-        document.getElementById("btnDeleteAllLogs").style.display = "inline-block";
-    }
-    
-    if (currentLogTab === 'current') window.filterLogs();
 });
 
 onValue(ref(db, 'archived_logs'), (snapshot) => { 
-    allArchivedLogs = [];
-    if (snapshot.exists()) { 
-        snapshot.forEach(child => {
-            allArchivedLogs.push({ id: child.key, ...child.val() });
-        }); 
-        allArchivedLogs.reverse();
+    try {
+        allArchivedLogs = [];
+        if (snapshot.exists()) { 
+            snapshot.forEach(child => {
+                allArchivedLogs.push({ id: child.key, ...child.val() });
+            }); 
+            allArchivedLogs.reverse();
+        }
+        if (currentLogTab === 'archived') window.filterLogs();
+    } catch(err) {
+        console.error(err);
     }
-    if (currentLogTab === 'archived') window.filterLogs();
 });
 
 window.archiveLogsAll = () => {
@@ -1903,60 +2131,35 @@ window.saveSettings = () => {
 };
 
 onValue(ref(db, 'storeSettings'), (snapshot) => {
-    if (snapshot.exists()) {
-        const d = snapshot.val();
-        if (document.getElementById("setStoreName")) document.getElementById("setStoreName").value = d.name || "";
-        if (document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
-        if (document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
-        if (document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
-        if (document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
-        if (document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
-        if (document.getElementById("setCopyright")) document.getElementById("setCopyright").value = d.copyright || "";
-        
-        if (d.social) {
-            if (document.getElementById("setFb")) document.getElementById("setFb").value = d.social.facebook || "";
-            if (document.getElementById("setInsta")) document.getElementById("setInsta").value = d.social.instagram || "";
-            if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
-            if (document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
-        }
+    try {
+        if (snapshot.exists()) {
+            const d = snapshot.val();
+            if (document.getElementById("setStoreName")) document.getElementById("setStoreName").value = d.name || "";
+            if (document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
+            if (document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
+            if (document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
+            if (document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
+            if (document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
+            if (document.getElementById("setCopyright")) document.getElementById("setCopyright").value = d.copyright || "";
+            
+            if (d.social) {
+                if (document.getElementById("setFb")) document.getElementById("setFb").value = d.social.facebook || "";
+                if (document.getElementById("setInsta")) document.getElementById("setInsta").value = d.social.instagram || "";
+                if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = d.social.telegram || "";
+                if (document.getElementById("setWhatsapp")) document.getElementById("setWhatsapp").value = d.social.whatsapp || "";
+            }
 
-        if (d.paymentMethods) {
-            if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
-            if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
-            if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
-            if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
+            if (d.paymentMethods) {
+                if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
+                if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
+                if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
+                if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
+            }
         }
+    } catch(err) {
+        console.error(err);
     }
 });
-
-window.goToPendingOrders = () => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-        const allowedTabs = window.currentEmpPermissions.tabs || [];
-        if (!allowedTabs.includes('orders-view')) {
-            return window.showAlert("عفواً، ليس لديك صلاحية لعرض صفحة الطلبات!", "error");
-        }
-    }
-
-    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-    const orderNavItem = document.querySelector('[data-target="orders-view"]');
-    if (orderNavItem) orderNavItem.classList.add('active');
-
-    document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-    const ordersView = document.getElementById('orders-view');
-    if (ordersView) ordersView.classList.add('active');
-
-    document.getElementById('sidebar').classList.add('collapsed');
-
-    window.switchOrderTab('active');
-    
-    setTimeout(() => {
-        const statusF = document.getElementById('filterOrderStatus');
-        if (statusF) {
-            statusF.value = 'قيد المراجعة';
-            window.renderOrdersTable();
-        }
-    }, 50);
-};
 
 // ==========================================
 // تشغيل القائمة المنسدلة للملف الشخصي
