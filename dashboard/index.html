@@ -46,38 +46,61 @@
             height: 0;
         }
 
+        /* حاوية الطباعة الموحدة (مخفية على الشاشة) */
+        #printRoot { display: none; }
+
         /* نظام طباعة صارم يمنع الصفحة البيضاء ويصغر الحجم */
         @media print {
-            body { background: white !important; overflow: visible !important; margin: 0; padding: 0; }
-            body > * { display: none !important; }
-            
-            /* إظهار فقط حاويات الطباعة المطلوبة */
-            body.print-mode-invoice .print-invoice-area { display: block !important; position: relative; width: 100%; padding: 15px; }
-            body.print-mode-waybill .print-waybill-area { display: block !important; position: relative; width: 100%; margin: 0; padding: 0;}
-            body.print-mode-bulk .bulk-print-container { display: block !important; position: relative; width: 100%; }
-            
+            @page { size: A4; margin: 6mm; }
+            html, body {
+                background: white !important;
+                height: auto !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* إخفاء كل حاجة ما عدا حاوية الطباعة */
+            body > *:not(#printRoot) { display: none !important; }
+            #printRoot {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                background: white !important;
+            }
+            #printRoot > *:last-child { page-break-after: avoid !important; }
+
             /* تظبيط تقرير المبيعات في الطباعة */
+            body.print-mode-report > *:not(#salesReportModal) { display: none !important; }
             body.print-mode-report .modal-overlay#salesReportModal { display: block !important; position: static; background: white; }
             body.print-mode-report .modal { box-shadow: none; width: 100%; max-width: none; }
             body.print-mode-report .report-filters, body.print-mode-report .close-btn { display: none !important; }
-            
-            /* تصغير حجم الورقة عشان تتناسب مع البوليصة وماتعملش صفحة فاضية */
-            @page { size: auto; margin: 0.5cm; }
-            
-            .bosta-waybill { 
-                transform: scale(0.95); 
-                transform-origin: top center; 
-                margin: 0 auto; 
-                padding: 15px !important; 
+
+            /* البوليصة: صفحة واحدة مضغوطة */
+            #printRoot .bosta-waybill {
+                width: 100% !important;
+                margin: 0 auto !important;
+                padding: 8px 10px !important;
                 border-width: 2px !important;
-                page-break-inside: avoid;
+                font-size: 14px !important;
+                line-height: 1.35 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
-            
-            /* تكبير الباركود أقصى عرض متاح */
-            #topBarcode, [id^="bulk-bc-"] { 
-                width: 100% !important; 
-                max-height: 120px !important; 
-                height: auto !important;
+            #printRoot .bosta-waybill > div { padding-bottom: 6px !important; margin-bottom: 6px !important; }
+
+            /* الباركود الشريطي مالي العرض يمين وشمال */
+            #printRoot .bosta-waybill svg,
+            #printRoot svg[id^="bulk-bc-"] {
+                width: 100% !important;
+                height: 130px !important;
+                max-width: none !important;
+                display: block !important;
+            }
+            /* QR كود أكبر مالي مكانه */
+            #printRoot #qrCodeBox img, #printRoot #qrCodeBox canvas {
+                width: 150px !important;
+                height: 150px !important;
             }
         }
     </style>
@@ -1048,6 +1071,9 @@
 
     <!-- ================= حاوية الطباعة المجمعة ================= -->
     <div id="bulkPrintContainer" class="bulk-print-container" style="display:none; background:white;"></div>
+
+    <!-- ================= حاوية الطباعة الفعلية (كل الطباعة تخرج من هنا) ================= -->
+    <div id="printRoot"></div>
 
     <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
