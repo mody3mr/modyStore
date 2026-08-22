@@ -447,23 +447,41 @@ tr:hover { background-color: #f8fafc; }
 .top-product-revenue { color: var(--success); font-weight: 900; font-size: 15px;}
 
 /* ================= طباعة الفاتورة والبوليصة ================= */
-@media print {
-    body * { visibility: hidden; }
-    
-    /* طباعة الفاتورة */
-    body.print-mode-invoice .print-invoice-area, 
-    body.print-mode-invoice .print-invoice-area * { visibility: visible; }
-    body.print-mode-invoice .screen-only { display: none !important; }
-    body.print-mode-invoice .screen-only-flex { display: block !important; }
-    body.print-mode-invoice .print-invoice-area { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; background: white; padding: 20px;}
-
-    /* طباعة بوليصة الشحن */
-    body.print-mode-waybill .print-waybill-area,
-    body.print-mode-waybill .print-waybill-area * { visibility: visible; }
-    body.print-mode-waybill .print-waybill-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
-}
-
-/* ================= القائمة المنسدلة للملف الشخصي ================= */
+/* نظام طباعة صارم يمنع الصفحة البيضاء ويصغر الحجم */
+        @media print {
+            /* إخفاء كل محتويات الصفحة الأساسية */
+            body { background: white !important; overflow: visible !important; margin: 0; padding: 0; }
+            body > * { display: none !important; }
+            
+            /* إظهار فقط حاوية الطباعة النشطة */
+            body.print-mode-invoice .print-invoice-area { display: block !important; position: relative; width: 100%; padding: 15px;}
+            body.print-mode-waybill .print-waybill-area { display: block !important; position: relative; width: 100%; margin: 0; padding: 0;}
+            body.print-mode-bulk .bulk-print-container { display: block !important; position: relative; width: 100%; }
+            
+            /* تظبيط تقرير المبيعات في الطباعة */
+            body.print-mode-report .modal-overlay#salesReportModal { display: block !important; position: static; background: white; }
+            body.print-mode-report .modal { box-shadow: none; width: 100%; max-width: none; }
+            body.print-mode-report .report-filters, body.print-mode-report .close-btn { display: none !important; }
+            
+            /* هوامش الورقة وتقليص حجم البوليصة عشان متعملش صفحة جديدة */
+            @page { size: auto; margin: 0.5cm; }
+            
+            .bosta-waybill { 
+                transform: scale(0.95); 
+                transform-origin: top center; 
+                margin: 0 auto; 
+                padding: 15px !important; 
+                border-width: 2px !important;
+                page-break-inside: avoid;
+            }
+            
+            /* تكبير الباركود أقصى عرض متاح */
+            #topBarcode, [id^="bulk-bc-"] { 
+                width: 100% !important; 
+                max-height: 120px !important; 
+                height: auto !important;
+            }
+        }/* ================= القائمة المنسدلة للملف الشخصي ================= */
 .user-profile { 
     display: flex; 
     align-items: center; 
