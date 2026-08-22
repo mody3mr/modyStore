@@ -681,15 +681,20 @@ window.renderOrdersTable = () => {
             else availableStatuses = [order.status];
         }
 
-        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}', '${order.displayId || order.orderId}')" ${(!canChangeStatus || availableStatuses.length === 1 || order.status === 'مرتجع') ? 'disabled' : ''}>`;
-        ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي', 'مرتجع'].forEach(st => {
+        let sHtml = `<select class="status-select ${statusClass}" onchange="requestOrderStatusUpdate('${order.dbId}', this, '${order.status}', '${order.displayId || order.orderId}')" ${(!canChangeStatus || order.status === 'مرتجع') ? 'disabled' : ''}>`;
+        
+        ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'].forEach(st => {
             if (availableStatuses.includes(st) || st === order.status) {
-                let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':st==='مرتجع'?'↩️':'❌';
+                let icon = st==='قيد المراجعة'?'⏳':st==='جاري التجهيز'?'📦':st==='تم الشحن'?'🚚':st==='تم تسليمه'?'✅':'❌';
                 sHtml += `<option value="${st}" ${order.status === st ? 'selected' : ''}>${icon} ${st}</option>`;
             }
         });
+        
+        // إظهار المرتجع فقط إذا كانت حالة الطلب بالفعل مرتجع ويكون مقفول
+        if(order.status === 'مرتجع') {
+            sHtml += `<option value="مرتجع" selected disabled>↩️ مرتجع (يُدار من شاشة المرتجعات)</option>`;
+        }
         sHtml += `</select>`;
-
         table.innerHTML += `
             <tr>
                 <td style="font-weight:900; color:var(--primary);">#${order.displayId || order.orderId}</td>
@@ -1221,45 +1226,32 @@ window.calculatePurTotal = () => {
     document.getElementById('purTotalAmount').innerText = totalItems + shipping;
 };
 
+// الدالة المسئولة عن حفظ المشتريات وتسميعها في الـ DB
 window.savePurchaseInvoice = () => {
-    const supplier = document.getElementById('purSupplier').value.trim() || 'غير محدد';
-    const invoiceNo = document.getElementById('purInvoiceNo').value.trim() || '-';
+    const supplier = document.getElementById('purSupplier').value.trim() || 'مورد عام';
+    const invoiceNo = document.getElementById('purInvoiceNo').value.trim() || 'بدون رقم';
     const shipping = parseFloat(document.getElementById('purShipping').value) || 0;
-    const totalItems = purItems.reduce((acc, curr) => acc + curr.total, 0);
-    const totalAmount = totalItems + shipping;
+    const totalAmount = purItems.reduce((acc, curr) => acc + curr.total, 0) + shipping;
 
-    if(purItems.length === 0) {
-        return window.showAlert('الفاتورة فارغة!');
-    }
+    if(purItems.length === 0) return window.showAlert('الفاتورة فارغة!');
 
+    // تم التأكد من عدم وجود بيانات فارغة (Undefined) تمنع الحفظ
     const data = {
-        type: 'purchase',
-        title: `فاتورة مشتريات (مورد: ${supplier})`,
-        supplier: supplier,
-        invoiceNo: invoiceNo,
-        items: purItems,
-        shipping: shipping,
-        amount: totalAmount,
-        timestamp: Date.now(),
-        user: currentUser
+        type: 'purchase', title: `فاتورة مشتريات (مورد: ${supplier})`, supplier: supplier, invoiceNo: invoiceNo,
+        items: purItems, shipping: shipping, amount: totalAmount, timestamp: Date.now(), user: currentUser || "مدير"
     };
 
     purItems.forEach(item => {
         const pRef = ref(db, `products/${item.id}`);
-        get(pRef).then(snap => {
-            if(snap.exists()) {
-                update(pRef, { stock: (snap.val().stock || 0) + item.qty });
-            }
-        });
+        get(pRef).then(snap => { if(snap.exists()) { update(pRef, { stock: (snap.val().stock || 0) + item.qty }); } });
     });
 
     push(ref(db, 'finance'), data).then(() => {
         logAction("مشتريات", `إدخال فاتورة مشتريات بقيمة ${totalAmount} ج.م وتحديث المخزون`);
         window.showAlert('تم الحفظ وتحديث المخزون', 'success');
         closeModal('purchaseModal');
-    });
+    }).catch(err => window.showAlert('حدث خطأ أثناء الحفظ', 'error'));
 };
-
 window.openExpenseModal = () => {
     document.getElementById('expTitle').value = '';
     document.getElementById('expAmount').value = '';
@@ -1399,58 +1391,45 @@ window.searchOrderForReturn = () => {
     document.getElementById('btnConfirmReturn').style.display = 'block';
 };
 
+// الدالة المسئولة عن حفظ المرتجعات وتسميعها في الـ DB وإرجاع المخزون
 window.confirmReturnOrder = () => {
     const reason = document.getElementById('returnReasonSelect').value;
-    const notes = document.getElementById('returnNotes').value;
+    const notes = document.getElementById('returnNotes').value || 'بدون ملاحظات';
     const restoreStock = document.getElementById('returnStockToggle').checked;
     
     if(!reason) return window.showAlert('برجاء اختيار سبب المرتجع');
-    
     const checkboxes = document.querySelectorAll('.ret-item-cb:checked');
     if(checkboxes.length === 0) return window.showAlert('برجاء اختيار منتج واحد على الأقل للاسترجاع');
 
-    let itemsToReturn = [];
-    let returnAmount = 0;
+    let itemsToReturn = []; let returnAmount = 0;
     checkboxes.forEach(cb => {
-        let idx = cb.getAttribute('data-index');
-        let item = currentReturnOrderTemp.items[idx];
-        itemsToReturn.push(item);
-        returnAmount += (item.qty * item.price);
+        let item = currentReturnOrderTemp.items[cb.getAttribute('data-index')];
+        itemsToReturn.push(item); returnAmount += (item.qty * item.price);
     });
 
+    // تأمين البيانات عشان الـ Push ميترفضش
     const retData = {
         orderDbId: currentReturnOrderTemp.dbId,
-        orderId: currentReturnOrderTemp.orderId,
-        displayId: currentReturnOrderTemp.displayId,
-        customer: currentReturnOrderTemp.customer,
-        items: itemsToReturn,
-        amount: returnAmount,
-        reason: reason,
-        notes: notes,
-        status: 'تم استلام المرتجع',
-        timestamp: Date.now(),
-        user: currentUser
+        orderId: currentReturnOrderTemp.orderId || currentReturnOrderTemp.displayId,
+        displayId: currentReturnOrderTemp.displayId || '0000',
+        customer: currentReturnOrderTemp.customer || {name: 'غير مسجل', phone: '-'},
+        items: itemsToReturn, amount: returnAmount, reason: reason, notes: notes, status: 'تم استلام المرتجع', timestamp: Date.now(), user: currentUser || 'مدير'
     };
 
     if(restoreStock) {
         itemsToReturn.forEach(item => {
             const pRef = ref(db, `products/${item.id}`);
-            get(pRef).then(snap => {
-                if(snap.exists()) {
-                    update(pRef, { stock: (snap.val().stock || 0) + item.qty });
-                }
-            });
+            get(pRef).then(snap => { if(snap.exists()) update(pRef, { stock: (snap.val().stock || 0) + item.qty }); });
         });
     }
 
     push(ref(db, 'returns'), retData).then(() => {
         update(ref(db, `orders/${currentReturnOrderTemp.dbId}`), { status: 'مرتجع', returnedAt: Date.now() });
         logAction('مرتجع', `استلام مرتجع لطلب #${currentReturnOrderTemp.displayId}`);
-        window.showAlert('تم تسجيل المرتجع وتحديث حالة الطلب', 'success');
+        window.showAlert('تم تسجيل المرتجع وتحديث حالة الطلب والمخزون', 'success');
         closeModal('newReturnModal');
-    });
+    }).catch(err => window.showAlert('حدث خطأ أثناء حفظ المرتجع', 'error'));
 };
-
 onValue(ref(db, 'returns'), (snapshot) => {
     allReturns = [];
     if(snapshot.exists()) {
