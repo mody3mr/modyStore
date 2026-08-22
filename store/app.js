@@ -54,7 +54,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
     if (snapshot.exists()) {
         storeSettings = snapshot.val();
         
-        // الشريط الإخباري
         const ticker = document.getElementById("newsTicker");
         if (ticker) {
             if (storeSettings.newsTicker) {
@@ -65,20 +64,18 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             }
         }
 
-        // طرق الدفع
+        // طرق الدفع بأسماء مختصرة
         const pmSelect = document.getElementById("paymentMethod");
         if (pmSelect && storeSettings.paymentMethods) {
             pmSelect.innerHTML = "";
-            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>';
-            if (storeSettings.paymentMethods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية (فودافون كاش، الخ)</option>';
+            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="كاش">💵 كاش</option>';
+            if (storeSettings.paymentMethods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
             if (storeSettings.paymentMethods.instapay) pmSelect.innerHTML += '<option value="إنستا باي (InstaPay)">⚡ إنستا باي (InstaPay)</option>';
-            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا / بطاقة ائتمان">💳 فيزا / بطاقة ائتمان</option>';
+            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا</option>';
         }
 
-        // بيانات الفوتر
         if (storeSettings.name) document.getElementById("footerName").innerText = storeSettings.name;
         
-        // الإيميل
         if (storeSettings.email) {
             document.getElementById("footerEmail").innerHTML = `<i class="far fa-envelope"></i> <span class="info-text" dir="ltr">${storeSettings.email}</span>`;
             document.getElementById("footerEmail").style.display = "flex";
@@ -86,7 +83,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             document.getElementById("footerEmail").style.display = "none";
         }
 
-        // التليفون
         if (storeSettings.phone) {
             document.getElementById("footerPhone").innerHTML = `<i class="fas fa-mobile-alt"></i> <span class="info-text" dir="ltr">${storeSettings.phone}</span>`;
             document.getElementById("footerPhone").style.display = "flex";
@@ -94,7 +90,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             document.getElementById("footerPhone").style.display = "none";
         }
 
-        // العنوان
         if (storeSettings.address) {
             document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="info-text">${storeSettings.address}</span>`;
             document.getElementById("footerAddress").style.display = "flex";
@@ -102,7 +97,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             document.getElementById("footerAddress").style.display = "none";
         }
 
-        // السوشيال ميديا
         if (storeSettings.social) {
             const fb = document.getElementById("socFb"), ig = document.getElementById("socInsta"), tg = document.getElementById("socTg"), wa = document.getElementById("socWa");
             if(storeSettings.social.facebook) { fb.href = storeSettings.social.facebook; fb.style.display = "flex"; } else { fb.style.display = "none"; }
@@ -281,14 +275,34 @@ window.closeProductModal = () => {
     document.getElementById('productDetailsModal').style.display = 'none';
 };
 
+// دالة جديدة لقفل أي قوائم أو نوافذ منبثقة عند الضغط بره
+window.closeOverlay = () => {
+    document.getElementById("cartSidebar").classList.remove("open");
+    
+    const checkout = document.getElementById("checkoutModal");
+    if (checkout) checkout.style.display = "none";
+    
+    const tracking = document.getElementById("trackingModal");
+    if (tracking) tracking.style.display = "none";
+    
+    document.getElementById("overlay").classList.remove("show");
+};
+
+// تعديل الدالة بحيث تظهر أو تخفي الـ overlay بناءً على حالة السلة
 window.toggleCart = () => {
-    document.getElementById("cartSidebar").classList.toggle("open");
-    document.getElementById("overlay").classList.toggle("show");
+    const sidebar = document.getElementById("cartSidebar");
+    const overlay = document.getElementById("overlay");
+    sidebar.classList.toggle("open");
+    if (sidebar.classList.contains("open")) {
+        overlay.classList.add("show");
+    } else {
+        overlay.classList.remove("show");
+    }
 };
 
 window.addToCart = (id, name, price, img, stock) => {
     if (storeSettings.isOpen === false) {
-        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا استقبال طلبات جديدة.', confirmButtonColor: 'var(--primary)'});
+        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا استقبال طلبات جديدة.', confirmButtonColor: 'var(--title-color)'});
     }
 
     const existingItem = cart.find(item => item.id === id);
@@ -536,7 +550,7 @@ ${orderItemsText}
             })
         });
 
-        if(paymentMethod !== "الدفع عند الاستلام (COD)") {
+        if(paymentMethod !== "كاش") {
             Swal.fire({icon: 'info', title: 'توجيه للدفع', text: 'تم تسجيل طلبك بنجاح. سيتم توجيهك لبوابة الدفع الإلكتروني.', confirmButtonColor: 'var(--title-color)'});
         }
 
@@ -624,7 +638,7 @@ window.trackOrder = () => {
 
             detailsBox.innerHTML = `
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>تاريخ الطلب:</strong> ${orderDate}</div>
-                <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'الدفع عند الاستلام'}</div>
+                <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'كاش'}</div>
                 ${itemsHtml}
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الإجمالي الفرعي:</span> <span>${foundOrder.subtotal} ج.م</span></div>
                 ${shippingHtml}
@@ -728,7 +742,6 @@ window.editCustomerOrder = (dbId) => {
     });
 };
 
-// حقوق الملكية المشفرة (لا يمكن تعديلها برمجياً بسهولة)
 const cArr = [169, 32, 50, 48, 50, 54, 32, 1578, 1605, 32, 1575, 1604, 1573, 1606, 1588, 1575, 1569, 32, 1576, 1608, 1575, 1587, 1591, 1577, 32, 124, 32, 1605, 1581, 1605, 1583, 32, 1593, 1605, 1585, 1608, 32, 1575, 1576, 1585, 1575, 1607, 1610, 1605, 32, 124, 32, 1605, 1608, 1583, 1610, 32, 1587, 1578, 1608, 1585];
 const lArr = [104, 116, 116, 112, 115, 58, 47, 47, 119, 97, 46, 109, 101, 47, 43, 50, 48, 49, 48, 57, 52, 50, 54, 52, 50, 48, 54];
 const devCopy = document.getElementById("devCopyLink");
