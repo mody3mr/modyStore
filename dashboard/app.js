@@ -692,7 +692,7 @@ window.renderOrdersTable = () => {
         
         // إظهار المرتجع فقط إذا كانت حالة الطلب بالفعل مرتجع ويكون مقفول
         if(order.status === 'مرتجع') {
-            sHtml += `<option value="مرتجع" selected disabled>↩️ مرتجع (يُدار من شاشة المرتجعات)</option>`;
+            sHtml += `<option value="مرتجع" selected disabled>↩️ مرتجع (شحن / عميل)</option>`;
         }
         sHtml += `</select>`;
         table.innerHTML += `
