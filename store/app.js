@@ -490,6 +490,7 @@ ${orderItemsText}
 
     const orderData = {
         orderId: orderId,
+        secretCode: orderId,
         customer: { name, phone, phone2, city, region, building, floor, apartment, landmark, address },
         paymentMethod: paymentMethod,
         items: orderItemsForDb,
