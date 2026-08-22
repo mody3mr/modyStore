@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getDatabase, ref, get, child, remove, update, onValue, push } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+import { getDatabase, ref, get, child, remove, update, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1544,11 +1544,13 @@ window.saveEmployee = async () => {
         }
 
         try {
-            // إنشاء تطبيق فايربيس مؤقت لإنشاء حساب الموظف بدون تسجيل خروج المدير
             const secondaryApp = initializeApp(firebaseConfig, "SecondaryAppInstance");
             const secondaryAuth = getAuth(secondaryApp);
             
-            await createUserWithEmailAndPassword(secondaryAuth, emailVal, passVal);
+            // إنشاء الحساب وجلب الـ UID
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, emailVal, passVal);
+            const newUid = userCredential.user.uid;
+            
             await signOut(secondaryAuth);
 
             const newEmpData = { 
@@ -1562,7 +1564,8 @@ window.saveEmployee = async () => {
                 createdAt: Date.now() 
             };
             
-            await push(ref(db, 'employees'), newEmpData);
+            // هنا التعديل: حفظ بيانات الموظف باستخدام الـ UID كمعرف أساسي
+            await set(ref(db, `employees/${newUid}`), newEmpData);
             
             window.closeModal('employeeModal');
             window.showAlert("تم إضافة الموظف وإنشاء حساب الدخول بنجاح!", "success");
@@ -1582,7 +1585,6 @@ window.saveEmployee = async () => {
         }
     }
 };
-
 window.editEmployee = (id) => {
     if (window.currentUserRole !== 'Admin') {
         return window.showAlert("ليس لديك صلاحية لتعديل الموظفين!", "error");
