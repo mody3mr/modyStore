@@ -6,19 +6,20 @@
     <title>مودي استور | الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- تم إرجاع اسم ملف التصميم لأصله -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- شريط الأخبار الديناميكي (يتم التحكم فيه من الداش بورد) -->
-    <div id="newsTicker" style="display: none; background-color: var(--primary); color: white; text-align: center; padding: 10px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px;"></div>
 
     <header>
         <div class="nav-container">
             <a href="#" class="logo"><i class="fas fa-bolt"></i> مودي استور</a>
             
             <div style="display: flex; gap: 15px; align-items: center;">
+                <!-- زرار الدارك مود -->
+                <div class="theme-toggle" onclick="toggleTheme()" title="الوضع الليلي/النهاري">
+                    <i id="themeIcon" class="fas fa-moon"></i>
+                </div>
+                
                 <button class="track-btn" onclick="openTrackingModal(); document.getElementById('overlay').classList.add('show');">
                     <i class="fas fa-map-marker-alt"></i> تتبع طلبك
                 </button>
@@ -28,6 +29,8 @@
                 </div>
             </div>
         </div>
+        <!-- الشريط الإخباري تم نقله هنا أسفل الهيدر -->
+        <div id="newsTicker" class="news-ticker"></div>
     </header>
 
     <section class="hero">
@@ -40,24 +43,41 @@
 
     <!-- شبكة المنتجات -->
     <div class="products-container" id="productsGrid">
-        <div style="text-align: center; width: 100%; padding: 50px; font-weight: bold; color: #94a3b8; font-size: 18px;">
+        <div style="text-align: center; width: 100%; padding: 50px; font-weight: bold; color: var(--text-light); font-size: 18px;">
             <i class="fas fa-circle-notch fa-spin" style="margin-bottom: 15px; font-size: 30px; color: var(--secondary);"></i><br>
             جاري تحميل المنتجات...
         </div>
     </div>
 
-    <!-- نافذة تفاصيل المنتج -->
+    <!-- الفوتر السفلي الجديد -->
+    <footer class="store-footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <h3 id="footerName"><i class="fas fa-bolt"></i> جاري التحميل...</h3>
+                <p id="footerAddress"><i class="fas fa-map-marker-alt"></i> جاري التحميل...</p>
+                <p id="footerPhone"><i class="fas fa-phone"></i> جاري التحميل...</p>
+            </div>
+            <div class="footer-social">
+                <a href="#" id="socFb" style="display:none;" target="_blank"><i class="fab fa-facebook"></i></a>
+                <a href="#" id="socInsta" style="display:none;" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="#" id="socTg" style="display:none;" target="_blank"><i class="fab fa-telegram"></i></a>
+                <a href="#" id="socWa" style="display:none;" target="_blank"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+        <div class="footer-copyright" id="footerCopy"></div>
+    </footer>
+
+    <!-- باقي النوافذ المنبثقة (Modal) والسلة الجانبية زي ما هي -->
     <div class="product-modal" id="productDetailsModal">
         <div class="product-modal-content">
             <div class="close-product-modal" onclick="closeProductModal()"><i class="fas fa-times"></i></div>
             <div class="product-modal-img"><img id="modalProductImg" src="" alt="صورة المنتج"></div>
-            
             <div class="product-modal-info">
                 <div class="modal-cat" id="modalProductCat">القسم</div>
                 <h2 class="modal-title" id="modalProductTitle">اسم المنتج</h2>
+                <div id="modalOfferTimer" style="display:none;"></div>
                 <div class="modal-price-wrapper" id="modalProductPriceWrapper"></div>
                 <div class="modal-desc" id="modalProductDesc">لا يوجد وصف متاح لهذا المنتج حالياً.</div>
-
                 <div class="policy-accordion">
                     <div class="policy-item" onclick="this.classList.toggle('open')">
                         <div class="policy-header">سياسة الشحن والتوصيل <i class="fas fa-chevron-down"></i></div>
@@ -68,8 +88,7 @@
                         <div class="policy-content">يحق للعميل استبدال أو استرجاع المنتج خلال 14 يوماً من تاريخ الاستلام، بشرط أن يكون المنتج في حالته الأصلية.</div>
                     </div>
                 </div>
-
-                <button class="modal-add-btn" id="modalAddBtn">إضافة للسلة <i class="fas fa-cart-plus"></i></button>
+                <div id="modalBtnContainer"></div>
             </div>
         </div>
     </div>
@@ -101,81 +120,56 @@
         <div id="checkoutForm">
             <h3>إتمام الطلب</h3>
             <label class="checkout-label">بيانات التوصيل التفصيلية</label>
-            
             <div class="input-wrapper"><input type="text" id="custName" class="checkout-input" placeholder="الاسم بالكامل"><i class="fas fa-user"></i></div>
-            
             <div class="checkout-row">
                 <div class="input-wrapper"><input type="tel" id="custPhone" class="checkout-input" placeholder="رقم الموبايل"><i class="fas fa-phone"></i></div>
                 <div class="input-wrapper"><input type="tel" id="custPhone2" class="checkout-input" placeholder="رقم بديل (اختياري)"><i class="fas fa-phone-alt"></i></div>
             </div>
-            
             <div class="checkout-row">
-                <div class="input-wrapper">
-                    <select id="custCity" class="checkout-input" onchange="updateShippingCost()">
-                        <option value="">اختر المحافظة / المدينة...</option>
-                    </select>
-                </div>
+                <div class="input-wrapper"><select id="custCity" class="checkout-input" onchange="updateShippingCost()"><option value="">اختر المحافظة / المدينة...</option></select></div>
                 <div class="input-wrapper"><input type="text" id="custRegion" class="checkout-input" placeholder="المنطقة"><i class="fas fa-map"></i></div>
             </div>
-
             <div class="checkout-row">
                 <div class="input-wrapper"><input type="text" id="custBuilding" class="checkout-input" placeholder="رقم المبنى"></div>
                 <div class="input-wrapper"><input type="text" id="custFloor" class="checkout-input" placeholder="الدور"></div>
                 <div class="input-wrapper"><input type="text" id="custAppt" class="checkout-input" placeholder="الشقة"></div>
             </div>
-
             <div class="input-wrapper"><input type="text" id="custLandmark" class="checkout-input" placeholder="علامة مميزة (اختياري)"><i class="fas fa-map-pin"></i></div>
             <div class="input-wrapper"><textarea id="custAddress" class="checkout-input" rows="2" placeholder="العنوان بالتفصيل السردي (وصف للمندوب)"></textarea><i class="fas fa-map-marker-alt"></i></div>
-
             <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
-                <select id="paymentMethod" class="checkout-input">
-                    <option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>
-                </select>
+                <select id="paymentMethod" class="checkout-input"><option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option></select>
             </div>
-
             <button class="confirm-btn" id="submitOrderBtn" onclick="sendOrder()">تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i></button>
             <div class="cancel-btn" onclick="document.getElementById('checkoutModal').style.display='none'; document.getElementById('cartSidebar').classList.add('open');">إلغاء والعودة للسلة</div>
         </div>
-
         <div id="successScreen" class="success-msg">
             <i class="fas fa-check-circle success-icon"></i>
             <h3 style="color: var(--success); margin-bottom: 10px;">تم استلام طلبك بنجاح!</h3>
-            <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم التتبع السري لطلبك هو: <strong id="successOrderId" style="color:var(--primary);"></strong></p>
+            <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم التتبع السري لطلبك هو: <strong id="successOrderId" style="color:var(--title-color);"></strong></p>
             <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">احتفظ بالرقم السري لتتمكن من تتبع أو تعديل طلبك لاحقاً.</p>
-            <button class="confirm-btn" style="background: var(--primary);" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
+            <button class="confirm-btn" style="background: var(--title-color);" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
         </div>
     </div>
 
-    <!-- نافذة تتبع الطلب بالفاتورة المصغرة -->
+    <!-- تتبع الطلب -->
     <div class="checkout-modal" id="trackingModal" style="max-height: 90vh; overflow-y: auto;">
         <h3>تتبع طلبك <i class="fas fa-search-location"></i></h3>
         <p style="text-align: center; color: var(--text-light); font-size: 14px; margin-bottom: 20px;">أدخل رقم التتبع السري ورقم الموبايل لمعرفة حالة وتفاصيل طلبك.</p>
-        
-        <div class="input-wrapper">
-            <input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم التتبع (المكون من 8 أرقام)">
-            <i class="fas fa-hashtag"></i>
-        </div>
-        <div class="input-wrapper">
-            <input type="tel" id="trackPhone" class="checkout-input" placeholder="رقم الموبايل المكتوب في الطلب">
-            <i class="fas fa-phone"></i>
-        </div>
-        
-        <div id="trackingResult" style="display: none; margin: 20px 0; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--gray); text-align: right;">
+        <div class="input-wrapper"><input type="text" id="trackOrderId" class="checkout-input" placeholder="رقم التتبع (المكون من 8 أرقام)"><i class="fas fa-hashtag"></i></div>
+        <div class="input-wrapper"><input type="tel" id="trackPhone" class="checkout-input" placeholder="رقم الموبايل المكتوب في الطلب"><i class="fas fa-phone"></i></div>
+        <div id="trackingResult" style="display: none; margin: 20px 0; padding: 20px; background: var(--bg); border-radius: 12px; border: 1px solid var(--gray); text-align: right;">
             <div style="text-align: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
                 <div style="font-weight: bold; color: var(--text-light); margin-bottom: 5px;">حالة الطلب:</div>
                 <div id="trackingStatusText" style="font-size: 22px; font-weight: 900; color: var(--secondary);"></div>
             </div>
-            
             <div id="trackingOrderDetails" style="font-size: 14px; color: var(--text);"></div>
         </div>
-
         <button class="confirm-btn" onclick="trackOrder()">تتبع الآن <i class="fas fa-search"></i></button>
         <div class="cancel-btn" onclick="document.getElementById('trackingModal').style.display='none'; document.getElementById('overlay').classList.remove('show');">إغلاق</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- تم إرجاع اسم ملف الجافاسكريبت لأصله -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
