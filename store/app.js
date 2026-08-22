@@ -58,7 +58,7 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         const ticker = document.getElementById("newsTicker");
         if (ticker) {
             if (storeSettings.newsTicker) {
-                ticker.innerHTML = `<i class="fas fa-bullhorn"></i> ${storeSettings.newsTicker}`;
+                ticker.innerHTML = `<div class="scrolling-text"><i class="fas fa-bullhorn"></i> ${storeSettings.newsTicker}</div>`;
                 ticker.style.display = "block";
             } else {
                 ticker.style.display = "none";
