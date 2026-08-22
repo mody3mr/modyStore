@@ -10,6 +10,9 @@
 </head>
 <body>
 
+    <!-- شريط الأخبار الديناميكي (يتم التحكم فيه من الداش بورد) -->
+    <div id="newsTicker" style="display: none; background-color: var(--primary); color: white; text-align: center; padding: 10px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px;"></div>
+
     <header>
         <div class="nav-container">
             <a href="#" class="logo"><i class="fas fa-bolt"></i> مودي استور</a>
@@ -85,6 +88,7 @@
             </div>
             <div id="promoMessage" class="promo-message"></div>
             <div class="summary-row"><span>الإجمالي الفرعي:</span><span id="subtotalPrice">0 ج.م</span></div>
+            <div class="summary-row" id="shippingRow"><span>مصاريف الشحن:</span><span id="shippingCostValue" style="color: var(--secondary);">يتم حسابه بالداخل</span></div>
             <div class="summary-row" id="discountRow" style="display: none; color: var(--accent);"><span>قيمة الخصم:</span><span id="discountValue">-0 ج.م</span></div>
             <div class="summary-row total-row"><span>الإجمالي النهائي:</span><span id="finalTotalPrice">0 ج.م</span></div>
             <button class="checkout-btn" onclick="openCheckoutModal()">متابعة لإتمام الطلب <i class="fas fa-arrow-left"></i></button>
@@ -105,7 +109,12 @@
             </div>
             
             <div class="checkout-row">
-                <div class="input-wrapper"><input type="text" id="custCity" class="checkout-input" placeholder="المحافظة / المدينة"><i class="fas fa-city"></i></div>
+                <div class="input-wrapper">
+                    <!-- تحويل المحافظة لقائمة منسدلة لسحب البيانات من الداش بورد -->
+                    <select id="custCity" class="checkout-input" onchange="updateShippingCost()">
+                        <option value="">اختر المحافظة / المدينة...</option>
+                    </select>
+                </div>
                 <div class="input-wrapper"><input type="text" id="custRegion" class="checkout-input" placeholder="المنطقة"><i class="fas fa-map"></i></div>
             </div>
 
@@ -121,10 +130,8 @@
             <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
                 <select id="paymentMethod" class="checkout-input">
+                    <!-- الخيارات سيتم تحميلها ديناميكياً من الداش بورد -->
                     <option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>
-                    <option value="محفظة إلكترونية">📱 محفظة إلكترونية (فودافون كاش، الخ)</option>
-                    <option value="إنستا باي (InstaPay)">⚡ إنستا باي (InstaPay)</option>
-                    <option value="فيزا / بطاقة ائتمان">💳 فيزا / بطاقة ائتمان</option>
                 </select>
             </div>
 
