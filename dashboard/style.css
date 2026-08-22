@@ -463,21 +463,20 @@ tr:hover { background-color: #f8fafc; }
     body.print-mode-waybill .print-waybill-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
 }
 
-/* ================= القائمة المنسدلة للملف الشخصي (تنسيق مرتب) ================= */
-/* ================= القائمة المنسدلة للملف الشخصي (شكل فخم) ================= */
+/* ================= القائمة المنسدلة للملف الشخصي ================= */
 .user-profile { 
     display: flex; 
     align-items: center; 
     gap: 10px; 
     font-weight: 700; 
-    position: relative; /* ضروري عشان القائمة تكون مرتبطة بيه */
+    position: relative; 
     cursor: pointer;
 }
 
 .profile-dropdown {
     position: absolute;
     top: 55px;
-    left: 0; /* لتغيير اتجاه المحاذاة لو حاببها تحت الصورة مباشرة خليه right: 0 */
+    left: 0; 
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -527,7 +526,9 @@ tr:hover { background-color: #f8fafc; }
 
 .dropdown-item.text-danger:hover { 
     background: #fef2f2; 
-}/* ==========================================
+}
+
+/* ==========================================
     دعم الشاشات الصغيرة والموبايل (Responsiveness)
 ========================================== */
 @media screen and (max-width: 768px) {
@@ -619,23 +620,23 @@ tr:hover { background-color: #f8fafc; }
         width: 100%;
     }
     @media print {
-    body * {
-        visibility: hidden;
+        body * {
+            visibility: hidden;
+        }
+        .print-mode-invoice #invoicePrintContainer, 
+        .print-mode-invoice #invoicePrintContainer * {
+            visibility: visible;
+        }
+        .print-mode-invoice #invoicePrintContainer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+        }
+        /* إخفاء الأزرار أثناء الطباعة */
+        .print-mode-invoice button {
+            display: none !important;
+        }
     }
-    .print-mode-invoice #invoicePrintContainer, 
-    .print-mode-invoice #invoicePrintContainer * {
-        visibility: visible;
-    }
-    .print-mode-invoice #invoicePrintContainer {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        padding: 20px;
-    }
-    /* إخفاء الأزرار أثناء الطباعة */
-    .print-mode-invoice button {
-        display: none !important;
-    }
-}
 }
