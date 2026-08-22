@@ -107,6 +107,7 @@ header { background-color: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px
 .total-row { font-size: 24px; font-weight: 900; color: var(--primary); border-top: 2px dashed var(--gray); padding-top: 20px; margin-top: 10px; margin-bottom: 25px; }
 .checkout-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 900; font-size: 18px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 12px; transition: 0.3s; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2); }
 .checkout-btn:hover { background: var(--secondary); transform: translateY(-3px); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3); }
+.checkout-btn:disabled { background: var(--text-light); cursor: not-allowed; box-shadow: none; transform: none; }
 
 .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 999; backdrop-filter: blur(4px); }
 .overlay.show { display: block; }
