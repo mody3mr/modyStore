@@ -321,8 +321,27 @@ window.goToOrdersTab = (tab = 'active') => {
     window.switchOrderTab(tab);
 };
 
+window.goToPendingOrders = () => {
+    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+        const allowedTabs = window.currentEmpPermissions.tabs || [];
+        if (!allowedTabs.includes('orders-view')) {
+            return window.showAlert("عفواً، ليس لديك صلاحية لعرض صفحة الطلبات!", "error");
+        }
+    }
+    const orderNav = document.querySelector('[data-target="orders-view"]');
+    if (orderNav) orderNav.click();
+    window.switchOrderTab('active');
+    setTimeout(() => {
+        const filterStatus = document.getElementById('filterOrderStatus');
+        if(filterStatus) {
+            filterStatus.value = 'قيد المراجعة';
+            window.renderOrdersTable();
+        }
+    }, 100);
+};
+
 // ==========================================
-// تقارير المبيعات (حساب الصافي والمبيعات الفردية)
+// تقارير المبيعات
 // ==========================================
 let productCatalog = {}; 
 
@@ -566,25 +585,6 @@ function updateChartsData() {
     }
 }
 
-window.goToPendingOrders = () => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-        const allowedTabs = window.currentEmpPermissions.tabs || [];
-        if (!allowedTabs.includes('orders-view')) {
-            return window.showAlert("عفواً، ليس لديك صلاحية لعرض صفحة الطلبات!", "error");
-        }
-    }
-    const orderNav = document.querySelector('[data-target="orders-view"]');
-    if (orderNav) orderNav.click();
-    window.switchOrderTab('active');
-    setTimeout(() => {
-        const filterStatus = document.getElementById('filterOrderStatus');
-        if(filterStatus) {
-            filterStatus.value = 'قيد المراجعة';
-            window.renderOrdersTable();
-        }
-    }, 100);
-};
-
 // ==========================================
 // إدارة الطلبات
 // ==========================================
@@ -816,7 +816,6 @@ onValue(ref(db, 'orders'), (snapshot) => {
                     currentMaxTime = o.createdAt;
                 }
                 
-                // Push Notification Logic
                 if (!isFirstLoadOrders && o.createdAt > latestKnownOrderTime) {
                     let itemsCount = o.items ? o.items.reduce((acc, i) => acc + i.qty, 0) : 0;
                     sendPushNotification(`طلب جديد #${o.displayId || o.orderId}`, `عدد المنتجات: ${itemsCount}\nالتكلفة: ${Math.round(o.total)} ج.م`);
@@ -896,7 +895,7 @@ window.stopScanner = () => {
 };
 
 // ==========================================
-// الطباعة المجمعة للبوليصات بالتصميم الأصلي
+// الطباعة 
 // ==========================================
 window.bulkPrintWaybills = () => {
     let processingOrders = allOrders.filter(o => o.status === 'جاري التجهيز');
@@ -964,7 +963,6 @@ window.bulkPrintWaybills = () => {
         container.innerHTML += html;
     });
 
-    // توليد الباركود
     processingOrders.forEach(order => {
         if (typeof JsBarcode !== 'undefined') {
             JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.displayId || order.orderId, { format: "CODE128", width: 3, height: 100, displayValue: true });
@@ -974,201 +972,6 @@ window.bulkPrintWaybills = () => {
     document.body.classList.add('print-mode-bulk');
     window.print();
     setTimeout(() => { document.body.classList.remove('print-mode-bulk'); }, 500);
-};
-
-// ==========================================
-// تجهيز بوليصة الشحن وتفاصيل الطلب الفردي
-// ==========================================
-let currentPrintOrder = null;
-
-window.viewOrderDetails = (orderDbId) => {
-    const order = allOrders.find(o => o.dbId === orderDbId);
-    if (!order) return;
-    
-    currentPrintOrder = order;
-
-    document.getElementById("orderModalTitle").innerText = `تفاصيل الطلب: #${order.displayId || order.orderId}`;
-    document.getElementById("oName").innerText = order.customer ? order.customer.name : "-";
-    document.getElementById("oPhone").innerText = order.customer ? order.customer.phone : "-";
-    document.getElementById("oAddress").innerText = order.customer ? order.customer.address : "-";
-    if (document.getElementById("oCity")) {
-        document.getElementById("oCity").innerText = order.customer ? order.customer.city : "-";
-    }
-    document.getElementById("oPayment").innerText = order.paymentMethod || "دفع عند الاستلام";
-
-    if (document.getElementById("oSecretCode")) {
-        document.getElementById("oSecretCode").innerText = order.secretCode || "غير متوفر";
-    }
-    
-    if (document.getElementById("oCancelReasonBox")) {
-        if (order.status === 'ملغي' && order.cancelReason) {
-            document.getElementById("oCancelReasonBox").style.display = 'block';
-            document.getElementById("oCancelReasonText").innerText = order.cancelReason;
-        } else {
-            document.getElementById("oCancelReasonBox").style.display = 'none';
-        }
-    }
-
-    const list = document.getElementById("oItemsList");
-    list.innerHTML = "";
-    
-    if (order.items && Array.isArray(order.items)) {
-        order.items.forEach(item => {
-            list.innerHTML += `
-                <div class="order-item-row">
-                    <span>${item.qty}x ${item.name}</span>
-                    <span>${item.qty * item.price} ج.م</span>
-                </div>`;
-        });
-    }
-
-    document.getElementById("oSubtotal").innerText = `${order.subtotal || 0} ج.م`;
-    if (document.getElementById("oShipping")) {
-        document.getElementById("oShipping").innerText = `${order.shippingCost || 0} ج.م`;
-    }
-    
-    if (order.discount > 0) {
-        document.getElementById("oDiscountDiv").style.display = "block";
-        document.getElementById("oDiscount").innerText = `-${Math.round(order.discount)} ج.م`;
-    } else {
-        document.getElementById("oDiscountDiv").style.display = "none";
-    }
-    
-    document.getElementById("oTotal").innerText = `${Math.round(order.total || 0)} ج.م`;
-
-    let tlHtml = `
-        <div class="tl-step done">
-            <div class="tl-title">تم استلام الطلب</div>
-            <div class="tl-date">${formatDateTime(order.createdAt)}</div>
-        </div>`;
-        
-    if (order.status === 'ملغي') {
-        tlHtml += `
-            <div class="tl-step cancel">
-                <div class="tl-title" style="color:var(--accent);">تم إلغاء الطلب</div>
-                <div class="tl-date">${formatDateTime(order.cancelledAt || Date.now())}</div>
-            </div>`;
-    } else if (order.status === 'مرتجع') {
-        tlHtml += `
-            <div class="tl-step cancel">
-                <div class="tl-title" style="color:var(--accent);">تم إرجاع الطلب</div>
-                <div class="tl-date">${formatDateTime(order.returnedAt || Date.now())}</div>
-            </div>`;
-    } else {
-        let procClass = order.processedAt ? 'done' : '';
-        tlHtml += `
-            <div class="tl-step ${procClass}">
-                <div class="tl-title">جاري التجهيز</div>
-                <div class="tl-date">${formatDateTime(order.processedAt)}</div>
-            </div>`;
-            
-        let shipClass = order.shippedAt ? 'done' : '';
-        tlHtml += `
-            <div class="tl-step ${shipClass}">
-                <div class="tl-title">تم الشحن</div>
-                <div class="tl-date">${formatDateTime(order.shippedAt)}</div>
-            </div>`;
-            
-        let delClass = order.deliveredAt ? 'done' : '';
-        tlHtml += `
-            <div class="tl-step ${delClass}">
-                <div class="tl-title">تم تسليمه</div>
-                <div class="tl-date">${formatDateTime(order.deliveredAt)}</div>
-            </div>`;
-    }
-    
-    document.getElementById("oTimeline").innerHTML = tlHtml;
-    document.getElementById("orderDetailsModal").style.display = "flex";
-};
-
-window.printDocument = (type) => {
-    const order = currentPrintOrder;
-    if (!order) return;
-
-    if (type === 'waybill') {
-        if (typeof JsBarcode !== 'undefined') {
-            JsBarcode("#topBarcode", order.displayId || order.orderId, { format: "CODE128", width: 3, height: 100, displayValue: true });
-        }
-        if (typeof QRCode !== 'undefined') {
-            document.getElementById("qrCodeBox").innerHTML = "";
-            new QRCode(document.getElementById("qrCodeBox"), { text: "https://mody3mr.github.io/modytech/store", width: 55, height: 55 });
-        }
-        
-        const allowOpenSelect = document.getElementById("wbAllowOpen");
-        if (allowOpenSelect) document.getElementById("printAllowOpen").innerText = allowOpenSelect.value;
-        if (order.customer) {
-            document.getElementById("printCustName").innerText = order.customer.name || "-";
-            document.getElementById("printCity").innerText = order.customer.city || "-";
-            if (document.getElementById("printRegion")) document.getElementById("printRegion").innerText = order.customer.region || "";
-            document.getElementById("printAddress").innerText = order.customer.address || "-";
-            document.getElementById("printPhone1").innerText = order.customer.phone || "-";
-            if (document.getElementById("printPhone2")) document.getElementById("printPhone2").innerText = order.customer.phone2 || "-";
-        }
-        
-        let descParts = [];
-        if (order.items && Array.isArray(order.items)) {
-            order.items.forEach(i => descParts.push(`${i.qty}x ${i.name}`));
-        }
-        document.getElementById("printProductsDesc").innerText = descParts.join(' ، ');
-        
-        let notesText = document.getElementById("wbNotes") ? document.getElementById("wbNotes").value : "";
-        document.getElementById("printNotes").innerText = !notesText ? "لا يوجد" : notesText;
-
-        const codContainer = document.getElementById("codAmountContainer");
-        const paidContainer = document.getElementById("paidAmountContainer");
-        let payMethod = order.paymentMethod || "الدفع عند الاستلام (COD)";
-        
-        if (payMethod.includes("عند الاستلام") || payMethod.includes("COD") || payMethod.includes("كاش")) {
-            if (codContainer) codContainer.style.display = "block";
-            if (paidContainer) paidContainer.style.display = "none";
-            let codAmountEl = document.getElementById("printCodAmount");
-            if (codAmountEl) codAmountEl.innerText = Math.round(order.total || 0) + " ج.م";
-        } else {
-            if (codContainer) codContainer.style.display = "none";
-            if (paidContainer) paidContainer.style.display = "block";
-            let payMethodLabel = document.getElementById("printPaymentMethodLabel");
-            if (payMethodLabel) payMethodLabel.innerText = payMethod;
-            let paidAmountEl = document.getElementById("printPaidAmount");
-            if (paidAmountEl) paidAmountEl.innerText = Math.round(order.total || 0) + " ج.م (مدفوع)";
-        }
-        document.body.className = 'print-mode-waybill';
-    } else {
-        if (document.getElementById("invOrderId")) document.getElementById("invOrderId").innerText = "#" + (order.displayId || order.orderId);
-        if (document.getElementById("invDate")) document.getElementById("invDate").innerText = formatDateTime(order.createdAt);
-        if (order.customer) {
-            if (document.getElementById("invCustName")) document.getElementById("invCustName").innerText = order.customer.name || "-";
-            if (document.getElementById("invCustPhone")) document.getElementById("invCustPhone").innerText = order.customer.phone || "-";
-            if (document.getElementById("invCustAddress")) document.getElementById("invCustAddress").innerText = order.customer.address || "-";
-        }
-        
-        const invItemsList = document.getElementById("invItemsList");
-        if (invItemsList) {
-            invItemsList.innerHTML = "";
-            if (order.items && Array.isArray(order.items)) {
-                order.items.forEach(item => {
-                    invItemsList.innerHTML += `
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid black;">${item.name}</td>
-                            <td style="padding: 8px; border: 1px solid black; text-align: center;">${item.qty}</td>
-                            <td style="padding: 8px; border: 1px solid black; text-align: center;">${item.price} ج.م</td>
-                            <td style="padding: 8px; border: 1px solid black; text-align: center;">${item.qty * item.price} ج.م</td>
-                        </tr>`;
-                });
-            }
-        }
-        
-        if (document.getElementById("invSubtotal")) document.getElementById("invSubtotal").innerText = (order.subtotal || 0) + " ج.م";
-        if (document.getElementById("invDiscount")) document.getElementById("invDiscount").innerText = order.discount > 0 ? `-${Math.round(order.discount)} ج.م` : "0 ج.م";
-        if (document.getElementById("invTotal")) document.getElementById("invTotal").innerText = Math.round(order.total || 0) + " ج.م";
-
-        document.body.className = 'print-mode-invoice';
-    }
-    
-    window.print();
-    
-    setTimeout(() => { 
-        document.body.className = ''; 
-    }, 500); 
 };
 
 // ==========================================
@@ -1274,7 +1077,6 @@ window.savePurchaseInvoice = () => {
         user: currentUser
     };
 
-    // تحديث المخزون
     purItems.forEach(item => {
         const pRef = ref(db, `products/${item.id}`);
         get(pRef).then(snap => {
