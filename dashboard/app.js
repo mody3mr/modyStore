@@ -54,7 +54,7 @@ onAuthStateChanged(auth, (user) => {
 
                             // إخفاء وحماية الأزرار الحساسة (إضافة / تعديل / حذف) للمشرفين
                             if (!window.currentEmpPermissions.canAdd) {
-                                document.querySelectorAll('.btn-add, #btnAddProduct, #btnOpenCategoryModal, #btnAddVoucher, #btnOpenEmployeeModal').forEach(btn => {
+                                document.querySelectorAll('.btn-add, #btnAddProduct, #btnOpenCategoryModal, #btnAddVoucher, #btnOpenEmployeeModal, #btnAddShipping').forEach(btn => {
                                     if(btn) btn.style.display = 'none';
                                 });
                             }
@@ -344,7 +344,7 @@ window.generateReport = (filterType, element) => {
         end = Date.now();
     }
 
-    let filteredTotal = 0; // الإجمالي الصافي اللي دخل الدرج
+    let filteredTotal = 0; 
     let paymentStats = { 
         "الدفع عند الاستلام (COD)": 0, 
         "محفظة إلكترونية": 0, 
@@ -357,7 +357,7 @@ window.generateReport = (filterType, element) => {
         if (order.status === 'ملغي') return;
         
         if (order.createdAt >= start && order.createdAt <= end) {
-            filteredTotal += (order.total || 0); // الصافي
+            filteredTotal += (order.total || 0); 
             const pMethod = order.paymentMethod || "";
             
             if (pMethod.includes("محفظة")) {
@@ -376,7 +376,7 @@ window.generateReport = (filterType, element) => {
                         productSales[item.name] = { 
                             name: item.name, 
                             qty: 0, 
-                            revenue: 0, // الإيراد الخام للمنتج من غير الخصومات الكلية
+                            revenue: 0, 
                             img: productCatalog[item.name] || 'https://via.placeholder.com/50' 
                         };
                     }
@@ -477,7 +477,7 @@ function initCharts() {
     
     if (ctxSales && !salesChart) {
         salesChart = new Chart(ctxSales, {
-            type: 'bar', // تم التحويل لأعمدة
+            type: 'bar', 
             data: { labels: [], datasets: [{ label: 'المبيعات (ج.م)', data: [], backgroundColor: '#3b82f6', borderRadius: 4 }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
@@ -542,7 +542,7 @@ function updateChartsData() {
 }
 
 // ==========================================
-// إدارة الطلبات (الطباعة المجمعة، الإسكانر، الصلاحيات)
+// إدارة الطلبات
 // ==========================================
 let allOrders = [];
 let currentOrderTab = 'active';
@@ -617,20 +617,18 @@ window.renderOrdersTable = () => {
         else if (order.status === 'تم الشحن') statusClass = 'status-shipped';
         else if (order.status === 'تم تسليمه') statusClass = 'status-delivered';
         
-        // التحقق من صلاحية تغيير حالة الطلب بدقة
         let canChangeStatus = true;
         let isFreeChange = false;
         
         if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
             canChangeStatus = window.currentEmpPermissions.canChangeStatus !== undefined ? window.currentEmpPermissions.canChangeStatus : true;
-            isFreeChange = !!window.currentEmpPermissions.canChangeStatus; // لو متفعلة، يقدر يغير براحته للوراء والأمام
+            isFreeChange = !!window.currentEmpPermissions.canChangeStatus; 
         }
 
         let availableStatuses = [];
         if (window.currentUserRole === 'Admin' || isFreeChange) {
             availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'تم الشحن', 'تم تسليمه', 'ملغي'];
         } else {
-            // المشرف اللي معندوش تعديل حر بيمشي متسلسل للأمام بس
             if (order.status === 'قيد المراجعة') availableStatuses = ['قيد المراجعة', 'جاري التجهيز', 'ملغي'];
             else if (order.status === 'جاري التجهيز') availableStatuses = ['جاري التجهيز', 'تم الشحن', 'ملغي'];
             else if (order.status === 'تم الشحن') availableStatuses = ['تم الشحن', 'تم تسليمه', 'ملغي'];
@@ -726,7 +724,7 @@ window.updateOrderStatus = (orderId, selectElement, displayId) => {
 };
 
 // ==========================================
-// الإسكانر (لتغيير حالة الطلب أوتوماتيك لتم الشحن)
+// الإسكانر 
 // ==========================================
 let html5QrcodeScanner = null;
 window.openScannerModal = () => {
@@ -763,7 +761,7 @@ window.stopScanner = () => {
 };
 
 // ==========================================
-// الطباعة المجمعة للبوليصات
+// الطباعة المجمعة للبوليصات بالتصميم الأصلي
 // ==========================================
 window.bulkPrintWaybills = () => {
     let processingOrders = allOrders.filter(o => o.status === 'جاري التجهيز');
@@ -775,25 +773,68 @@ window.bulkPrintWaybills = () => {
     
     processingOrders.forEach(order => {
         let descParts = order.items ? order.items.map(i => `${i.qty}x ${i.name}`).join(' ، ') : '';
-        let codAmount = order.paymentMethod && !order.paymentMethod.includes("كاش") ? "مدفوع إلكترونياً" : `${Math.round(order.total || 0)} ج.م`;
         
         let html = `
-        <div style="page-break-after: always; padding: 20px; font-family: 'Cairo', sans-serif; direction: rtl; width:100%; max-width:400px; margin:0 auto; border:2px solid black; margin-bottom:20px;">
-            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h2>ModyStore ⚡</h2>
-                <div style="font-size:20px; letter-spacing:2px; font-weight:bold;">*${order.displayId || order.orderId}*</div>
-            </div>
-            <p><strong>إلى:</strong> ${order.customer ? order.customer.name : ''}</p>
-            <p><strong>العنوان:</strong> ${order.customer ? order.customer.address : ''}</p>
-            <p><strong>المحافظة:</strong> ${order.customer ? order.customer.city : ''}</p>
-            <p><strong>تليفون:</strong> ${order.customer ? order.customer.phone : ''}</p>
-            <hr>
-            <p><strong>المحتوى:</strong> ${descParts}</p>
-            <div style="text-align: center; border: 2px solid black; padding: 10px; margin-top: 10px;">
-                <strong>المطلوب تحصيله (COD)</strong><br><span style="font-size:24px; font-weight:bold;">${codAmount}</span>
+        <div style="page-break-after: always; width: 100%; margin: 0; padding: 0;">
+            <div class="bosta-waybill" style="width: 100%; max-width: 400px; margin: 0 auto; border: 2px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 10px;">
+                <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="font-size: 24px; font-weight: 900; margin-bottom: 5px;">ModyStore <i class="fas fa-bolt"></i></div>
+                    <svg id="bulk-bc-${order.displayId || order.orderId}" style="height: 50px !important; width: 80%; max-width: 250px; margin: 0 auto;"></svg>
+                </div>
+
+                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1; border-left: 1px solid black; padding-left: 5px;">
+                        <strong>من:</strong> مودي ستور<br>
+                        <strong>السماح بالفتح:</strong> נعم
+                    </div>
+                    <div style="flex: 1; padding-right: 5px; display: flex; justify-content: center; align-items: center;"></div>
+                </div>
+
+                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 14px;">
+                    <strong>إلى:</strong> <span style="font-weight:bold; font-size:16px;">${order.customer ? order.customer.name : '-'}</span><br>
+                    <strong>المحافظة:</strong> <span>${order.customer ? order.customer.city : '-'}</span> | <strong>المنطقة:</strong> <span>${order.customer ? order.customer.region || '' : ''}</span><br>
+                    <strong>العنوان:</strong> <span>${order.customer ? order.customer.address : '-'}</span><br>
+                    <strong>مبنى:</strong> <span>-</span> | <strong>دور:</strong> <span>-</span> | <strong>شقة:</strong> <span>-</span><br>
+                    <strong>علامة مميزة:</strong> <span>-</span>
+                </div>
+
+                <div style="display: flex; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1; border-left: 1px solid black;">
+                        <strong>تليفون:</strong> <span dir="ltr" style="font-weight:bold; font-size:16px;">${order.customer ? order.customer.phone : '-'}</span>
+                    </div>
+                    <div style="flex: 1; padding-right: 5px;">
+                        <strong>تليفون آخر:</strong> <span dir="ltr">${order.customer ? order.customer.phone2 || '-' : '-'}</span>
+                    </div>
+                </div>
+
+                <div style="border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px; font-size: 13px;">
+                    <strong>الوصف:</strong> <span>${descParts}</span><br>
+                    <strong>ملاحظات:</strong> <span>لا يوجد</span>
+                </div>
+
+                ${(order.paymentMethod && !order.paymentMethod.includes("كاش") && !order.paymentMethod.includes("استلام")) ? 
+                `<div style="text-align: center; font-size: 16px; background-color: #f8fafc; padding: 10px; border: 2px solid black; border-radius: 8px; margin-bottom: 10px;">
+                    <strong>طريقة الدفع:</strong> <span style="font-weight:bold;">${order.paymentMethod}</span> <br>
+                    <strong>القيمة:</strong> <span style="font-weight:bold;">${Math.round(order.total || 0)} ج.م (مدفوع)</span>
+                </div>` : 
+                `<div style="text-align: center; border: 2px solid black; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
+                    <strong style="font-size:14px;">المبلغ المطلوب تحصيله (COD)</strong><br>
+                    <span style="font-size:24px; font-weight:900;">${Math.round(order.total || 0)} ج.م</span>
+                </div>`}
+
+                <div style="text-align: center; font-weight: bold; margin-top: 15px; font-size: 14px;">
+                    شكراً لثقتكم بنا <span style="color: red; font-size: 18px;">❤️</span>
+                </div>
             </div>
         </div>`;
         container.innerHTML += html;
+    });
+
+    // توليد الباركود
+    processingOrders.forEach(order => {
+        if (typeof JsBarcode !== 'undefined') {
+            JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.displayId || order.orderId, { format: "CODE128", width: 2, height: 50, displayValue: true });
+        }
     });
     
     document.body.classList.add('print-mode-bulk');
@@ -1036,7 +1077,7 @@ onValue(ref(db, 'orders'), (snapshot) => {
 });
 
 // ==========================================
-// إدارة المنتجات (إضافة/تعديل بصلاحيات دقيقة)
+// إدارة المنتجات
 // ==========================================
 let editingProductId = null;
 let allProducts = [];
@@ -1050,7 +1091,10 @@ window.switchProductTab = (tab, btn) => {
 };
 
 window.openProductModal = () => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+    
+    if (isSup && !canAdd) {
         return window.showAlert("ليس لديك صلاحية لإضافة منتجات جديدة!", "error");
     }
     editingProductId = null; 
@@ -1076,9 +1120,9 @@ window.openProductModal = () => {
 
 window.saveProduct = () => {
     const isSup = window.currentUserRole === 'Supervisor';
-    const canEditFull = window.currentEmpPermissions ? window.currentEmpPermissions.canEdit : false;
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
 
-    // حالة: المشرف بيعدل بس معندوش صلاحية التعديل الكلي (هيزود مخزون بس)
     if (editingProductId && isSup && !canEditFull) {
         let addStockVal = document.getElementById("prodAddStockOnly") ? document.getElementById("prodAddStockOnly").value : 0;
         if(!addStockVal || addStockVal < 1) return window.showAlert("برجاء كتابة رقم صحيح للإضافة");
@@ -1121,18 +1165,14 @@ window.saveProduct = () => {
     };
 
     if (editingProductId) {
-        if (isSup && !canEditFull) {
-            return window.showAlert("ليس لديك صلاحية لتعديل المنتجات!", "error");
-        }
+        if (isSup && !canEditFull) return window.showAlert("ليس لديك صلاحية لتعديل المنتجات!", "error");
         update(ref(db, `products/${editingProductId}`), data).then(() => {
             window.closeModal('productModal');
             window.showAlert("تم التعديل بنجاح!", "success");
             logAction("تعديل منتج", `تعديل بيانات المنتج: ${data.name}`);
         });
     } else {
-        if (isSup && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
-            return window.showAlert("ليس لديك صلاحية لإضافة منتجات جديدة!", "error");
-        }
+        if (isSup && !canAdd) return window.showAlert("ليس لديك صلاحية لإضافة منتجات جديدة!", "error");
         data.isActive = true; 
         push(ref(db, 'products'), data).then(() => {
             window.closeModal('productModal');
@@ -1165,11 +1205,8 @@ window.filterProducts = () => {
     });
 
     const isSup = window.currentUserRole === 'Supervisor';
-    let canEdit = true;
-    let canDelete = true;
-    if (isSup && window.currentEmpPermissions) {
-        canDelete = !!window.currentEmpPermissions.canDelete;
-    }
+    const canEdit = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : true;
+    const canDelete = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : true;
     
     filtered.forEach(p => {
         let priceDisplay = `${p.price} ج.م`;
@@ -1201,11 +1238,11 @@ window.filterProducts = () => {
                         <button class="btn-action btn-edit" onclick="editProduct('${p.id}')">
                             <i class="fas fa-pen"></i>
                         </button>
-                        ${(!isSup || window.currentEmpPermissions.canEdit) ? `
+                        ${(!isSup || canEdit) ? `
                         <button class="btn-action btn-hide" style="background-color: ${toggleBg}" onclick="toggleProduct('${p.id}', ${p.isActive}, '${p.name}')">
                             <i class="fas ${toggleIcon}"></i>
                         </button>` : ''}
-                        ${canDelete ? `
+                        ${(!isSup || canDelete) ? `
                         <button class="btn-action btn-delete" onclick="deleteProduct('${p.id}', '${p.name}')">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
@@ -1228,14 +1265,17 @@ onValue(ref(db, 'products'), (snapshot) => {
         }
         window.filterProducts();
         updateNotifications();
-        if(typeof window.filterCategories !== 'undefined') window.filterCategories(); // التحديث في الأقسام
+        if(typeof window.filterCategories !== 'undefined') window.filterCategories();
     } catch(err) {
         console.error(err);
     }
 });
 
 window.deleteProduct = (id, name) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canDelete) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canDelete = window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : false;
+
+    if (isSup && !canDelete) {
         return window.showAlert("ليس لديك صلاحية لحذف المنتجات!", "error");
     }
     window.showConfirm("هل تريد حذف هذا المنتج نهائياً؟", () => {
@@ -1247,7 +1287,10 @@ window.deleteProduct = (id, name) => {
 };
 
 window.toggleProduct = (id, status, name) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+
+    if (isSup && !canEditFull) {
         return window.showAlert("ليس لديك صلاحية لتعديل حالة المنتجات!", "error");
     }
     update(ref(db, `products/${id}`), { isActive: !status }).then(() => {
@@ -1273,7 +1316,7 @@ window.editProduct = (id) => {
     }, 100);
     
     const isSup = window.currentUserRole === 'Supervisor';
-    const canEditFull = window.currentEmpPermissions ? window.currentEmpPermissions.canEdit : false;
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
     
     if (isSup && !canEditFull) {
         if (document.getElementById('stockOnlyAlert')) document.getElementById('stockOnlyAlert').style.display = 'block';
@@ -1299,13 +1342,16 @@ window.editProduct = (id) => {
 };
 
 // ==========================================
-// الأقسام (وظهور عدد المنتجات بداخلها)
+// الأقسام
 // ==========================================
 let editingCatId = null; 
 let allCategories = [];
 
 window.openCategoryModal = () => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+
+    if (isSup && !canAdd) {
         return window.showAlert("ليس لديك صلاحية لإضافة أقسام جديدة!", "error");
     }
     editingCatId = null; 
@@ -1317,19 +1363,19 @@ window.saveCategory = () => {
     const name = document.getElementById("catNameInput").value.trim(); 
     if (!name) return;
     
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+
     if (editingCatId) {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
-            return window.showAlert("ليس لديك صلاحية لتعديل الأقسام!", "error");
-        }
+        if (isSup && !canEditFull) return window.showAlert("ليس لديك صلاحية لتعديل الأقسام!", "error");
         update(ref(db, `categories/${editingCatId}`), { name }).then(() => {
             window.closeModal('categoryModal');
             window.showAlert("تم التعديل", "success");
             logAction("تعديل قسم", `تعديل اسم القسم إلى: ${name}`);
         });
     } else {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
-            return window.showAlert("ليس لديك صلاحية لإضافة أقسام جديدة!", "error");
-        }
+        if (isSup && !canAdd) return window.showAlert("ليس لديك صلاحية لإضافة أقسام جديدة!", "error");
         push(ref(db, 'categories'), { name: name, isActive: true }).then(() => {
             window.closeModal('categoryModal');
             window.showAlert("تم إضافة القسم", "success");
@@ -1339,7 +1385,10 @@ window.saveCategory = () => {
 };
 
 window.editCategory = (id, name) => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+
+    if (isSup && !canEditFull) {
         return window.showAlert("ليس لديك صلاحية لتعديل الأقسام!", "error");
     }
     editingCatId = id; 
@@ -1348,7 +1397,10 @@ window.editCategory = (id, name) => {
 };
 
 window.deleteCategory = (id, name) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canDelete) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canDelete = window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : false;
+
+    if (isSup && !canDelete) {
         return window.showAlert("ليس لديك صلاحية لحذف الأقسام!", "error");
     }
     window.showConfirm("هل متأكد من حذف القسم؟", () => {
@@ -1372,18 +1424,15 @@ window.filterCategories = () => {
     
     let filtered = allCategories.filter(c => (c.name || "").toLowerCase().includes(term));
 
-    let canEdit = true;
-    let canDelete = true;
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-        canEdit = !!window.currentEmpPermissions.canEdit;
-        canDelete = !!window.currentEmpPermissions.canDelete;
-    }
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEdit = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : true;
+    const canDelete = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : true;
     
     filtered.forEach(c => {
         let badgeClass = c.isActive ? 'badge-active' : 'badge-inactive';
         let badgeText = c.isActive ? 'مفعل' : 'مخفي';
         
-        let prodCount = allProducts.filter(p => p.category === c.name).length; // حساب عدد المنتجات
+        let prodCount = allProducts.filter(p => p.category === c.name).length; 
         
         table.innerHTML += `
             <tr>
@@ -1392,11 +1441,11 @@ window.filterCategories = () => {
                 <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                 <td>
                     <div class="actions">
-                        ${canEdit ? `
+                        ${(!isSup || canEdit) ? `
                         <button class="btn-action btn-edit" onclick="editCategory('${c.id}', '${c.name}')">
                             <i class="fas fa-pen"></i>
                         </button>` : ''}
-                        ${canDelete ? `
+                        ${(!isSup || canDelete) ? `
                         <button class="btn-action btn-delete" onclick="deleteCategory('${c.id}', '${c.name}')">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
@@ -1425,12 +1474,15 @@ onValue(ref(db, 'categories'), (snapshot) => {
 });
 
 // ==========================================
-// أسعار الشحن والمحافظات (الجديدة)
+// أسعار الشحن 
 // ==========================================
 let allShipping = [];
 
 window.openShippingModal = () => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+
+    if (isSup && !canAdd) {
         return window.showAlert("ليس لديك صلاحية للإضافة!", "error");
     }
     document.getElementById('shipGovName').value = "";
@@ -1450,7 +1502,10 @@ window.saveShipping = () => {
 };
 
 window.deleteShipping = (id) => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canDelete) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canDelete = window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : false;
+
+    if (isSup && !canDelete) {
         return window.showAlert("ليس لديك صلاحية للحذف!", "error");
     }
     window.showConfirm("هل أنت متأكد من حذف هذه المحافظة؟", () => { 
@@ -1464,10 +1519,8 @@ onValue(ref(db, 'shipping'), (snapshot) => {
     table.innerHTML = "";
     
     if (snapshot.exists()) {
-        let canDelete = true;
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-            canDelete = !!window.currentEmpPermissions.canDelete;
-        }
+        const isSup = window.currentUserRole === 'Supervisor';
+        const canDelete = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : true;
 
         snapshot.forEach(child => {
             let s = {id: child.key, ...child.val()};
@@ -1478,7 +1531,7 @@ onValue(ref(db, 'shipping'), (snapshot) => {
                     <td><span class="badge badge-active">مفعل</span></td>
                     <td>
                         <div class="actions">
-                            ${canDelete ? `<button class="btn-action btn-delete" onclick="deleteShipping('${s.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                            ${(!isSup || canDelete) ? `<button class="btn-action btn-delete" onclick="deleteShipping('${s.id}')"><i class="fas fa-trash"></i></button>` : ''}
                         </div>
                     </td>
                 </tr>`;
@@ -1501,7 +1554,10 @@ window.switchVoucherTab = (tab, btn) => {
 };
 
 window.openVoucherModal = () => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
+
+    if (isSup && !canAdd) {
         return window.showAlert("ليس لديك صلاحية لإضافة كوبونات جديدة!", "error");
     }
     editingVoucherId = null; 
@@ -1525,9 +1581,13 @@ window.saveVoucher = () => {
         value: Number(value), 
         usageLimit: Number(limit) 
     };
+
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+    const canAdd = window.currentEmpPermissions ? !!window.currentEmpPermissions.canAdd : false;
     
     if (editingVoucherId) {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+        if (isSup && !canEditFull) {
             return window.showAlert("ليس لديك صلاحية لتعديل الكوبونات!", "error");
         }
         update(ref(db, `vouchers/${editingVoucherId}`), data).then(() => {
@@ -1536,7 +1596,7 @@ window.saveVoucher = () => {
             logAction("تعديل كوبون", `تعديل الكود: ${code}`);
         });
     } else {
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canAdd) {
+        if (isSup && !canAdd) {
             return window.showAlert("ليس لديك صلاحية لإنشاء كوبونات جديدة!", "error");
         }
         data.usedBy = [];
@@ -1550,7 +1610,10 @@ window.saveVoucher = () => {
 };
 
 window.editVoucher = (id) => { 
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+
+    if (isSup && !canEditFull) {
         return window.showAlert("ليس لديك صلاحية لتعديل الكوبونات!", "error");
     }
     editingVoucherId = id; 
@@ -1565,7 +1628,10 @@ window.editVoucher = (id) => {
 };
 
 window.toggleVoucher = (id, status, code) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canEdit) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEditFull = window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : false;
+
+    if (isSup && !canEditFull) {
         return window.showAlert("ليس لديك صلاحية لتغيير حالة الكوبونات!", "error");
     }
     update(ref(db, `vouchers/${id}`), { isActive: !status }).then(() => {
@@ -1574,7 +1640,10 @@ window.toggleVoucher = (id, status, code) => {
 };
 
 window.deleteVoucher = (id, code) => {
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions && !window.currentEmpPermissions.canDelete) {
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canDelete = window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : false;
+
+    if (isSup && !canDelete) {
         return window.showAlert("ليس لديك صلاحية لحذف الكوبونات!", "error");
     }
     window.showConfirm("حذف الكوبون نهائياً؟", () => {
@@ -1622,12 +1691,9 @@ window.filterVouchers = () => {
         return textMatch && tabMatch;
     });
 
-    let canEdit = true;
-    let canDelete = true;
-    if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-        canEdit = !!window.currentEmpPermissions.canEdit;
-        canDelete = !!window.currentEmpPermissions.canDelete;
-    }
+    const isSup = window.currentUserRole === 'Supervisor';
+    const canEdit = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canEdit : true;
+    const canDelete = isSup && window.currentEmpPermissions ? !!window.currentEmpPermissions.canDelete : true;
     
     filtered.forEach(v => {
         let usedCount = 0;
@@ -1661,10 +1727,10 @@ window.filterVouchers = () => {
                 <td>
                     <div class="actions">
                         <button class="btn-action btn-users" onclick="showVoucherUsers('${v.id}')"><i class="fas fa-users"></i></button>
-                        ${canEdit ? `
+                        ${(!isSup || canEdit) ? `
                         <button class="btn-action btn-edit" onclick="editVoucher('${v.id}')"><i class="fas fa-pen"></i></button>
                         <button class="btn-action btn-hide" style="background-color: ${toggleBg}" onclick="toggleVoucher('${v.id}', ${v.isActive}, '${v.code}')" title="${toggleTitle}"><i class="fas ${toggleIcon}"></i></button>` : ''}
-                        ${canDelete ? `
+                        ${(!isSup || canDelete) ? `
                         <button class="btn-action btn-delete" onclick="deleteVoucher('${v.id}', '${v.code}')"><i class="fas fa-trash"></i></button>` : ''}
                     </div>
                 </td>
