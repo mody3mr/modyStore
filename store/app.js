@@ -19,6 +19,8 @@ const TELEGRAM_CHAT_ID = "5664540316";
 let allActiveProducts = [];
 let cart = [];
 let appliedVoucher = null; 
+let storeSettings = {}; 
+let currentShippingCost = 0; 
 
 // Toast Notifications Settings
 const Toast = Swal.mixin({
@@ -33,6 +35,62 @@ function formatDateTime(ms) {
     if(!ms) return "";
     return new Date(ms).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+// 1. جلب إعدادات المتجر (حالة المتجر، شريط الأخبار، طرق الدفع)
+onValue(ref(db, 'storeSettings'), (snapshot) => {
+    if (snapshot.exists()) {
+        storeSettings = snapshot.val();
+        
+        // تحديث شريط الأخبار
+        const ticker = document.getElementById("newsTicker");
+        if (ticker) {
+            if (storeSettings.newsTicker) {
+                ticker.innerText = storeSettings.newsTicker;
+                ticker.style.display = "block";
+            } else {
+                ticker.style.display = "none";
+            }
+        }
+
+        // تحديث طرق الدفع المتاحة
+        const pmSelect = document.getElementById("paymentMethod");
+        if (pmSelect && storeSettings.paymentMethods) {
+            pmSelect.innerHTML = "";
+            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="الدفع عند الاستلام (COD)">💵 الدفع عند الاستلام (COD)</option>';
+            if (storeSettings.paymentMethods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية (فودافون كاش، الخ)</option>';
+            if (storeSettings.paymentMethods.instapay) pmSelect.innerHTML += '<option value="إنستا باي (InstaPay)">⚡ إنستا باي (InstaPay)</option>';
+            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا / بطاقة ائتمان">💳 فيزا / بطاقة ائتمان</option>';
+        }
+    }
+});
+
+// 2. جلب أسعار الشحن وتحويلها لقائمة منسدلة
+onValue(ref(db, 'shipping'), (snapshot) => {
+    const citySelect = document.getElementById("custCity");
+    if (citySelect) {
+        citySelect.innerHTML = '<option value="">اختر المحافظة / المدينة...</option>';
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const s = child.val();
+                if (s.isActive) {
+                    citySelect.innerHTML += `<option value="${s.name}" data-price="${s.price}">${s.name} (شحن: ${s.price} ج.م)</option>`;
+                }
+            });
+        }
+    }
+});
+
+// دالة تحديث سعر الشحن عند تغيير المحافظة
+window.updateShippingCost = () => {
+    const citySelect = document.getElementById("custCity");
+    if (citySelect && citySelect.value) {
+        const selectedOption = citySelect.options[citySelect.selectedIndex];
+        currentShippingCost = Number(selectedOption.getAttribute('data-price')) || 0;
+    } else {
+        currentShippingCost = 0;
+    }
+    updateCartUI();
+};
 
 onValue(ref(db, 'categories'), (snapshot) => {
     const catBar = document.getElementById("catBar");
@@ -91,10 +149,14 @@ window.renderProducts = (filterType) => {
             priceHtml = `<span class="product-price"><span class="old-price" style="font-size:16px;">${p.price}</span> ${p.discountPrice} <span>ج.م</span></span>`;
             badgeHtml = `<div class="discount-badge">خصم ${p.price - p.discountPrice} ج.م</div>`;
         }
+        
+        // إظهار شارة نفاذ الكمية لو المخزون 0
+        let stockBadge = (p.stock === 0) ? `<div class="discount-badge" style="background:var(--gray); color:var(--text); left:15px; right:auto;">نفذت الكمية</div>` : '';
 
         grid.innerHTML += `
             <div class="product-card" onclick="openProductDetails('${p.id}')">
                 ${badgeHtml}
+                ${stockBadge}
                 <div class="product-img-wrapper">
                     <img src="${p.imageUrl}" class="product-img" onerror="this.src='https://via.placeholder.com/300x300?text=صورة+المنتج'">
                 </div>
@@ -102,7 +164,7 @@ window.renderProducts = (filterType) => {
                     <div class="product-cat">${p.category}</div>
                     <h3 class="product-title">${p.name}</h3>
                     <div class="price-wrapper">${priceHtml}</div>
-                    <button class="add-to-cart" onclick="event.stopPropagation(); addToCart('${p.id}', '${p.name}', ${p.effectivePrice}, '${p.imageUrl}')">
+                    <button class="add-to-cart" onclick="event.stopPropagation(); addToCart('${p.id}', '${p.name}', ${p.effectivePrice}, '${p.imageUrl}', ${p.stock || 0})">
                         إضافة للسلة <i class="fas fa-cart-plus"></i>
                     </button>
                 </div>
@@ -138,7 +200,7 @@ window.openProductDetails = (id) => {
 
     const addBtn = document.getElementById('modalAddBtn');
     addBtn.onclick = () => {
-        addToCart(p.id, p.name, p.effectivePrice, p.imageUrl);
+        addToCart(p.id, p.name, p.effectivePrice, p.imageUrl, p.stock || 0);
         closeProductModal();
     };
 
@@ -154,10 +216,21 @@ window.toggleCart = () => {
     document.getElementById("overlay").classList.toggle("show");
 };
 
-window.addToCart = (id, name, price, img) => {
+// تعديل إضافة للسلة للتحقق من المخزون وحالة المتجر
+window.addToCart = (id, name, price, img, stock) => {
+    if (storeSettings.isOpen === false) {
+        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا استقبال طلبات جديدة.', confirmButtonColor: 'var(--primary)'});
+    }
+
     const existingItem = cart.find(item => item.id === id);
+    const currentQty = existingItem ? existingItem.qty : 0;
+    
+    if ((currentQty + 1) > stock) {
+        return Toast.fire({icon: 'warning', title: `عفواً، الكمية المتاحة في المخزون هي ${stock} فقط`});
+    }
+
     if (existingItem) existingItem.qty++;
-    else cart.push({ id, name, price, img, qty: 1 });
+    else cart.push({ id, name, price, img, stock, qty: 1 });
     
     Toast.fire({icon: 'success', title: 'تمت الإضافة للسلة'});
     updateCartUI();
@@ -165,9 +238,13 @@ window.addToCart = (id, name, price, img) => {
     document.getElementById("overlay").classList.add("show");
 };
 
+// تعديل تغيير الكمية للتحقق من المخزون
 window.updateQty = (id, change) => {
     const item = cart.find(item => item.id === id);
     if(item) {
+        if(change > 0 && (item.qty + change) > item.stock) {
+            return Toast.fire({icon: 'warning', title: `أقصى كمية متاحة هي ${item.stock}`});
+        }
         item.qty += change;
         if(item.qty <= 0) cart = cart.filter(i => i.id !== id);
         updateCartUI();
@@ -214,6 +291,12 @@ function updateCartUI() {
     }
     document.getElementById("cartCountBadge").innerText = count;
     document.getElementById("subtotalPrice").innerText = subtotal + " ج.م";
+    
+    // إضافة عرض مصاريف الشحن في السلة
+    if (document.getElementById("shippingCostValue")) {
+        document.getElementById("shippingCostValue").innerText = `+${currentShippingCost} ج.م`;
+    }
+
     calculateFinalTotal(subtotal);
 }
 
@@ -228,9 +311,9 @@ window.applyPromo = () => {
             snapshot.forEach(child => {
                 const v = child.val();
                 if(v.code === codeInput && v.isActive) {
-    foundVoucher = v;
-    foundVoucher.id = child.key; // السطر ده مهم جداً عشان نحتفظ بالـ ID الخاص بالكوبون
-}
+                    foundVoucher = v;
+                    foundVoucher.id = child.key; 
+                }
             });
         }
         if(foundVoucher) {
@@ -262,7 +345,9 @@ function calculateFinalTotal(subtotal) {
     } else {
         discountRow.style.display = "none";
     }
-    document.getElementById("finalTotalPrice").innerText = Math.round(subtotal - discount) + " ج.م";
+    
+    // حساب الإجمالي مع إضافة مصاريف الشحن
+    document.getElementById("finalTotalPrice").innerText = Math.round(subtotal - discount + currentShippingCost) + " ج.م";
 }
 
 window.openCheckoutModal = () => {
@@ -270,15 +355,19 @@ window.openCheckoutModal = () => {
         Swal.fire({icon: 'warning', title: 'عفواً', text: 'سلة المشتريات فارغة!', confirmButtonColor: 'var(--primary)'});
         return;
     }
+    if (storeSettings.isOpen === false) {
+        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا إتمام الطلب.', confirmButtonColor: 'var(--primary)'});
+    }
     document.getElementById("checkoutModal").style.display = "block";
     document.getElementById("cartSidebar").classList.remove("open");
 };
 
+// تعديل إرسال الطلب ليتضمن الشحن والكوبونات وتقليل المخزون
 window.sendOrder = async () => {
     const name = document.getElementById("custName").value;
     const phone = document.getElementById("custPhone").value;
     const phone2 = document.getElementById("custPhone2").value;
-    const city = document.getElementById("custCity").value;
+    const city = document.getElementById("custCity").value; // أصبحت منسدلة
     const region = document.getElementById("custRegion").value;
     const building = document.getElementById("custBuilding").value;
     const floor = document.getElementById("custFloor").value;
@@ -307,7 +396,7 @@ window.sendOrder = async () => {
         orderItemsForDb.push({ id: item.id, name: item.name, price: item.price, qty: item.qty });
     });
 
-    let finalTotal = subtotal;
+    let finalTotal = subtotal + currentShippingCost;
     let discountText = "";
     let discountVal = 0;
 
@@ -315,8 +404,7 @@ window.sendOrder = async () => {
         discountVal = appliedVoucher.type === "percentage" ? subtotal * (appliedVoucher.value/100) : appliedVoucher.value;
         if(discountVal > subtotal) discountVal = subtotal;
         finalTotal -= discountVal;
-        discountText = `
-🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
+        discountText = `\n🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
     }
 
     const orderId = Math.floor(10000000 + Math.random() * 90000000).toString(); 
@@ -333,7 +421,8 @@ window.sendOrder = async () => {
 
 📦 *المنتجات:*
 ${orderItemsText}
-💰 *الإجمالي الفرعي:* ${subtotal} ج.م${discountText}
+💰 *الإجمالي الفرعي:* ${subtotal} ج.م
+🚚 *رسوم الشحن:* ${currentShippingCost} ج.م${discountText}
 🔥 *الإجمالي النهائي: ${Math.round(finalTotal)} ج.م*
     `;
 
@@ -343,6 +432,7 @@ ${orderItemsText}
         paymentMethod: paymentMethod,
         items: orderItemsForDb,
         subtotal: subtotal,
+        shippingCost: currentShippingCost, // تم إضافة حفظ الشحن
         discount: discountVal,
         total: finalTotal,
         status: "قيد المراجعة", 
@@ -350,8 +440,32 @@ ${orderItemsText}
     };
 
     try {
+        // حفظ الطلب
         await push(ref(db, 'orders'), orderData);
+        
+        // تسجيل استخدام الكوبون للعميل في الداش بورد
+        if (appliedVoucher) {
+            await push(ref(db, `vouchers/${appliedVoucher.id}/usedBy`), {
+                name: name,
+                phone: phone,
+                orderId: orderId,
+                timestamp: Date.now()
+            });
+        }
+        
+        // تقليل المخزون للمنتجات المطلوبة
+        for (const item of cart) {
+            const productRef = ref(db, `products/${item.id}`);
+            const snapshot = await get(productRef);
+            if (snapshot.exists()) {
+                const p = snapshot.val();
+                let newStock = (p.stock || 0) - item.qty;
+                if (newStock < 0) newStock = 0;
+                await update(productRef, { stock: newStock });
+            }
+        }
 
+        // إرسال التليجرام
         const tgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
         await fetch(tgUrl, {
             method: 'POST',
@@ -372,6 +486,7 @@ ${orderItemsText}
         document.getElementById("successOrderId").innerText = orderId;
         
         cart = [];
+        appliedVoucher = null;
         updateCartUI();
 
     } catch (error) {
@@ -436,6 +551,7 @@ window.trackOrder = () => {
 
             const orderDate = new Date(foundOrder.createdAt).toLocaleDateString('ar-EG');
             let discountHtml = foundOrder.discount > 0 ? `<div style="color:var(--accent); display:flex; justify-content:space-between; margin-bottom:5px;"><span>الخصم:</span> <span>-${Math.round(foundOrder.discount)} ج.م</span></div>` : "";
+            let shippingHtml = `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الشحن:</span> <span>${foundOrder.shippingCost || 0} ج.م</span></div>`;
 
             let actionsHtml = '';
             if (foundOrder.status === 'قيد المراجعة') {
@@ -452,6 +568,7 @@ window.trackOrder = () => {
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'الدفع عند الاستلام'}</div>
                 ${itemsHtml}
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الإجمالي الفرعي:</span> <span>${foundOrder.subtotal} ج.م</span></div>
+                ${shippingHtml}
                 ${discountHtml}
                 <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:18px; font-weight:900; color:var(--primary); background:#e2e8f0; padding:10px; border-radius:8px;">
                     <span>الإجمالي النهائي:</span> <span>${Math.round(foundOrder.total)} ج.م</span>
@@ -514,6 +631,7 @@ window.editCustomerOrder = (dbId) => {
                             name: item.name,
                             price: item.price,
                             qty: item.qty,
+                            stock: fullProd.stock || 0, // إضافة المخزون للسلة
                             img: fullProd.imageUrl || 'https://via.placeholder.com/100'
                         });
                     });
@@ -522,13 +640,18 @@ window.editCustomerOrder = (dbId) => {
                         document.getElementById("custName").value = orderData.customer.name || '';
                         document.getElementById("custPhone").value = orderData.customer.phone || '';
                         document.getElementById("custPhone2").value = orderData.customer.phone2 || '';
-                        document.getElementById("custCity").value = orderData.customer.city || '';
                         document.getElementById("custRegion").value = orderData.customer.region || '';
                         document.getElementById("custBuilding").value = orderData.customer.building || '';
                         document.getElementById("custFloor").value = orderData.customer.floor || '';
                         document.getElementById("custAppt").value = orderData.customer.apartment || '';
                         document.getElementById("custLandmark").value = orderData.customer.landmark || '';
                         document.getElementById("custAddress").value = orderData.customer.address || '';
+                        // إعادة تعيين المحافظة لو موجودة
+                        const citySelect = document.getElementById("custCity");
+                        if(citySelect && orderData.customer.city) {
+                            citySelect.value = orderData.customer.city;
+                            updateShippingCost();
+                        }
                     }
                     
                     update(ref(db, `orders/${dbId}`), { 
