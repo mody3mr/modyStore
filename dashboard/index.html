@@ -46,60 +46,39 @@
             height: 0;
         }
 
-        /* تظبيط شكل الطباعة للفواتير والبوليصة بناءً على طلبك */
+        /* نظام طباعة صارم يمنع الصفحة البيضاء ويصغر الحجم */
         @media print {
-            body * {
-                visibility: hidden;
+            body { background: white !important; overflow: visible !important; margin: 0; padding: 0; }
+            body > * { display: none !important; }
+            
+            /* إظهار فقط حاويات الطباعة المطلوبة */
+            body.print-mode-invoice .print-invoice-area { display: block !important; position: relative; width: 100%; padding: 15px; }
+            body.print-mode-waybill .print-waybill-area { display: block !important; position: relative; width: 100%; margin: 0; padding: 0;}
+            body.print-mode-bulk .bulk-print-container { display: block !important; position: relative; width: 100%; }
+            
+            /* تظبيط تقرير المبيعات في الطباعة */
+            body.print-mode-report .modal-overlay#salesReportModal { display: block !important; position: static; background: white; }
+            body.print-mode-report .modal { box-shadow: none; width: 100%; max-width: none; }
+            body.print-mode-report .report-filters, body.print-mode-report .close-btn { display: none !important; }
+            
+            /* تصغير حجم الورقة عشان تتناسب مع البوليصة وماتعملش صفحة فاضية */
+            @page { size: auto; margin: 0.5cm; }
+            
+            .bosta-waybill { 
+                transform: scale(0.95); 
+                transform-origin: top center; 
+                margin: 0 auto; 
+                padding: 15px !important; 
+                border-width: 2px !important;
+                page-break-inside: avoid;
             }
             
-            /* طباعة الفاتورة */
-            body.print-mode-invoice .print-invoice-area, 
-            body.print-mode-invoice .print-invoice-area * {
-                visibility: visible;
+            /* تكبير الباركود أقصى عرض متاح */
+            #topBarcode, [id^="bulk-bc-"] { 
+                width: 100% !important; 
+                max-height: 120px !important; 
+                height: auto !important;
             }
-            body.print-mode-invoice .print-invoice-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 15px;
-                background: white;
-            }
-
-            /* طباعة بوليصة الشحن (إخفاء كل شيء وإظهار البوليصة فقط) */
-            body.print-mode-waybill .print-waybill-area, 
-            body.print-mode-waybill .print-waybill-area * {
-                visibility: visible;
-            }
-            body.print-mode-waybill .print-waybill-area {
-                display: block !important;
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-            }
-
-            /* طباعة بوليصات مجمعة */
-            body.print-mode-bulk .bulk-print-container,
-            body.print-mode-bulk .bulk-print-container * {
-                visibility: visible;
-            }
-            body.print-mode-bulk .bulk-print-container {
-                position: absolute; left: 0; top: 0; width: 100%; display: block !important;
-            }
-
-            /* طباعة تقرير الـ PDF بدون شاشة بيضاء */
-            body.print-mode-report #salesReportModal,
-            body.print-mode-report #salesReportModal * {
-                visibility: visible;
-            }
-            body.print-mode-report #salesReportModal {
-                position: absolute; left: 0; top: 0; width: 100%; box-shadow: none;
-            }
-            body.print-mode-report .report-filters, body.print-mode-report .close-btn { display: none !important; }
         }
     </style>
 </head>
@@ -159,7 +138,6 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 20px;">
-                <!-- جرس الإشعارات للنواقص وتحديد كمقروء -->
                 <div class="user-profile" id="notifBtn" style="position: relative; cursor: pointer;">
                     <i class="fas fa-bell" style="font-size: 22px; color: #64748b;"></i>
                     <span id="notifCount" style="position:absolute; top:-5px; right:-8px; background:var(--danger); color:white; font-size:11px; padding:2px 6px; border-radius:50%; display:none;">0</span>
@@ -676,6 +654,8 @@
 
         </div>
 
+        <!-- ================= النوافذ المنبثقة (Modals) الأساسية ================= -->
+        
         <!-- ================= تقرير المبيعات المفصل ================= -->
         <div class="modal-overlay" id="salesReportModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 800px; max-width: 95%;">
@@ -729,7 +709,6 @@
             <div class="modal animate__animated animate__zoomIn" style="width: 450px;">
                 <h3><i class="fas fa-qrcode"></i> سكانر لتأكيد الشحن</h3>
                 <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">قم بتوجيه قارئ الباركود على بوليصة الشحن. يوجد فاصل زمني لمنع التكرار.</p>
-                <!-- تعديل شكل المستطيل ليناسب الباركود الشريطي -->
                 <div id="qr-reader" style="width: 100%; aspect-ratio: 2/1; border-radius: 8px; overflow: hidden; border: 2px solid var(--border);"></div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('scannerModal'); stopScanner();">إغلاق وإيقاف الكاميرا</button>
@@ -773,7 +752,11 @@
                         <strong style="color: var(--primary); margin-bottom: 10px; display: block;">خيارات بوليصة الشحن:</strong>
                         <div class="input-group">
                             <label>السماح بفتح الشحنة؟</label>
-                            <select id="wbAllowOpen"><option value="نعم">نعم</option><option value="لا">لا</option></select>
+                            <!-- خليت الافتراضي "لا" زي ما طلبت -->
+                            <select id="wbAllowOpen">
+                                <option value="لا" selected>لا</option>
+                                <option value="نعم">نعم</option>
+                            </select>
                         </div>
                         <div class="input-group">
                             <label>ملاحظات للمندوب</label>
@@ -793,102 +776,7 @@
             </div>
         </div>
 
-        <!-- ================= تصميم بوليصة الشحن للطباعة ================= -->
-        <div id="waybillPrintArea" class="print-waybill-area" style="display:none; background:white;">
-            <!-- تم التعديل لتأخذ البوليصة مساحة الورقة كلها والباركود يكون كبير -->
-            <div class="bosta-waybill" style="width: 100%; height: 100%; border: 3px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; padding: 20px; box-sizing: border-box;">
-                <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
-                    <div style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">ModyStore <i class="fas fa-bolt"></i></div>
-                    <!-- الباركود بحجم كبير جداً -->
-                    <svg id="topBarcode" style="width: 100%; height: 120px; max-width: none; margin: 0 auto;"></svg>
-                </div>
-
-                <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1; border-left: 2px solid black; padding-left: 10px; font-size: 18px;">
-                        <strong>من:</strong> مودي ستور<br>
-                        <strong>السماح بالفتح:</strong> <span id="printAllowOpen">نعم</span>
-                    </div>
-                    <div style="flex: 1; padding-right: 10px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
-                </div>
-
-                <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
-                    <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:24px;"></span><br>
-                    <strong>المحافظة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
-                    <strong>العنوان:</strong> <span id="printAddress"></span><br>
-                    <strong>مبنى:</strong> <span id="printBuilding">-</span> | <strong>دور:</strong> <span id="printFloor">-</span> | <strong>شقة:</strong> <span id="printApartment">-</span><br>
-                    <strong>علامة مميزة:</strong> <span id="printLandmark">-</span>
-                </div>
-
-                <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
-                    <div style="flex: 1; border-left: 2px solid black;">
-                        <strong>تليفون:</strong> <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:22px;"></span>
-                    </div>
-                    <div style="flex: 1; padding-right: 10px;">
-                        <strong>تليفون آخر:</strong> <span id="printPhone2" dir="ltr">-</span>
-                    </div>
-                </div>
-
-                <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 18px;">
-                    <strong>الوصف:</strong> <span id="printProductsDesc"></span><br>
-                    <strong>ملاحظات:</strong> <span id="printNotes"></span>
-                </div>
-
-                <div id="codAmountContainer" style="text-align: center; border: 3px solid black; padding: 20px; margin-bottom: 15px; border-radius: 12px;">
-                    <strong style="font-size:20px;">المبلغ المطلوب تحصيله (COD)</strong><br>
-                    <span id="printCodAmount" style="font-size:40px; font-weight:900;"></span>
-                </div>
-
-                <div id="paidAmountContainer" style="text-align: center; font-size: 20px; display:none; background-color: #f8fafc; padding: 20px; border: 3px solid black; border-radius: 12px; margin-bottom: 15px;">
-                    <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> <br>
-                    <strong>القيمة:</strong> <span id="printPaidAmount" style="font-weight:bold;"></span>
-                </div>
-
-                <div style="text-align: center; font-weight: bold; margin-top: 20px; font-size: 20px;">
-                    شكراً لثقتكم بنا <span style="color: red; font-size: 24px;">❤️</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ================= تصميم الفاتورة المنفصلة ================= -->
-        <div id="invoicePrintContainer" class="print-invoice-area" style="display:none; background:white; color:black; font-family:'Cairo';">
-            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
-                <h1 style="margin: 0; font-size: 28px;">ModyStore</h1>
-                <p style="margin: 5px 0 0 0; font-size: 16px;">فاتورة طلب عميل</p>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
-                <div>
-                    <strong>العميل:</strong> <span id="invCustName"></span><br>
-                    <strong>التليفون:</strong> <span id="invCustPhone" dir="ltr"></span><br>
-                    <strong>العنوان:</strong> <span id="invCustAddress"></span>
-                </div>
-                <div style="text-align: left;">
-                    <strong>رقم الفاتورة:</strong> <span id="invOrderId"></span><br>
-                    <strong>التاريخ:</strong> <span id="invDate"></span>
-                </div>
-            </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; text-align: center;">
-                <thead>
-                    <tr style="background-color: #f1f5f9;">
-                        <th style="padding: 10px; border: 1px solid black; text-align: right;">المنتج</th>
-                        <th style="padding: 10px; border: 1px solid black;">الكمية</th>
-                        <th style="padding: 10px; border: 1px solid black;">السعر</th>
-                        <th style="padding: 10px; border: 1px solid black;">المجموع</th>
-                    </tr>
-                </thead>
-                <tbody id="invItemsList"></tbody>
-            </table>
-            <div style="text-align: left; font-size: 16px; border-top: 2px solid black; padding-top: 10px;">
-                <p style="margin: 5px 0;"><strong>الإجمالي الفرعي:</strong> <span id="invSubtotal"></span></p>
-                <p style="margin: 5px 0; color: var(--accent);"><strong>الخصم:</strong> <span id="invDiscount"></span></p>
-                <p style="margin: 10px 0 0 0; font-size: 22px; font-weight: bold;"><strong>الصافي للدفع:</strong> <span id="invTotal"></span></p>
-            </div>
-            <div style="text-align: center; margin-top: 40px; font-size: 14px; border-top: 1px dashed black; padding-top: 15px;">شكراً لتسوقكم معنا!</div>
-        </div>
-
-        <!-- ================= حاوية الطباعة المجمعة ================= -->
-        <div id="bulkPrintContainer" class="bulk-print-container" style="display:none; background:white;"></div>
-
-        <!-- ================= النوافذ المنبثقة الجديدة للماليات والمرتجعات ================= -->
+        <!-- ================= النوافذ المنبثقة (Modals) التي سقطت سهواً ================= -->
         
         <!-- فاتورة مشتريات جديدة -->
         <div class="modal-overlay" id="purchaseModal">
@@ -986,8 +874,6 @@
             </div>
         </div>
 
-        <!-- ================= النوافذ القديمة (منتج، قسم، شحن، كوبون، موظف) ================= -->
-        
         <!-- إضافة/تعديل منتج -->
         <div class="modal-overlay" id="productModal">
             <div class="modal animate__animated animate__zoomIn">
@@ -1067,7 +953,102 @@
         </div>
 
     </main>
+
+    <!-- !!! تم نقل حاويات الطباعة أسفل الصفحة لتجنب مشكلة الطباعة البيضاء !!! -->
+    <!-- ================= تصميم بوليصة الشحن للطباعة ================= -->
+    <div id="waybillPrintArea" class="print-waybill-area" style="display:none; background:white;">
+        <div class="bosta-waybill" style="width: 100%; border: 3px solid black; font-family: 'Cairo', sans-serif; direction: rtl; background: white; color: black; box-sizing: border-box;">
+            <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
+                <div style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">ModyStore <i class="fas fa-bolt"></i></div>
+                <!-- الباركود بحجم كبير جداً مالي الشاشة -->
+                <svg id="topBarcode" style="width: 100%; height: 120px; max-width: none; margin: 0 auto;"></svg>
+            </div>
+
+            <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px;">
+                <div style="flex: 1; border-left: 2px solid black; padding-left: 10px; font-size: 18px;">
+                    <strong>من:</strong> مودي ستور<br>
+                    <strong>السماح بالفتح:</strong> <span id="printAllowOpen">لا</span>
+                </div>
+                <div style="flex: 1; padding-right: 10px; display: flex; justify-content: center; align-items: center;" id="qrCodeBox"></div>
+            </div>
+
+            <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
+                <strong>إلى:</strong> <span id="printCustName" style="font-weight:bold; font-size:24px;"></span><br>
+                <strong>المحافظة:</strong> <span id="printCity"></span> | <strong>المنطقة:</strong> <span id="printRegion"></span><br>
+                <strong>العنوان:</strong> <span id="printAddress"></span><br>
+                <strong>مبنى:</strong> <span id="printBuilding">-</span> | <strong>دور:</strong> <span id="printFloor">-</span> | <strong>شقة:</strong> <span id="printApartment">-</span><br>
+                <strong>علامة مميزة:</strong> <span id="printLandmark">-</span>
+            </div>
+
+            <div style="display: flex; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 20px;">
+                <div style="flex: 1; border-left: 2px solid black;">
+                    <strong>تليفون:</strong> <span id="printPhone1" dir="ltr" style="font-weight:bold; font-size:22px;"></span>
+                </div>
+                <div style="flex: 1; padding-right: 10px;">
+                    <strong>تليفون آخر:</strong> <span id="printPhone2" dir="ltr">-</span>
+                </div>
+            </div>
+
+            <div style="border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 15px; font-size: 18px;">
+                <strong>الوصف:</strong> <span id="printProductsDesc"></span><br>
+                <strong>ملاحظات:</strong> <span id="printNotes"></span>
+            </div>
+
+            <div id="codAmountContainer" style="text-align: center; border: 3px solid black; padding: 20px; margin-bottom: 15px; border-radius: 12px;">
+                <strong style="font-size:20px;">المبلغ المطلوب تحصيله (COD)</strong><br>
+                <span id="printCodAmount" style="font-size:40px; font-weight:900;"></span>
+            </div>
+
+            <div id="paidAmountContainer" style="text-align: center; font-size: 20px; display:none; background-color: #f8fafc; padding: 20px; border: 3px solid black; border-radius: 12px; margin-bottom: 15px;">
+                <strong>طريقة الدفع:</strong> <span id="printPaymentMethodLabel" style="font-weight:bold;"></span> <br>
+                <strong>القيمة:</strong> <span id="printPaidAmount" style="font-weight:bold;"></span>
+            </div>
+
+            <div style="text-align: center; font-weight: bold; margin-top: 15px; font-size: 20px;">
+                شكراً لثقتكم بنا <span style="color: red; font-size: 24px;">❤️</span>
+            </div>
+        </div>
+    </div>
     
+    <!-- ================= تصميم الفاتورة المنفصلة ================= -->
+    <div id="invoicePrintContainer" class="print-invoice-area" style="display:none; background:white; color:black; font-family:'Cairo';">
+        <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 28px;">ModyStore</h1>
+            <p style="margin: 5px 0 0 0; font-size: 16px;">فاتورة طلب عميل</p>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+            <div>
+                <strong>العميل:</strong> <span id="invCustName"></span><br>
+                <strong>التليفون:</strong> <span id="invCustPhone" dir="ltr"></span><br>
+                <strong>العنوان:</strong> <span id="invCustAddress"></span>
+            </div>
+            <div style="text-align: left;">
+                <strong>رقم الفاتورة:</strong> <span id="invOrderId"></span><br>
+                <strong>التاريخ:</strong> <span id="invDate"></span>
+            </div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; text-align: center;">
+            <thead>
+                <tr style="background-color: #f1f5f9;">
+                    <th style="padding: 10px; border: 1px solid black; text-align: right;">المنتج</th>
+                    <th style="padding: 10px; border: 1px solid black;">الكمية</th>
+                    <th style="padding: 10px; border: 1px solid black;">السعر</th>
+                    <th style="padding: 10px; border: 1px solid black;">المجموع</th>
+                </tr>
+            </thead>
+            <tbody id="invItemsList"></tbody>
+        </table>
+        <div style="text-align: left; font-size: 16px; border-top: 2px solid black; padding-top: 10px;">
+            <p style="margin: 5px 0;"><strong>الإجمالي الفرعي:</strong> <span id="invSubtotal"></span></p>
+            <p style="margin: 5px 0; color: var(--accent);"><strong>الخصم:</strong> <span id="invDiscount"></span></p>
+            <p style="margin: 10px 0 0 0; font-size: 22px; font-weight: bold;"><strong>الصافي للدفع:</strong> <span id="invTotal"></span></p>
+        </div>
+        <div style="text-align: center; margin-top: 40px; font-size: 14px; border-top: 1px dashed black; padding-top: 15px;">شكراً لتسوقكم معنا!</div>
+    </div>
+
+    <!-- ================= حاوية الطباعة المجمعة ================= -->
+    <div id="bulkPrintContainer" class="bulk-print-container" style="display:none; background:white;"></div>
+
     <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js"></script>
 </body>
