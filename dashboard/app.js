@@ -117,16 +117,22 @@ onAuthStateChanged(auth, (user) => {
                         window.currentEmpPermissions = empData.permissions || null; 
                         
                         // --- تطبيق الصلاحيات للمشرفين وحماية الواجهة أمنياً ---
-                        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-                            const allowedTabs = window.currentEmpPermissions.tabs || [];
-                            
-                            // إزالة التابات غير المسموح بها من القائمة الجانبية تماماً
-                            document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
-                                const target = nav.getAttribute('data-target');
-                                if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
-                                    nav.style.display = 'none';
-                                    nav.remove();
-                                }
+                       // داخل onAuthStateChanged بعد جلب الصلاحيات
+if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+    const allowedTabs = window.currentEmpPermissions.tabs || [];
+    
+    // حماية التابات وإزالتها تماماً من الـ DOM لمنع التحايل
+    document.querySelectorAll('.view-section').forEach(view => {
+        const viewId = view.id;
+        if (viewId !== 'analytics-view' && !allowedTabs.includes(viewId)) {
+            view.innerHTML = '<div style="padding: 50px; text-align: center; color: red;"><h2>ليس لديك صلاحية للوصول لهذه الصفحة.</h2></div>';
+        }
+    });
+    
+    // إخفاء تاب الإعدادات نهائياً
+    const settingsNav = document.querySelector('[data-target="settings-view"]');
+    if (settingsNav) settingsNav.remove();
+}
                             });
 
                             // إخفاء وحماية الأزرار الحساسة (إضافة / تعديل / حذف) للمشرفين
@@ -547,20 +553,30 @@ window.filterReportProducts = () => {
 
 window.exportReportToExcel = () => {
     if (typeof XLSX === 'undefined') {
-        return window.showAlert("برجاء إضافة مكتبة Excel في ملف HTML لتصدير الإحصائيات");
+        return window.showAlert("برجاء إضافة مكتبة Excel");
     }
+    
+    // جلب التاريخ المختار للتقرير
+    const dateSelected = document.getElementById("reportSpecificDate").value || "كل الأوقات";
+    const exportDate = new Date().toLocaleString('ar-EG');
+
     let formattedData = currentReportProducts.map(p => ({
         "اسم المنتج": p.name,
         "الكمية المباعة": p.qty,
-        "إيراد المنتج (قبل الخصم)": Math.round(p.revenue)
+        "إيراد المنتج": Math.round(p.revenue),
+        "إجمالي الخصومات": p.discountTotal || 0, // لازم تتأكد إنك بتحسب الخصومات في دالة generateReport
+        "الفترة المحددة": dateSelected,
+        "تاريخ استخراج التقرير": exportDate
     }));
+
     let worksheet = XLSX.utils.json_to_sheet(formattedData);
     let workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
     XLSX.writeFile(workbook, `Sales_Report_${new Date().getTime()}.xlsx`);
-    logAction("تصدير تقرير", `تم تصدير تقرير المبيعات إلى إكسيل`);
+    
+    // تسجيل الحدث في سجل النشاطات
+    logAction("تصدير تقرير", `تم تصدير تقرير المبيعات إلى إكسيل للفترة: ${dateSelected}`);
 };
-
 window.exportReportToPDF = () => {
     document.body.classList.add('print-mode-report');
     window.print();
