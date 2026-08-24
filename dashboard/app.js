@@ -1120,31 +1120,30 @@ onValue(ref(db, 'orders'), (snapshot) => {
 let html5QrcodeScanner = null;
 let lastScanTime = 0;
 
-window.openScannerModal = () => {
-    document.getElementById('scannerModal').style.display = 'flex';
-    html5QrcodeScanner = new Html5Qrcode("qr-reader");
-    html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 350, height: 150 } },
-        (decodedText) => {
-            let now = Date.now();
-            if (now - lastScanTime < 1500) return; 
-            lastScanTime = now;
-            
-            let beep = document.getElementById('barcodeBeep');
-            if (beep) { beep.currentTime = 0; beep.play().catch(e=>console.log(e)); }
+window.processManualScan = () => {
+    let code = document.getElementById('manualBarcode').value.trim();
+    if (!code) return window.showAlert("أدخل رقم الطلب أولاً", "error");
+    processScannedCode(code); // افصل لوجيك السكانر في دالة مساعدة
+    document.getElementById('manualBarcode').value = '';
+};
 
-            let order = allOrders.find(o => o.displayId === decodedText || o.orderId === decodedText || o.secretCode === decodedText);
-            if(order) {
-                if(order.status === 'تم الشحن' || order.status === 'تم تسليمه' || order.status === 'ملغي' || order.status === 'مرتجع') {
-                    window.showAlert(`الطلب حالته الحالية: ${order.status}`, 'warning');
-                } else {
-                    update(ref(db, `orders/${order.dbId}`), { status: 'تم الشحن', shippedAt: Date.now() });
-                    window.showAlert('تم تحويل الطلب لـ تم الشحن!', 'success');
-                    logAction("سكانر شحن", `تأكيد شحن طلب #${order.displayId} عبر السكانر`);
-                }
-            } else {
-                window.showAlert('لم يتم العثور على الطلب!', 'error');
-            }
-        },
+function processScannedCode(decodedText) {
+    let beep = document.getElementById('barcodeBeep');
+    if (beep) { beep.currentTime = 0; beep.play().catch(e=>console.log(e)); }
+
+    let order = allOrders.find(o => o.displayId === decodedText || o.orderId === decodedText || o.secretCode === decodedText);
+    if(order) {
+        if(order.status === 'تم الشحن' || order.status === 'تم تسليمه' || order.status === 'ملغي' || order.status === 'مرتجع') {
+            window.showAlert(`الطلب حالته الحالية: ${order.status}`, 'warning');
+        } else {
+            update(ref(db, `orders/${order.dbId}`), { status: 'تم الشحن', shippedAt: Date.now() });
+            window.showAlert('تم تحويل الطلب لـ تم الشحن!', 'success');
+            logAction("سكانر شحن", `تأكيد شحن طلب #${order.displayId}`);
+        }
+    } else {
+        window.showAlert('لم يتم العثور على الطلب!', 'error');
+    }
+}
         (error) => { /* ignore */ }
     ).catch(err => {
         console.error(err);
