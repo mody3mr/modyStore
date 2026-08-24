@@ -108,7 +108,7 @@
 <body>
 
     <!-- ملف الصوت الخاص بالسكانر -->
-    <audio id="barcodeBeep" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    <audio id="barcodeBeep" src="https://www.soundjay.com/buttons/sounds/beep-07a.mp3" preload="auto"></audio>
 
     <!-- ================= القائمة الجانبية ================= -->
     <aside class="sidebar" id="sidebar">
@@ -746,7 +746,14 @@
                 </div>
             </div>
         </div>
-
+    <!-- داخل scannerModal -->
+<div class="input-group" style="margin-top: 15px;">
+    <label>إدخال رقم الطلب يدوياً (في حال تعطل السكانر)</label>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="manualBarcode" placeholder="رقم الطلب...">
+        <button class="btn-save" onclick="processManualScan()">تأكيد</button>
+    </div>
+</div>
         <!-- ================= تفاصيل الطلب وخيارات الطباعة ================= -->
         <div class="modal-overlay" id="orderDetailsModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 800px;">
