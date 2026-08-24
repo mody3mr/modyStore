@@ -853,10 +853,16 @@ window.updateOrderStatus = (orderId, selectElement, displayId, oldStatus) => {
 
     update(ref(db, `orders/${orderId}`), updates).then(() => {
         logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ${newStatus}`);
+        
+        // تصفير الفلتر عشان الطلب ميختفيش
+        const statusFilter = document.getElementById("filterOrderStatus");
+        if (statusFilter && statusFilter.value !== '') {
+            statusFilter.value = '';
+        }
+        
         window.showAlert("تم تحديث الحالة بنجاح", "success");
     });
 };
-
 // ==========================================
 // عرض تفاصيل الطلب والطباعة (الدوال التي كانت ناقصة)
 // ==========================================
