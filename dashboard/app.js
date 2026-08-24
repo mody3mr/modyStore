@@ -117,22 +117,16 @@ onAuthStateChanged(auth, (user) => {
                         window.currentEmpPermissions = empData.permissions || null; 
                         
                         // --- تطبيق الصلاحيات للمشرفين وحماية الواجهة أمنياً ---
-                       // داخل onAuthStateChanged بعد جلب الصلاحيات
-if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-    const allowedTabs = window.currentEmpPermissions.tabs || [];
-    
-    // حماية التابات وإزالتها تماماً من الـ DOM لمنع التحايل
-    document.querySelectorAll('.view-section').forEach(view => {
-        const viewId = view.id;
-        if (viewId !== 'analytics-view' && !allowedTabs.includes(viewId)) {
-            view.innerHTML = '<div style="padding: 50px; text-align: center; color: red;"><h2>ليس لديك صلاحية للوصول لهذه الصفحة.</h2></div>';
-        }
-    });
-    
-    // إخفاء تاب الإعدادات نهائياً
-    const settingsNav = document.querySelector('[data-target="settings-view"]');
-    if (settingsNav) settingsNav.remove();
-}
+                        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+                            const allowedTabs = window.currentEmpPermissions.tabs || [];
+                            
+                            // إزالة التابات غير المسموح بها من القائمة الجانبية تماماً
+                            document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
+                                const target = nav.getAttribute('data-target');
+                                if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
+                                    nav.style.display = 'none';
+                                    nav.remove();
+                                }
                             });
 
                             // إخفاء وحماية الأزرار الحساسة (إضافة / تعديل / حذف) للمشرفين
@@ -553,30 +547,20 @@ window.filterReportProducts = () => {
 
 window.exportReportToExcel = () => {
     if (typeof XLSX === 'undefined') {
-        return window.showAlert("برجاء إضافة مكتبة Excel");
+        return window.showAlert("برجاء إضافة مكتبة Excel في ملف HTML لتصدير الإحصائيات");
     }
-    
-    // جلب التاريخ المختار للتقرير
-    const dateSelected = document.getElementById("reportSpecificDate").value || "كل الأوقات";
-    const exportDate = new Date().toLocaleString('ar-EG');
-
     let formattedData = currentReportProducts.map(p => ({
         "اسم المنتج": p.name,
         "الكمية المباعة": p.qty,
-        "إيراد المنتج": Math.round(p.revenue),
-        "إجمالي الخصومات": p.discountTotal || 0, // لازم تتأكد إنك بتحسب الخصومات في دالة generateReport
-        "الفترة المحددة": dateSelected,
-        "تاريخ استخراج التقرير": exportDate
+        "إيراد المنتج (قبل الخصم)": Math.round(p.revenue)
     }));
-
     let worksheet = XLSX.utils.json_to_sheet(formattedData);
     let workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
     XLSX.writeFile(workbook, `Sales_Report_${new Date().getTime()}.xlsx`);
-    
-    // تسجيل الحدث في سجل النشاطات
-    logAction("تصدير تقرير", `تم تصدير تقرير المبيعات إلى إكسيل للفترة: ${dateSelected}`);
+    logAction("تصدير تقرير", `تم تصدير تقرير المبيعات إلى إكسيل`);
 };
+
 window.exportReportToPDF = () => {
     document.body.classList.add('print-mode-report');
     window.print();
@@ -620,11 +604,6 @@ function updateChartsData() {
         d.setDate(d.getDate() - i);
         let dateStr = d.toLocaleDateString('ar-EG');
         daysStats[dateStr] = { count: 0, revenue: 0 };
-        // بعد حساب counts.pending, counts.processing الخ
-if(document.getElementById('statRevCount')) document.getElementById('statRevCount').innerText = counts.pending;
-if(document.getElementById('statProcCount')) document.getElementById('statProcCount').innerText = counts.processing;
-if(document.getElementById('statShipCount')) document.getElementById('statShipCount').innerText = counts.shipped;
-if(document.getElementById('statDelivCount')) document.getElementById('statDelivCount').innerText = counts.delivered;
     }
 
     allOrders.forEach(o => {
@@ -874,16 +853,10 @@ window.updateOrderStatus = (orderId, selectElement, displayId, oldStatus) => {
 
     update(ref(db, `orders/${orderId}`), updates).then(() => {
         logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ${newStatus}`);
-        
-        // تصفير الفلتر عشان الطلب ميختفيش
-        const statusFilter = document.getElementById("filterOrderStatus");
-        if (statusFilter && statusFilter.value !== '') {
-            statusFilter.value = '';
-        }
-        
         window.showAlert("تم تحديث الحالة بنجاح", "success");
     });
 };
+
 // ==========================================
 // عرض تفاصيل الطلب والطباعة (الدوال التي كانت ناقصة)
 // ==========================================
@@ -1141,30 +1114,31 @@ onValue(ref(db, 'orders'), (snapshot) => {
 let html5QrcodeScanner = null;
 let lastScanTime = 0;
 
-window.processManualScan = () => {
-    let code = document.getElementById('manualBarcode').value.trim();
-    if (!code) return window.showAlert("أدخل رقم الطلب أولاً", "error");
-    processScannedCode(code); // افصل لوجيك السكانر في دالة مساعدة
-    document.getElementById('manualBarcode').value = '';
-};
+window.openScannerModal = () => {
+    document.getElementById('scannerModal').style.display = 'flex';
+    html5QrcodeScanner = new Html5Qrcode("qr-reader");
+    html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 350, height: 150 } },
+        (decodedText) => {
+            let now = Date.now();
+            if (now - lastScanTime < 1500) return; 
+            lastScanTime = now;
+            
+            let beep = document.getElementById('barcodeBeep');
+            if (beep) { beep.currentTime = 0; beep.play().catch(e=>console.log(e)); }
 
-function processScannedCode(decodedText) {
-    let beep = document.getElementById('barcodeBeep');
-    if (beep) { beep.currentTime = 0; beep.play().catch(e=>console.log(e)); }
-
-    let order = allOrders.find(o => o.displayId === decodedText || o.orderId === decodedText || o.secretCode === decodedText);
-    if(order) {
-        if(order.status === 'تم الشحن' || order.status === 'تم تسليمه' || order.status === 'ملغي' || order.status === 'مرتجع') {
-            window.showAlert(`الطلب حالته الحالية: ${order.status}`, 'warning');
-        } else {
-            update(ref(db, `orders/${order.dbId}`), { status: 'تم الشحن', shippedAt: Date.now() });
-            window.showAlert('تم تحويل الطلب لـ تم الشحن!', 'success');
-            logAction("سكانر شحن", `تأكيد شحن طلب #${order.displayId}`);
-        }
-    } else {
-        window.showAlert('لم يتم العثور على الطلب!', 'error');
-    }
-}
+            let order = allOrders.find(o => o.displayId === decodedText || o.orderId === decodedText || o.secretCode === decodedText);
+            if(order) {
+                if(order.status === 'تم الشحن' || order.status === 'تم تسليمه' || order.status === 'ملغي' || order.status === 'مرتجع') {
+                    window.showAlert(`الطلب حالته الحالية: ${order.status}`, 'warning');
+                } else {
+                    update(ref(db, `orders/${order.dbId}`), { status: 'تم الشحن', shippedAt: Date.now() });
+                    window.showAlert('تم تحويل الطلب لـ تم الشحن!', 'success');
+                    logAction("سكانر شحن", `تأكيد شحن طلب #${order.displayId} عبر السكانر`);
+                }
+            } else {
+                window.showAlert('لم يتم العثور على الطلب!', 'error');
+            }
+        },
         (error) => { /* ignore */ }
     ).catch(err => {
         console.error(err);
@@ -1412,22 +1386,22 @@ window.saveExpense = () => {
 
 onValue(ref(db, 'finance'), (snapshot) => {
     allFinance = [];
-    let totalPur = 0;
-    let totalExp = 0;
+    let total = 0;
     if(snapshot.exists()){
         snapshot.forEach(child => {
             let f = child.val();
             f.id = child.key;
             allFinance.push(f);
-            if (f.type === 'purchase') totalPur += f.amount;
-            if (f.type === 'expense') totalExp += f.amount;
+            total += f.amount;
         });
     }
     allFinance.reverse();
-    if(document.getElementById('statTotalPurchases')) document.getElementById('statTotalPurchases').innerText = totalPur + " ج.م";
-    if(document.getElementById('statTotalExpenses')) document.getElementById('statTotalExpenses').innerText = totalExp + " ج.م";
+    if(document.getElementById('statTotalExpenses')) {
+        document.getElementById('statTotalExpenses').innerText = total + " ج.م";
+    }
     renderFinanceTable();
 });
+
 window.renderFinanceTable = () => {
     const table = document.getElementById('financeTableBody');
     if(!table) return;
