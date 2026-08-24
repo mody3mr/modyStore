@@ -1392,22 +1392,22 @@ window.saveExpense = () => {
 
 onValue(ref(db, 'finance'), (snapshot) => {
     allFinance = [];
-    let total = 0;
+    let totalPur = 0;
+    let totalExp = 0;
     if(snapshot.exists()){
         snapshot.forEach(child => {
             let f = child.val();
             f.id = child.key;
             allFinance.push(f);
-            total += f.amount;
+            if (f.type === 'purchase') totalPur += f.amount;
+            if (f.type === 'expense') totalExp += f.amount;
         });
     }
     allFinance.reverse();
-    if(document.getElementById('statTotalExpenses')) {
-        document.getElementById('statTotalExpenses').innerText = total + " ج.م";
-    }
+    if(document.getElementById('statTotalPurchases')) document.getElementById('statTotalPurchases').innerText = totalPur + " ج.م";
+    if(document.getElementById('statTotalExpenses')) document.getElementById('statTotalExpenses').innerText = totalExp + " ج.م";
     renderFinanceTable();
 });
-
 window.renderFinanceTable = () => {
     const table = document.getElementById('financeTableBody');
     if(!table) return;
