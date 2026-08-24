@@ -325,14 +325,22 @@
             </div>
 
             <!-- التاب الجديد 1: المشتريات والمصروفات (الماليات) -->
-            <div id="finance-view" class="view-section animate__animated animate__fadeIn">
-                <div class="page-header" style="display:flex; flex-wrap:wrap; gap:10px;">
-                    <h2 class="page-title">المشتريات والمصروفات (الماليات)</h2>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button class="btn-save" style="background-color: var(--success);" onclick="openPurchaseModal()"><i class="fas fa-file-invoice-dollar"></i> فاتورة مشتريات (تزود المخزون)</button>
-                        <button class="btn-save" style="background-color: var(--danger);" onclick="openExpenseModal()"><i class="fas fa-money-bill-wave"></i> إضافة مصروفات</button>
-                    </div>
-                </div>
+            <div class="stat-cards" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+    <div class="stat-card" style="padding: 15px;">
+        <div class="stat-icon" style="color: #10b981; background: #dcfce7;"><i class="fas fa-box-open"></i></div>
+        <div class="stat-info">
+            <h3 style="font-size: 12px;">إجمالي المشتريات</h3>
+            <p id="statTotalPurchases" style="font-size: 18px;">0 ج.م</p>
+        </div>
+    </div>
+    <div class="stat-card" style="padding: 15px;">
+        <div class="stat-icon" style="color: #ef4444; background: #fef2f2;"><i class="fas fa-minus-circle"></i></div>
+        <div class="stat-info">
+            <h3 style="font-size: 12px;">إجمالي المصروفات</h3>
+            <p id="statTotalExpenses" style="font-size: 18px;">0 ج.م</p>
+        </div>
+    </div>
+</div>
 
                 <div class="custom-tabs">
                     <button class="custom-tab-btn active" onclick="switchFinanceTab('all', this)">كل العمليات</button>
