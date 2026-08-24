@@ -449,34 +449,10 @@ tr:hover { background-color: #f8fafc; }
 /* ================= طباعة الفاتورة والبوليصة ================= */
 /* نظام طباعة صارم يمنع الصفحة البيضاء ويصغر الحجم */
         @media print {
-    body.print-mode-report {
-        background: white !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    body.print-mode-report > *:not(#salesReportModal) { 
-        display: none !important; 
-    }
-    body.print-mode-report .modal-overlay#salesReportModal { 
-        display: block !important; 
-        position: absolute !important; 
-        top: 0 !important; 
-        left: 0 !important; 
-        background: white !important; 
-        width: 100% !important;
-    }
-    body.print-mode-report .modal { 
-        box-shadow: none !important; 
-        width: 100% !important; 
-        max-width: none !important; 
-        margin: 0 !important; 
-        padding: 10px !important;
-    }
-    body.print-mode-report .report-filters, 
-    body.print-mode-report .close-btn { 
-        display: none !important; 
-    }
-}            
+            /* إخفاء كل محتويات الصفحة الأساسية */
+            body { background: white !important; overflow: visible !important; margin: 0; padding: 0; }
+            body > * { display: none !important; }
+            
             /* إظهار فقط حاوية الطباعة النشطة */
             body.print-mode-invoice .print-invoice-area { display: block !important; position: relative; width: 100%; padding: 15px;}
             body.print-mode-waybill .print-waybill-area { display: block !important; position: relative; width: 100%; margin: 0; padding: 0;}
