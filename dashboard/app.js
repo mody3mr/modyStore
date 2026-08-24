@@ -620,6 +620,11 @@ function updateChartsData() {
         d.setDate(d.getDate() - i);
         let dateStr = d.toLocaleDateString('ar-EG');
         daysStats[dateStr] = { count: 0, revenue: 0 };
+        // بعد حساب counts.pending, counts.processing الخ
+if(document.getElementById('statRevCount')) document.getElementById('statRevCount').innerText = counts.pending;
+if(document.getElementById('statProcCount')) document.getElementById('statProcCount').innerText = counts.processing;
+if(document.getElementById('statShipCount')) document.getElementById('statShipCount').innerText = counts.shipped;
+if(document.getElementById('statDelivCount')) document.getElementById('statDelivCount').innerText = counts.delivered;
     }
 
     allOrders.forEach(o => {
