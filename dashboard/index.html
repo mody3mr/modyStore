@@ -643,73 +643,92 @@
             </div>
 
             <!-- 8. شاشة الإعدادات -->
-            <div id="settings-view" class="view-section animate__animated animate__fadeIn">
-                <div class="page-header">
-                    <h2 class="page-title">إعدادات المتجر</h2>
+            <div id="settings-view" class="view-section animate__animated animate__fadeIn settings-page">
+                <div class="settings-hero">
+                    <div class="settings-hero-content">
+                        <div class="settings-hero-icon"><i class="fas fa-sliders-h"></i></div>
+                        <div>
+                            <div class="settings-eyebrow">STORE CONTROL CENTER</div>
+                            <h2>إعدادات المتجر</h2>
+                            <p>تحكم في هوية المتجر، حالة استقبال الطلبات، طرق الدفع وبيانات التواصل من مكان واحد.</p>
+                        </div>
+                    </div>
+                    <div class="settings-status-card">
+                        <span class="settings-status-dot"></span>
+                        <div>
+                            <small>حالة المتجر</small>
+                            <strong id="settingsStatusText">مفتوح لاستقبال الطلبات</strong>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="setStoreStatus" onchange="document.getElementById('settingsStatusText').innerText=this.checked?'مفتوح لاستقبال الطلبات':'مغلق مؤقتاً'; document.querySelector('.settings-status-card').classList.toggle('is-closed', !this.checked);">
+                            <span></span>
+                        </label>
+                    </div>
                 </div>
-                <div class="grid-2">
-                    <div class="card" style="padding: 20px;">
-                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-store"></i> الإعدادات الأساسية</h3>
-                        <div class="input-group">
-                            <label>شريط الأخبار (يظهر أعلى الموقع للعملاء)</label>
-                            <input type="text" id="setNewsTicker" placeholder="مثال: خصم 20% لفترة محدودة...">
-                        </div>
-                        <div class="input-group" style="display:flex; align-items:center; gap:10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
-                            <label style="margin:0; font-weight: 800; color: var(--primary);">حالة المتجر (مفتوح لاستقبال الطلبات؟)</label>
-                            <input type="checkbox" id="setStoreStatus" style="width:20px; height:20px;">
-                        </div>
-                    </div>
-                    
-                    <div class="card" style="padding: 20px;">
-                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-address-card"></i> بيانات التواصل (الفوتر)</h3>
-                        <div class="input-group"><label>رقم التليفون الأساسي</label><input type="text" id="setPhone" dir="ltr"></div>
-                        <div class="input-group"><label>البريد الإلكتروني</label><input type="email" id="setEmail" dir="ltr"></div>
-                        <div class="input-group"><label>العنوان التفصيلي</label><input type="text" id="setAddress"></div>
-                    </div>
 
-                    <div class="card" style="padding: 20px; grid-column: span 2;">
-                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-money-check-alt"></i> طرق الدفع المتاحة</h3>
-                        <div class="grid-2">
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayCod" style="width:20px; height:20px;"> كاش (عند الاستلام)</label>
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayWallet" style="width:20px; height:20px;"> محفظة إلكترونية</label>
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayInsta" style="width:20px; height:20px;"> إنستا باي</label>
-                            <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="setPayVisa" style="width:20px; height:20px;"> فيزا / بطاقة ائتمان</label>
-                        </div>
-                    </div>
-                    
-                    <div class="card" style="padding: 20px; grid-column: span 2;">
-                        <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-share-alt"></i> روابط السوشيال ميديا</h3>
-                        <p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">قم بتفعيل الزر بجانب الشبكة التي تريد إظهارها في المتجر، ثم ضع الرابط الخاص بك.</p>
-                        <div class="grid-2">
-                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
-                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableFb"> <i class="fab fa-facebook" style="color: #1877F2;"></i> فيسبوك</label>
-                                <input type="text" id="setFb" dir="ltr" placeholder="رابط الصفحة...">
-                            </div>
-                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
-                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableInsta"> <i class="fab fa-instagram" style="color: #E4405F;"></i> انستجرام</label>
-                                <input type="text" id="setInsta" dir="ltr" placeholder="رابط الحساب...">
-                            </div>
-                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
-                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableTg"> <i class="fab fa-telegram" style="color: #0088cc;"></i> تليجرام</label>
-                                <input type="text" id="setTelegram" dir="ltr" placeholder="رابط القناة...">
-                            </div>
-                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
-                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableWa"> <i class="fab fa-whatsapp" style="color: #25D366;"></i> واتساب</label>
-                                <input type="text" id="setWhatsapp" dir="ltr" placeholder="رقم الموبايل الدولي...">
-                            </div>
-                            <div class="input-group" style="display:flex; flex-direction:column; gap:5px;">
-                                <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="enableTiktok"> <i class="fab fa-tiktok" style="color: #000;"></i> تيك توك</label>
-                                <input type="text" id="setTiktok" dir="ltr" placeholder="رابط الحساب...">
-                            </div>
-                        </div>
-                    </div>
+                <div class="settings-section-title">
+                    <div><span class="section-kicker">GENERAL</span><h3>الإعدادات الأساسية</h3></div>
+                    <p>المعلومات التي تظهر للعملاء وتؤثر على تجربة المتجر.</p>
                 </div>
-                <button class="btn-save" style="margin-top:20px; width:100%; font-size: 18px; padding: 15px;" onclick="saveSettings()">
-                    <i class="fas fa-save"></i> حفظ وتحديث الإعدادات
-                </button>
+
+                <div class="settings-grid">
+                    <section class="settings-card settings-card-wide">
+                        <div class="settings-card-head">
+                            <div class="settings-card-icon blue"><i class="fas fa-store"></i></div>
+                            <div><h3>هوية وتشغيل المتجر</h3><p>رسالة المتجر وحالة استقبال الطلبات.</p></div>
+                        </div>
+                        <div class="settings-field">
+                            <label>شريط الأخبار <span>يظهر أعلى المتجر للعملاء</span></label>
+                            <div class="settings-input-wrap"><i class="fas fa-bullhorn"></i><input type="text" id="setNewsTicker" placeholder="مثال: خصم 20% لفترة محدودة..."></div>
+                        </div>
+                    </section>
+
+                    <section class="settings-card">
+                        <div class="settings-card-head">
+                            <div class="settings-card-icon green"><i class="fas fa-address-book"></i></div>
+                            <div><h3>بيانات التواصل</h3><p>بيانات الفوتر والتواصل مع العملاء.</p></div>
+                        </div>
+                        <div class="settings-fields-stack">
+                            <div class="settings-field"><label>رقم التليفون الأساسي</label><div class="settings-input-wrap"><i class="fas fa-phone"></i><input type="text" id="setPhone" dir="ltr" inputmode="tel" placeholder="01xxxxxxxxx"></div></div>
+                            <div class="settings-field"><label>البريد الإلكتروني</label><div class="settings-input-wrap"><i class="fas fa-envelope"></i><input type="email" id="setEmail" dir="ltr" placeholder="store@example.com"></div></div>
+                            <div class="settings-field"><label>العنوان التفصيلي</label><div class="settings-input-wrap"><i class="fas fa-location-dot"></i><input type="text" id="setAddress" placeholder="عنوان المتجر"></div></div>
+                        </div>
+                    </section>
+
+                    <section class="settings-card">
+                        <div class="settings-card-head">
+                            <div class="settings-card-icon purple"><i class="fas fa-credit-card"></i></div>
+                            <div><h3>طرق الدفع</h3><p>فعّل طرق الدفع المتاحة للعملاء.</p></div>
+                        </div>
+                        <div class="payment-settings-grid">
+                            <label class="payment-setting"><input type="checkbox" id="setPayCod"><span class="payment-check"><i class="fas fa-money-bill-wave"></i></span><span><b>كاش</b><small>عند الاستلام</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayWallet"><span class="payment-check"><i class="fas fa-wallet"></i></span><span><b>محفظة إلكترونية</b><small>Vodafone / Orange / Etisalat</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayInsta"><span class="payment-check"><i class="fas fa-bolt"></i></span><span><b>إنستا باي</b><small>تحويل فوري</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayVisa"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>فيزا</b><small>بطاقة ائتمان</small></span><em></em></label>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="settings-section-title social-title">
+                    <div><span class="section-kicker">SOCIAL</span><h3>قنوات التواصل الاجتماعي</h3></div>
+                    <p>اختار القنوات التي تريد إظهارها للعملاء وأضف روابطها.</p>
+                </div>
+
+                <section class="settings-card social-card">
+                    <div class="social-settings-grid">
+                        <div class="social-setting facebook"><div class="social-top"><div class="social-icon"><i class="fab fa-facebook-f"></i></div><div><b>Facebook</b><small>صفحة المتجر</small></div><label class="mini-switch"><input type="checkbox" id="enableFb"><span></span></label></div><div class="settings-input-wrap"><i class="fas fa-link"></i><input type="text" id="setFb" dir="ltr" placeholder="رابط الصفحة..."></div></div>
+                        <div class="social-setting instagram"><div class="social-top"><div class="social-icon"><i class="fab fa-instagram"></i></div><div><b>Instagram</b><small>حساب المتجر</small></div><label class="mini-switch"><input type="checkbox" id="enableInsta"><span></span></label></div><div class="settings-input-wrap"><i class="fas fa-link"></i><input type="text" id="setInsta" dir="ltr" placeholder="رابط الحساب..."></div></div>
+                        <div class="social-setting telegram"><div class="social-top"><div class="social-icon"><i class="fab fa-telegram-plane"></i></div><div><b>Telegram</b><small>القناة الرسمية</small></div><label class="mini-switch"><input type="checkbox" id="enableTg"><span></span></label></div><div class="settings-input-wrap"><i class="fas fa-link"></i><input type="text" id="setTelegram" dir="ltr" placeholder="رابط القناة..."></div></div>
+                        <div class="social-setting whatsapp"><div class="social-top"><div class="social-icon"><i class="fab fa-whatsapp"></i></div><div><b>WhatsApp</b><small>رقم التواصل</small></div><label class="mini-switch"><input type="checkbox" id="enableWa"><span></span></label></div><div class="settings-input-wrap"><i class="fas fa-phone"></i><input type="text" id="setWhatsapp" dir="ltr" inputmode="tel" placeholder="رقم الموبايل الدولي..."></div></div>
+                        <div class="social-setting tiktok"><div class="social-top"><div class="social-icon"><i class="fab fa-tiktok"></i></div><div><b>TikTok</b><small>حساب المتجر</small></div><label class="mini-switch"><input type="checkbox" id="enableTiktok"><span></span></label></div><div class="settings-input-wrap"><i class="fas fa-link"></i><input type="text" id="setTiktok" dir="ltr" placeholder="رابط الحساب..."></div></div>
+                    </div>
+                </section>
+
+                <div class="settings-save-bar">
+                    <div><div class="save-shield"><i class="fas fa-shield-alt"></i></div><div><strong>صلاحيات الإدارة</strong><span>تغييرات الإعدادات متاحة للـ Admin فقط ويتم تسجيلها في سجل النشاطات.</span></div></div>
+                    <button class="btn-save settings-save-btn" onclick="saveSettings()"><i class="fas fa-check"></i> حفظ جميع الإعدادات</button>
+                </div>
             </div>
-
-        </div>
 
         <!-- ================= النوافذ المنبثقة (Modals) الأساسية ================= -->
         
