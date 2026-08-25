@@ -19,9 +19,19 @@ const auth = getAuth(app);
 setPersistence(auth, browserSessionPersistence).catch((error) => console.error(error));
 
 let currentUser = "جاري التحميل...";
-window.currentUserRole = "Supervisor"; 
+window.currentUserRole = null; // لا نفترض صلاحيات المشرف قبل اكتمال التحقق من تسجيل الدخول
 window.currentEmpPermissions = null;
 window.currentEmpUid = null;
+window.__dashboardAuthReady = false;
+
+// حماية من الشاشة البيضاء: أي خطأ غير متوقع يظهر في الـ console بدل ما يترك الصفحة
+// في حالة غير مفهومة، مع محاولة إبقاء الواجهة ظاهرة.
+window.addEventListener('error', (event) => {
+    console.error('ModyStore Dashboard error:', event.error || event.message);
+});
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('ModyStore Dashboard promise error:', event.reason);
+});
 
 // ==========================================
 // طلب صلاحية الإشعارات (Push Notifications)
@@ -171,6 +181,23 @@ onAuthStateChanged(auth, (user) => {
                     }
                 });
             }
+            if (found) {
+                // أصبح التحقق من المستخدم مكتملاً؛ الآن فقط نسمح بتطبيق الصلاحيات.
+                window.__dashboardAuthReady = true;
+                try {
+                    window.applyDashboardPermissions?.();
+                    window.updateStatusSummary?.();
+                    window.renderOrdersTable?.();
+                    window.filterProducts?.();
+                    window.filterCategories?.();
+                    window.filterVouchers?.();
+                    window.renderFinanceTable?.();
+                    window.renderReturnsTable?.();
+                    window.renderInventoryTable?.();
+                } catch (e) {
+                    console.error('Dashboard post-auth refresh error:', e);
+                }
+            }
             if (!found) {
                 signOut(auth).then(() => {
                     window.location.href = "login.html"; 
@@ -193,9 +220,13 @@ window.logout = () => {
 // ==========================================
 // القائمة الجانبية (ومشكلة الموبايل)
 // ==========================================
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-});
+const sidebarToggleEl = document.getElementById('sidebarToggle');
+const sidebarEl = document.getElementById('sidebar');
+if (sidebarToggleEl && sidebarEl) {
+    sidebarToggleEl.addEventListener('click', () => {
+        sidebarEl.classList.toggle('collapsed');
+    });
+}
 
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -3180,6 +3211,9 @@ if (myProfileBtn && myProfileMenu) {
 
     // --- apply UI permissions after auth/data is available ---
     window.applyDashboardPermissions=()=>{
+        // لا تطبق أي صلاحيات أثناء مرحلة تحميل/تحقق Firebase.
+        // هذه كانت سبب اختفاء الداشبورد بعد حوالي 1.2 ثانية.
+        if (!window.__dashboardAuthReady && !isAdmin()) return;
         if(isAdmin()) return;
         MODULES.forEach(m=>{
             const tab=TAB_BY_MODULE[m];const nav=document.querySelector(`[data-target="${tab}"]`);const view=document.getElementById(tab);const allowed=modulePerm(m,'view');
@@ -3198,7 +3232,7 @@ if (myProfileBtn && myProfileMenu) {
         if(!modulePerm('logs','archive'))document.querySelector('[onclick="archiveLogsAll()"]')?.style.setProperty('display','none');
         if(!modulePerm('inventory','export'))document.querySelectorAll('#inventory-view [onclick*="exportInventoryShortages"]').forEach(b=>b.style.display='none');
     };
-    setTimeout(()=>{sanitizeInputs();window.applyDashboardPermissions();updateStatusSummary();renderInventoryTable();},1200);
+    setTimeout(()=>{sanitizeInputs();if(window.__dashboardAuthReady)window.applyDashboardPermissions();updateStatusSummary();if(window.__dashboardAuthReady)renderInventoryTable();},1200);
 })();
 
 // V2 corrective overrides (permissions, finance/shipping logs, inventory movements)
@@ -3292,7 +3326,7 @@ if (myProfileBtn && myProfileMenu) {
     const oldSaveSettingsV2=window.saveSettings;window.saveSettings=()=>{if(window.currentUserRole!=='Admin')return window.showAlert('الإعدادات متاحة للمدير فقط!','error');return oldSaveSettingsV2();};
 
     // Initial refresh after all overrides are installed.
-    setTimeout(()=>{document.getElementById('purInvoiceNo')?.dispatchEvent(new Event('input'));document.getElementById('voucherCode')?.dispatchEvent(new Event('input'));document.getElementById('empPhone')?.dispatchEvent(new Event('input'));window.applyDashboardPermissions?.();window.filterProducts?.();window.filterCategories?.();window.filterVouchers?.();window.renderFinanceTable?.();window.renderReturnsTable?.();window.renderInventoryTable?.();},1500);
+    setTimeout(()=>{document.getElementById('purInvoiceNo')?.dispatchEvent(new Event('input'));document.getElementById('voucherCode')?.dispatchEvent(new Event('input'));document.getElementById('empPhone')?.dispatchEvent(new Event('input'));if(window.__dashboardAuthReady)window.applyDashboardPermissions?.();if(window.__dashboardAuthReady){window.filterProducts?.();window.filterCategories?.();window.filterVouchers?.();window.renderFinanceTable?.();window.renderReturnsTable?.();window.renderInventoryTable?.();}},1500);
 })();
 
 // V2 inventory movement for returns + stricter finance/returns permissions
