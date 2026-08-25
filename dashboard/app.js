@@ -3388,3 +3388,105 @@ if (myProfileBtn && myProfileMenu) {
         logAction('تصدير تقرير إحصائيات',`تم تصدير تقرير المبيعات إلى Excel - ${reportMeta.label}`);
     };
 })();
+
+
+// ===== FINAL STABILITY PATCH =====
+// Keeps dashboard navigation/buttons responsive even if an earlier listener is replaced.
+(() => {
+    const bindDashboardInteractions = () => {
+        document.querySelectorAll('.nav-links .nav-item').forEach(item => {
+            if (item.dataset.stabilityBound === '1') return;
+            item.dataset.stabilityBound = '1';
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = item.dataset.target;
+                if (!target) return;
+                if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
+                    const tabs = window.currentEmpPermissions.tabs || [];
+                    if (target !== 'analytics-view' && !tabs.includes(target)) {
+                        window.showAlert?.('عفواً، ليس لديك صلاحية لعرض هذه الصفحة!', 'error');
+                        return;
+                    }
+                }
+                document.querySelectorAll('.nav-links .nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById(target)?.classList.add('active');
+            });
+        });
+    };
+    bindDashboardInteractions();
+    setTimeout(bindDashboardInteractions, 500);
+    setTimeout(bindDashboardInteractions, 1500);
+
+    // Excel loader + browser-compatible fallback.
+    window.ensureExcelLibrary = async () => {
+        if (window.XLSX) return true;
+        try {
+            await new Promise((resolve, reject) => {
+                const existing = document.querySelector('script[data-xlsx-fallback]');
+                if (existing) { existing.addEventListener('load', resolve, {once:true}); existing.addEventListener('error', reject, {once:true}); return; }
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.dataset.xlsxFallback = '1';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        } catch(e) { return false; }
+        return !!window.XLSX;
+    };
+
+    // Excel-compatible .xls fallback when the XLSX CDN is unavailable.
+    window.downloadExcelFallback = (rows, filename='Report.xls', sheetName='Report') => {
+        const escHtml = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const keys = rows.length ? Object.keys(rows[0]) : [];
+        const table = `<html><head><meta charset="UTF-8"></head><body dir="rtl"><table border="1"><tr>${keys.map(k=>`<th>${escHtml(k)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${keys.map(k=>`<td>${escHtml(r[k])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([table], {type:'application/vnd.ms-excel;charset=utf-8'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    };
+
+    // Replace the sales Excel exporter with a guaranteed working implementation.
+    window.exportReportToExcel = async () => {
+        if (window.currentUserRole === 'Supervisor' && !window.hasDashboardPermission?.('analytics','export')) {
+            return window.showAlert?.('ليس لديك صلاحية إصدار تقارير الإحصائيات!', 'error');
+        }
+        const rows = [
+            {
+                'نوع التقرير': reportMeta?.label || 'غير محدد',
+                'اليوم المختار': reportMeta?.label || 'غير محدد',
+                'تاريخ استخراج التقرير': new Date().toLocaleString('ar-EG'),
+                'إجمالي الخصومات': Math.round(reportMeta?.totalDiscount || 0),
+                'إجمالي المبيعات': Number(String(document.getElementById('reportTotalSales')?.innerText || '0').replace(/[^0-9.]/g,'')) || 0,
+                'اسم المنتج':'', 'الكمية المباعة':'', 'خصومات المنتج':'', 'إيراد قبل الخصم':'', 'إيراد بعد الخصم':''
+            },
+            ...(currentReportProducts || []).map(p => ({
+                'نوع التقرير':reportMeta?.label || '',
+                'اليوم المختار':reportMeta?.label || '',
+                'تاريخ استخراج التقرير':new Date().toLocaleString('ar-EG'),
+                'إجمالي الخصومات':'', 'إجمالي المبيعات':'',
+                'اسم المنتج':p.name, 'الكمية المباعة':p.qty,
+                'خصومات المنتج':Math.round(p.discount || 0),
+                'إيراد قبل الخصم':Math.round(p.revenue || 0),
+                'إيراد بعد الخصم':Math.round((p.revenue || 0) - (p.discount || 0))
+            }))
+        ];
+        const ok = await window.ensureExcelLibrary();
+        try {
+            if (ok && window.XLSX) {
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+                XLSX.writeFile(wb, `Sales_Report_${Date.now()}.xlsx`);
+            } else {
+                window.downloadExcelFallback(rows, `Sales_Report_${Date.now()}.xls`, 'Sales Report');
+            }
+            logAction('تصدير تقرير إحصائيات', `تم تصدير تقرير المبيعات إلى Excel - ${reportMeta?.label || ''}`);
+            window.showAlert?.('تم تصدير تقرير المبيعات بنجاح!', 'success');
+        } catch(e) {
+            console.error(e);
+            window.showAlert?.('تعذر تصدير تقرير المبيعات: ' + (e.message || e), 'error');
+        }
+    };
+})();
