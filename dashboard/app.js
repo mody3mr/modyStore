@@ -114,104 +114,110 @@ window.notifyCustomer = (order, title, message) => {
 // ==========================================
 // تسجيل الدخول الصارم وحماية الصلاحيات (Strict Auth)
 // ==========================================
-onAuthStateChanged(auth, (user) => {
-    if (user) {
+const authGate = document.getElementById('authGate');
+let authFinished = false;
+let authTimeout = null;
+
+function finishAuthUI(ok, message='') {
+    if (authFinished && ok) return;
+    if (authTimeout) clearTimeout(authTimeout);
+    const gate = document.getElementById('authGate');
+    const body = document.body;
+    if (ok) {
+        authFinished = true;
+        body.classList.remove('auth-pending');
+        body.classList.add('auth-ready');
+        if (gate) gate.style.display = 'none';
+        return;
+    }
+    // لا نترك المستخدم عالقاً على شاشة التحميل إذا فشل Firebase/قاعدة البيانات.
+    if (gate) {
+        gate.innerHTML = `
+            <div class="auth-gate-card auth-gate-error">
+                <div class="auth-gate-logo"><i class="fas fa-triangle-exclamation"></i></div>
+                <strong>تعذر تأمين لوحة التحكم</strong>
+                <span>${message || 'تعذر التحقق من الحساب والصلاحيات.'}</span>
+                <button type="button" class="btn-add" style="margin-top:16px" onclick="location.href='login.html'">
+                    <i class="fas fa-right-to-bracket"></i> العودة لتسجيل الدخول
+                </button>
+            </div>`;
+    }
+}
+
+// حماية من التعليق اللانهائي: إذا لم يرد Firebase خلال 15 ثانية نظهر سبباً واضحاً.
+authTimeout = setTimeout(() => {
+    if (!window.__dashboardAuthReady) {
+        finishAuthUI(false, 'لم تصل استجابة من Firebase. تأكد من اتصال الإنترنت وقواعد Realtime Database ثم حاول مرة أخرى.');
+    }
+}, 15000);
+
+onAuthStateChanged(auth, async (user) => {
+    try {
+        if (!user) {
+            if (authTimeout) clearTimeout(authTimeout);
+            window.location.href = "login.html";
+            return;
+        }
+
         window.currentEmpUid = user.uid;
-        get(ref(db, 'employees')).then((snapshot) => {
-            let found = false;
-            if (snapshot.exists()) {
-                snapshot.forEach(child => {
-                    if (child.val().email === user.email && child.val().isActive) {
-                        currentUser = child.val().name;
-                        window.currentUserRole = child.val().role;
-                        const empData = child.val();
-                        window.currentEmpPermissions = empData.permissions || null; 
-                        
-                        // --- تطبيق الصلاحيات للمشرفين وحماية الواجهة أمنياً ---
-                        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-                            const allowedTabs = window.currentEmpPermissions.tabs || [];
-                            
-                            // إزالة التابات غير المسموح بها من القائمة الجانبية تماماً
-                            document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
-                                const target = nav.getAttribute('data-target');
-                                if (target && target !== 'analytics-view' && !allowedTabs.includes(target)) {
-                                    nav.style.display = 'none';
-                                    nav.remove();
-                                }
-                            });
 
-                            // إخفاء وحماية الأزرار الحساسة (إضافة / تعديل / حذف) للمشرفين
-                            if (!window.currentEmpPermissions.canAdd) {
-                                document.querySelectorAll('.btn-add, #btnAddProduct, #btnOpenCategoryModal, #btnAddVoucher, #btnOpenEmployeeModal, #btnAddShipping').forEach(btn => {
-                                    if(btn) btn.style.display = 'none';
-                                });
-                            }
+        // الموظف يتم حفظه بمفتاح UID عند إنشاء الحساب، لذلك لا نحتاج قراءة
+        // جدول employees بالكامل. هذا أسرع وأكثر أماناً ويمنع التعليق عند قواعد البيانات الكبيرة.
+        const empSnap = await get(ref(db, `employees/${user.uid}`));
+        if (!empSnap.exists()) {
+            throw new Error('لم يتم العثور على بيانات الموظف لهذا الحساب.');
+        }
 
-                            // إذا كانت شاشة الإحصائيات غير مسموح بها، يتم نقله تلقائياً لأول شاشة مسموحة
-                            if (!allowedTabs.includes('analytics-view') && allowedTabs.length > 0) {
-                                const firstAllowedTab = allowedTabs[0];
-                                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                                const firstViewEl = document.getElementById(firstAllowedTab);
-                                if (firstViewEl) firstViewEl.classList.add('active');
-                                
-                                document.querySelectorAll('.nav-item').forEach(nav => {
-                                    nav.classList.remove('active');
-                                    if (nav.dataset.target === firstAllowedTab) nav.classList.add('active');
-                                });
-                            }
-                        }
-                        // -------------------------------------------------------------
+        const empData = empSnap.val() || {};
+        const emailMatches = !empData.email || String(empData.email).trim().toLowerCase() === String(user.email || '').trim().toLowerCase();
+        const active = empData.isActive !== false;
+        const role = empData.role || 'Supervisor';
 
-                        // --- تحديث بيانات الهيدر ---
-                        const nameDisplay = document.getElementById("currentUserNameDisplay");
-                        const avatar = document.getElementById("currentUserAvatar");
-                        const dropName = document.getElementById("dropdownName");
-                        const dropRole = document.getElementById("dropdownRole");
-                        
-                        if (nameDisplay) nameDisplay.innerText = currentUser;
-                        if (dropName) dropName.innerText = currentUser;
-                        if (dropRole) dropRole.innerText = window.currentUserRole === 'Admin' ? 'مدير النظام' : 'مشرف';
-                        
-                        if (avatar) {
-                            let apiName = currentUser.split(' ').join('+');
-                            avatar.src = `https://ui-avatars.com/api/?name=${apiName}&background=3b82f6&color=fff`;
-                        }
-                        // ---------------------------
-                        
-                        found = true;
-                    }
-                });
-            }
-            if (found) {
-                // أصبح التحقق من المستخدم مكتملاً؛ الآن فقط نسمح بتطبيق الصلاحيات.
-                window.__dashboardAuthReady = true;
-                try {
-                    window.applyDashboardPermissions?.();
-                    window.updateStatusSummary?.();
-                    window.renderOrdersTable?.();
-                    window.filterProducts?.();
-                    window.filterCategories?.();
-                    window.filterVouchers?.();
-                    window.renderFinanceTable?.();
-                    window.renderReturnsTable?.();
-                    window.renderInventoryTable?.();
-                    window.initMobilePushNotifications?.();
-                } catch (e) {
-                    console.error('Dashboard post-auth refresh error:', e);
-                }
-                document.body.classList.remove('auth-pending');
-                document.body.classList.add('auth-ready');
-            }
-            if (!found) {
-                signOut(auth).then(() => {
-                    window.location.href = "login.html"; 
-                });
-            }
-        }).catch((err) => {
-            console.error(err);
-        });
-    } else {
-        window.location.href = "login.html"; 
+        if (!emailMatches || !active) {
+            await signOut(auth);
+            window.location.href = "login.html";
+            return;
+        }
+
+        currentUser = empData.name || user.email || 'المستخدم';
+        window.currentUserRole = role;
+        window.currentEmpPermissions = empData.permissions || null;
+
+        // --- بيانات الهيدر ---
+        const nameDisplay = document.getElementById("currentUserNameDisplay");
+        const avatar = document.getElementById("currentUserAvatar");
+        const dropName = document.getElementById("dropdownName");
+        const dropRole = document.getElementById("dropdownRole");
+        if (nameDisplay) nameDisplay.innerText = currentUser;
+        if (dropName) dropName.innerText = currentUser;
+        if (dropRole) dropRole.innerText = role === 'Admin' ? 'مدير النظام' : 'مشرف';
+        if (avatar) {
+            const apiName = encodeURIComponent(currentUser);
+            avatar.src = `https://ui-avatars.com/api/?name=${apiName}&background=3b82f6&color=fff`;
+        }
+
+        // مهم: نطبق الصلاحيات قبل كشف أي جزء من الداشبورد.
+        window.__dashboardAuthReady = true;
+        try {
+            window.applyDashboardPermissions?.();
+            window.updateStatusSummary?.();
+            window.renderOrdersTable?.();
+            window.filterProducts?.();
+            window.filterCategories?.();
+            window.filterVouchers?.();
+            window.renderFinanceTable?.();
+            window.renderReturnsTable?.();
+            window.renderInventoryTable?.();
+            window.initMobilePushNotifications?.();
+        } catch (e) {
+            console.error('Dashboard post-auth refresh error:', e);
+        }
+
+        finishAuthUI(true);
+    } catch (err) {
+        console.error('Dashboard authentication failed:', err);
+        window.__dashboardAuthReady = false;
+        finishAuthUI(false, err?.message || 'تعذر الوصول إلى بيانات الموظف في Firebase.');
     }
 });
 
