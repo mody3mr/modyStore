@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
 import { getDatabase, ref, get, child, remove, update, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
@@ -16,7 +17,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 // تأمين الجلسة: إجبار الموقع على طلب تسجيل الدخول عند فتح المتصفح من جديد
-setPersistence(auth, browserSessionPersistence).catch((error) => console.error(error));
+setPersistence(auth, browserLocalPersistence).catch((error) => console.error(error));
 
 let currentUser = "جاري التحميل...";
 window.currentUserRole = null; // لا نفترض صلاحيات المشرف قبل اكتمال التحقق من تسجيل الدخول
@@ -194,9 +195,12 @@ onAuthStateChanged(auth, (user) => {
                     window.renderFinanceTable?.();
                     window.renderReturnsTable?.();
                     window.renderInventoryTable?.();
+                    window.initMobilePushNotifications?.();
                 } catch (e) {
                     console.error('Dashboard post-auth refresh error:', e);
                 }
+                document.body.classList.remove('auth-pending');
+                document.body.classList.add('auth-ready');
             }
             if (!found) {
                 signOut(auth).then(() => {
@@ -626,7 +630,7 @@ function initCharts() {
 }
 
 function updateChartsData() {
-    if (!salesChart || !ordersChart || typeof allOrders === 'undefined') return;
+    if (!salesChart || typeof allOrders === 'undefined') return;
     let counts = { pending: 0, processing: 0, shipped: 0, delivered: 0 };
     
     let daysStats = {};
@@ -652,8 +656,7 @@ function updateChartsData() {
         }
     });
 
-    ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered];
-    ordersChart.update();
+    if (ordersChart) { ordersChart.data.datasets[0].data = [counts.pending, counts.processing, counts.shipped, counts.delivered]; ordersChart.update(); }
 
     salesChart.data.labels = Object.keys(daysStats);
     salesChart.data.datasets[0].data = Object.values(daysStats).map(d => Math.round(d.revenue));
@@ -1038,14 +1041,16 @@ window.viewOrderDetails = (orderId) => {
     // باركود شريطي كبير مالي عرض البوليصة يمين وشمال
     if (typeof JsBarcode !== 'undefined') {
         JsBarcode("#topBarcode", order.displayId || order.orderId, {
-            format: "CODE128", width: 5, height: 120, displayValue: true, fontSize: 28, margin: 0
+            format: "CODE128", width: 2.4, height: 82, displayValue: true, fontSize: 20, margin: 8
         });
         const bcSvg = document.getElementById('topBarcode');
         if (bcSvg) {
-            bcSvg.setAttribute('preserveAspectRatio', 'none');
-            bcSvg.style.width = '100%';
-            bcSvg.style.maxWidth = 'none';
-            bcSvg.style.height = '120px';
+            bcSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            bcSvg.style.width = 'min(100%, 620px)';
+            bcSvg.style.maxWidth = '620px';
+            bcSvg.style.height = '90px';
+            bcSvg.style.display = 'block';
+            bcSvg.style.margin = '0 auto';
         }
     }
 
@@ -1255,9 +1260,9 @@ window.bulkPrintWaybills = () => {
 
     processingOrders.forEach(order => {
         if (typeof JsBarcode !== 'undefined') {
-            JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.displayId || order.orderId, { format: "CODE128", width: 5, height: 120, displayValue: true, fontSize: 28, margin: 0 });
+            JsBarcode(`#bulk-bc-${order.displayId || order.orderId}`, order.orderId || order.secretCode || order.displayId, { format: "CODE128", width: 2.2, height: 82, displayValue: true, fontSize: 20, margin: 8 });
             const bulkSvg = document.getElementById(`bulk-bc-${order.displayId || order.orderId}`);
-            if (bulkSvg) { bulkSvg.setAttribute('preserveAspectRatio', 'none'); bulkSvg.style.width = '100%'; bulkSvg.style.maxWidth = 'none'; }
+            if (bulkSvg) { bulkSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); bulkSvg.style.width = 'min(100%, 620px)'; bulkSvg.style.maxWidth = '620px'; bulkSvg.style.height = '90px'; bulkSvg.style.display='block'; bulkSvg.style.margin='0 auto'; }
         }
     });
     
@@ -2882,7 +2887,7 @@ if (myProfileBtn && myProfileMenu) {
 (() => {
     const MODULES = ['analytics','orders','finance','returns','products','categories','vouchers','shipping','employees','logs','inventory'];
     const ACTIONS = {
-        analytics:['view','export'], orders:['view','changeStatus','details'],
+        analytics:['view','export'], orders:['view','create','changeStatus','details'],
         finance:['view','purchase','expense','history','export'], returns:['view','create','details','archive','export'],
         products:['view','add','edit','toggle','delete'], categories:['view','add','edit','toggle','delete'],
         vouchers:['view','add','edit','toggle','delete','users'], shipping:['view','edit','toggle','delete'],
@@ -2904,7 +2909,9 @@ if (myProfileBtn && myProfileMenu) {
         if (action === 'view') return (p.tabs || []).includes(TAB_BY_MODULE[module]);
         if (action === 'changeStatus') return !!p.canChangeStatus;
         if (action === 'add') return !!p.canAdd;
-        if (action === 'edit' || action === 'toggle') return !!p.canEdit;
+        if (action === 'edit') return !!p.canEdit;
+        if (action === 'toggle') return false;
+        if (action === 'create') return false;
         if (action === 'delete') return !!p.canDelete;
         return false;
     }
@@ -3489,4 +3496,626 @@ if (myProfileBtn && myProfileMenu) {
             window.showAlert?.('تعذر تصدير تقرير المبيعات: ' + (e.message || e), 'error');
         }
     };
+})();
+
+
+/* ================================================================
+   ModyStore Production Patch — 2026-08
+   ================================================================ */
+(() => {
+    const escP = (v='') => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const numP = v => Number(v || 0);
+    const moneyP = v => `${Math.round(numP(v))} ج.م`;
+
+    // -------------------- Exact permission enforcement --------------------
+    const basePermission = window.hasDashboardPermission;
+    window.hasDashboardPermission = (module, action='view') => {
+        if (window.currentUserRole === 'Admin') return true;
+        const p = window.currentEmpPermissions || {};
+        if (p.modules?.[module] && Object.prototype.hasOwnProperty.call(p.modules[module], action)) {
+            return !!p.modules[module][action];
+        }
+        if (action === 'view') return (p.tabs || []).includes(`${module}-view`);
+        if (action === 'changeStatus') return !!p.canChangeStatus;
+        if (action === 'add') return !!p.canAdd;
+        if (action === 'edit') return !!p.canEdit;
+        if (action === 'delete') return !!p.canDelete;
+        // Legacy supervisors must NOT inherit "edit" into "toggle".
+        if (action === 'toggle') return false;
+        if (action === 'create') return false;
+        return typeof basePermission === 'function' ? !!basePermission(module, action) : false;
+    };
+
+    const applyExactPermissions = () => {
+        if (!window.__dashboardAuthReady) return;
+        document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
+            const target = nav.dataset.target;
+            const module = target?.replace(/-view$/, '');
+            if (!module || module === 'settings') return;
+            const allowed = window.hasDashboardPermission(module, 'view');
+            nav.style.display = allowed ? 'flex' : 'none';
+        });
+        const actionSelectors = [
+            ['products','add','#btnAddProduct'], ['products','edit','#products-view .btn-edit'],
+            ['products','toggle','#products-view .btn-hide'], ['products','delete','#products-view .btn-delete'],
+            ['orders','create','#btnCreateManualOrder'], ['orders','changeStatus','#orders-view .status-select'],
+            ['orders','details','#orders-view .btn-view'], ['finance','purchase','[onclick="openPurchaseModal()"]'],
+            ['finance','expense','[onclick="openExpenseModal()"]'], ['returns','create','[onclick="openNewReturnModal()"]']
+        ];
+        actionSelectors.forEach(([module,action,selector]) => {
+            const allowed = window.hasDashboardPermission(module, action);
+            document.querySelectorAll(selector).forEach(el => {
+                el.style.display = allowed ? '' : 'none';
+                if (el.matches('select')) el.disabled = !allowed;
+            });
+        });
+        if (window.currentUserRole !== 'Admin') {
+            document.querySelector('[data-target="settings-view"]')?.style.setProperty('display','none');
+        }
+    };
+    window.applyDashboardPermissions = applyExactPermissions;
+
+    // -------------------- Professional order scanner --------------------
+    let scannerV3 = null;
+    let lastScannerV3 = 0;
+    const normalizeScanCode = raw => {
+        let code = String(raw ?? '').trim();
+        try {
+            if (/^https?:\/\//i.test(code)) {
+                const u = new URL(code);
+                code = u.searchParams.get('order') || u.searchParams.get('code') || code;
+            }
+        } catch(e) {}
+        return code.replace(/\s+/g,'').trim();
+    };
+    const findOrderByScanCode = code => {
+        const c = normalizeScanCode(code);
+        return (allOrders || []).find(o => [
+            o.orderId, o.secretCode, o.displayId, o.barcode, o.trackingCode
+        ].some(v => String(v ?? '').trim() === c));
+    };
+    const scannerFormats = () => {
+        const F = window.Html5QrcodeSupportedFormats || {};
+        return ['QR_CODE','CODE_128','CODE_39','CODE_93','EAN_13','EAN_8','UPC_A','UPC_E','ITF','CODABAR']
+            .map(k => F[k]).filter(v => typeof v !== 'undefined');
+    };
+
+    window.processScannedOrder = async (rawCode) => {
+        const code = normalizeScanCode(rawCode);
+        if (!code) return;
+        const now = Date.now();
+        if (now - lastScannerV3 < 1000) return;
+        lastScannerV3 = now;
+        const beep = document.getElementById('barcodeBeep');
+        try { if (beep) { beep.currentTime = 0; await beep.play(); } } catch(e) {}
+        const order = findOrderByScanCode(code);
+        if (!order) return window.showAlert(`الكود المقروء (${code}) غير مرتبط بأي طلب!`, 'error');
+        if (!window.hasDashboardPermission('orders','changeStatus')) return window.showAlert('ليس لديك صلاحية تأكيد الشحن!', 'error');
+        if (['تم الشحن','تم تسليمه','ملغي','مرتجع'].includes(order.status)) {
+            return window.showAlert(`الطلب حالته الحالية: ${order.status}`, 'warning');
+        }
+        try {
+            await update(ref(db, `orders/${order.dbId}`), {status:'تم الشحن', shippedAt:Date.now()});
+            window.showAlert(`تم شحن الطلب #${order.displayId || order.orderId} بنجاح`, 'success');
+            logAction('سكانر شحن', `تأكيد شحن الطلب #${order.displayId || order.orderId} عبر السكانر`);
+        } catch(e) {
+            console.error(e);
+            window.showAlert('تعذر تحديث حالة الطلب بعد قراءة الكود.', 'error');
+        }
+    };
+    window.openScannerModal = async () => {
+        if (!window.hasDashboardPermission('orders','changeStatus')) return window.showAlert('ليس لديك صلاحية استخدام سكانر الشحن!','error');
+        const modal = document.getElementById('scannerModal');
+        if (modal) modal.style.display='flex';
+        const input = document.getElementById('manualScanOrderInput');
+        if (input) { input.value=''; setTimeout(()=>input.focus(),250); }
+        if (typeof Html5Qrcode === 'undefined') return window.showAlert('مكتبة السكانر غير متاحة!','error');
+        try {
+            if (scannerV3) { try { await scannerV3.stop(); } catch(e) {} }
+            scannerV3 = new Html5Qrcode('qr-reader', { verbose:false });
+            const formats = scannerFormats();
+            const config = { fps: 15, qrbox: { width: 330, height: 150 }, aspectRatio: 2.2, disableFlip: false };
+            if (formats.length) config.formatsToSupport = formats;
+            await scannerV3.start({facingMode:{exact:'environment'}}, config, decoded => window.processScannedOrder(decoded), () => {});
+        } catch(err) {
+            console.warn('Primary camera failed, retrying default environment camera', err);
+            try {
+                if (scannerV3) { try { await scannerV3.stop(); } catch(e) {} }
+                scannerV3 = new Html5Qrcode('qr-reader', {verbose:false});
+                const formats = scannerFormats();
+                const config = {fps:12, qrbox:{width:300,height:150}, disableFlip:false};
+                if (formats.length) config.formatsToSupport=formats;
+                await scannerV3.start({facingMode:'environment'}, config, decoded => window.processScannedOrder(decoded), () => {});
+            } catch(e) {
+                console.error(e);
+                window.showAlert('لم نتمكن من تشغيل الكاميرا. اسمح للمتصفح بالكاميرا وتأكد من استخدام HTTPS.', 'error');
+            }
+        }
+    };
+    window.stopScanner = async () => {
+        if (scannerV3) { try { await scannerV3.stop(); } catch(e) {} scannerV3=null; }
+        const oldScanner = typeof html5QrcodeScanner !== 'undefined' ? html5QrcodeScanner : null;
+        if (oldScanner && oldScanner !== scannerV3) { try { await oldScanner.stop(); } catch(e) {} }
+    };
+
+    // -------------------- Stable, readable waybill barcode --------------------
+    const renderStableBarcode = (order, svgSelector='#topBarcode') => {
+        const svg = document.querySelector(svgSelector);
+        if (!svg || typeof JsBarcode === 'undefined') return;
+        const code = String(order.orderId || order.secretCode || order.displayId || '').trim();
+        if (!code) return;
+        try {
+            JsBarcode(svg, code, {format:'CODE128', width:2.4, height:82, displayValue:true, fontSize:20, margin:8, lineColor:'#000', background:'#fff'});
+            svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+            svg.style.width='min(100%, 620px)';
+            svg.style.maxWidth='620px';
+            svg.style.height='90px';
+            svg.style.display='block';
+            svg.style.margin='0 auto';
+        } catch(e) { console.error('Barcode render error', e); }
+    };
+
+    const oldViewDetailsV3 = window.viewOrderDetails;
+    window.viewOrderDetails = (id) => {
+        const result = typeof oldViewDetailsV3 === 'function' ? oldViewDetailsV3(id) : null;
+        const order = (allOrders || []).find(o => o.dbId === id);
+        if (!order) return result;
+        const source = document.getElementById('oSource');
+        if (source) source.innerText = order.source || 'الموقع الإلكتروني';
+        setTimeout(() => renderStableBarcode(order), 30);
+        return result;
+    };
+
+    window.bulkPrintWaybills = () => {
+        if (!window.hasDashboardPermission('orders','details')) return window.showAlert('ليس لديك صلاحية طباعة البوليصات!','error');
+        const orders = (allOrders || []).filter(o => o.status === 'جاري التجهيز');
+        if (!orders.length) return window.showAlert('لا توجد طلبات جاري التجهيز لطباعتها!','warning');
+        const container = document.getElementById('bulkPrintContainer');
+        if (!container) return;
+        container.innerHTML='';
+        orders.forEach((o,idx) => {
+            const code = String(o.orderId || o.secretCode || o.displayId || '').trim();
+            const desc = (o.items || []).map(i => `${i.qty}x ${escP(i.name)}`).join(' ، ');
+            const wrap = document.createElement('div');
+            wrap.className='bulk-waybill-page';
+            wrap.style.cssText='page-break-after:always;width:100%;background:#fff;';
+            wrap.innerHTML = `
+                <div class="bosta-waybill bulk-waybill-card">
+                    <div class="waybill-head">
+                        <div class="waybill-brand">ModyStore <i class="fas fa-bolt"></i></div>
+                        <svg class="bulk-stable-barcode"></svg>
+                    </div>
+                    <div class="waybill-grid">
+                        <div><strong>من:</strong> مودي ستور<br><strong>السماح بالفتح:</strong> لا</div>
+                        <div class="bulk-waybill-qr"></div>
+                    </div>
+                    <div class="waybill-recipient">
+                        <strong>إلى:</strong> ${escP(o.customer?.name || '-')}<br>
+                        <strong>المحافظة:</strong> ${escP(o.customer?.city || '-')} | <strong>المنطقة:</strong> ${escP(o.customer?.region || '')}<br>
+                        <strong>العنوان:</strong> ${escP(typeof o.customer?.address === 'object' ? (o.customer.address.street || o.customer.address.details || '-') : (o.customer?.address || '-'))}<br>
+                        <strong>تليفون:</strong> <span dir="ltr">${escP(o.customer?.phone || '-')}</span>
+                    </div>
+                    <div class="waybill-description"><strong>الوصف:</strong> ${desc || '-'}<br><strong>ملاحظات:</strong> ${escP(o.notes || 'لا يوجد')}</div>
+                    <div class="waybill-amount"><strong>${o.paymentMethod && !String(o.paymentMethod).includes('كاش') && !String(o.paymentMethod).includes('استلام') ? 'القيمة المدفوعة' : 'المبلغ المطلوب تحصيله (COD)'}</strong><span>${Math.round(o.total || 0)} ج.م</span></div>
+                    <div class="waybill-footer">كود التتبع: <b>${escP(code)}</b> — شكراً لثقتكم بنا ❤️</div>
+                </div>`;
+            container.appendChild(wrap);
+            const svg=wrap.querySelector('.bulk-stable-barcode');
+            if (svg && typeof JsBarcode !== 'undefined') JsBarcode(svg, code, {format:'CODE128',width:2.4,height:82,displayValue:true,fontSize:20,margin:8});
+            const qr=wrap.querySelector('.bulk-waybill-qr');
+            if (qr && typeof QRCode !== 'undefined') new QRCode(qr,{text:`${location.origin}${location.pathname}?order=${encodeURIComponent(code)}`,width:120,height:120});
+        });
+        closeModal('orderDetailsModal');
+        window.printNode(container);
+    };
+
+    // -------------------- Manual order creation --------------------
+    let manualOrderItems = [];
+    const getActiveProductPrice = p => {
+        const end = numP(p.offerEndAt);
+        if (p.discountPrice && (!end || end > Date.now())) return numP(p.discountPrice);
+        return numP(p.price);
+    };
+    const renderManualItems = () => {
+        const list=document.getElementById('manualOrderItemsList');
+        if(!list)return;
+        if(!manualOrderItems.length){list.innerHTML='<div style="padding:25px;text-align:center;color:#94a3b8;">لم تتم إضافة منتجات بعد.</div>'; updateManualOrderTotals(); return;}
+        list.innerHTML=manualOrderItems.map((it,i)=>`
+            <div class="manual-item">
+                <strong>${escP(it.name)}</strong>
+                <span>× ${it.qty}</span>
+                <span>${moneyP(it.qty*it.price)}</span>
+                <button type="button" onclick="removeManualOrderItem(${i})"><i class="fas fa-times"></i></button>
+            </div>`).join('');
+        updateManualOrderTotals();
+    };
+    window.updateManualOrderTotals = () => {
+        const subtotal=manualOrderItems.reduce((s,i)=>s+numP(i.qty)*numP(i.price),0);
+        const shipping=Math.max(0,numP(document.getElementById('manualShippingCost')?.value));
+        const discount=Math.max(0,numP(document.getElementById('manualDiscount')?.value));
+        const total=Math.max(0,subtotal+shipping-discount);
+        const el=document.getElementById('manualOrderTotal'); if(el)el.innerText=moneyP(total);
+        return {subtotal,shipping,discount,total};
+    };
+    window.openManualOrderModal = () => {
+        if(!window.hasDashboardPermission('orders','create')) return window.showAlert('ليس لديك صلاحية إنشاء طلبات يدوية!','error');
+        manualOrderItems=[];
+        ['manualCustName','manualCustPhone','manualCustPhone2','manualCustCity','manualCustRegion','manualCustAddress','manualOrderNotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+        document.getElementById('manualShippingCost').value='0';
+        document.getElementById('manualDiscount').value='0';
+        document.getElementById('manualOrderSource').value='واتساب';
+        document.getElementById('manualPaymentMethod').value='كاش';
+        const s=document.getElementById('manualProductSelect');
+        if(s){s.innerHTML='<option value="">اختر المنتج...</option>';(allProducts||[]).filter(p=>p.isActive!==false).forEach(p=>s.innerHTML+=`<option value="${escP(p.id)}">${escP(p.name)} — ${moneyP(getActiveProductPrice(p))} — مخزون ${numP(p.stock)}</option>`);}
+        document.getElementById('manualProductQty').value='1';
+        renderManualItems();
+        document.getElementById('manualOrderModal').style.display='flex';
+    };
+    window.addManualOrderItem = () => {
+        if(!window.hasDashboardPermission('orders','create')) return;
+        const s=document.getElementById('manualProductSelect');
+        const qty=Math.max(1,parseInt(document.getElementById('manualProductQty')?.value,10)||1);
+        const p=(allProducts||[]).find(x=>x.id===s?.value);
+        if(!p)return window.showAlert('اختر المنتج أولاً!','warning');
+        const existing=manualOrderItems.find(x=>x.id===p.id);
+        const currentQty=existing?.qty||0;
+        if(numP(p.stock)<currentQty+qty)return window.showAlert(`المخزون المتاح من ${p.name} هو ${numP(p.stock)} فقط.`,'warning');
+        const price=getActiveProductPrice(p);
+        if(existing)existing.qty+=qty; else manualOrderItems.push({id:p.id,name:p.name,qty,price});
+        renderManualItems();
+    };
+    window.removeManualOrderItem = i => { manualOrderItems.splice(i,1); renderManualItems(); };
+    window.saveManualOrder = async () => {
+        if(!window.hasDashboardPermission('orders','create')) return window.showAlert('ليس لديك صلاحية إنشاء طلبات يدوية!','error');
+        const name=document.getElementById('manualCustName')?.value.trim();
+        const phone=document.getElementById('manualCustPhone')?.value.trim();
+        const phone2=document.getElementById('manualCustPhone2')?.value.trim();
+        const city=document.getElementById('manualCustCity')?.value.trim();
+        const region=document.getElementById('manualCustRegion')?.value.trim();
+        const address=document.getElementById('manualCustAddress')?.value.trim();
+        const source=document.getElementById('manualOrderSource')?.value||'يدوي';
+        const paymentMethod=document.getElementById('manualPaymentMethod')?.value||'كاش';
+        const notes=document.getElementById('manualOrderNotes')?.value.trim()||'';
+        if(!name||!phone||!city||!address)return window.showAlert('اسم العميل، الموبايل، المحافظة والعنوان بيانات مطلوبة.','warning');
+        if(!manualOrderItems.length)return window.showAlert('أضف منتجاً واحداً على الأقل للطلب.','warning');
+        const totals=window.updateManualOrderTotals();
+        const orderId=`M-${Date.now().toString().slice(-10)}`;
+        const secretCode=String(Math.floor(100000+Math.random()*900000));
+        const order=cleanData({
+            orderId, secretCode, source, manual:true, createdAt:Date.now(), createdBy:currentUser,
+            customer:{name,phone,phone2,city,region,address},
+            items:manualOrderItems.map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})),
+            shippingCost:totals.shipping, discount:totals.discount, subtotal:totals.subtotal,
+            total:totals.total, paymentMethod, paymentStatus:paymentMethod==='كاش'?'pending':'pending',
+            notes, status:'قيد المراجعة'
+        });
+        try{
+            // Re-check stock immediately before writing.
+            for(const item of manualOrderItems){
+                const snap=await get(ref(db,`products/${item.id}`));
+                const stock=snap.exists()?numP(snap.val().stock):0;
+                if(stock<item.qty)throw new Error(`المخزون غير كافٍ للمنتج: ${item.name}`);
+            }
+            const newRef=await push(ref(db,'orders'),order);
+            for(const item of manualOrderItems){
+                const pRef=ref(db,`products/${item.id}`);
+                const snap=await get(pRef);
+                if(snap.exists()){
+                    const before=numP(snap.val().stock), after=before-item.qty;
+                    await update(pRef,{stock:after});
+                    await push(ref(db,'inventoryMovements'),cleanData({productId:item.id,productName:item.name,before,after,reason:'طلب يدوي',orderId,source,user:currentUser,timestamp:Date.now()}));
+                }
+            }
+            await push(ref(db,'logs'),cleanData({action:'إنشاء طلب يدوي',details:`إنشاء الطلب ${orderId} من مصدر ${source}`,user:currentUser,timestamp:Date.now()}));
+            closeModal('manualOrderModal');
+            window.showAlert(`تم إنشاء الطلب #${orderId} بنجاح`, 'success');
+            window.switchOrderTab?.('active');
+        }catch(e){
+            console.error(e);
+            window.showAlert(`تعذر إنشاء الطلب: ${e.message||e}`,'error');
+        }
+    };
+
+    // -------------------- Source column + details permission --------------------
+    const oldRenderOrdersV3 = window.renderOrdersTable;
+    window.renderOrdersTable = () => {
+        const table=document.getElementById('ordersTableBody'); if(!table)return;
+        if(!window.hasDashboardPermission('orders','view')){table.innerHTML='<tr><td colspan="7" style="text-align:center;padding:25px;">لا تملك صلاحية عرض الطلبات.</td></tr>';return;}
+        const search=(document.getElementById('searchOrders')?.value||'').toLowerCase();
+        const dateFilter=document.getElementById('filterOrderDate')?.value||'';
+        const paymentFilter=document.getElementById('filterOrderPayment')?.value||'';
+        const statusFilter=document.getElementById('filterOrderStatus')?.value||'';
+        const tab=currentOrderTab==='active';
+        const filtered=(allOrders||[]).filter(o=>{
+            const tabMatch=tab?['قيد المراجعة','جاري التجهيز','تم الشحن'].includes(o.status):['تم تسليمه','ملغي','مرتجع'].includes(o.status);
+            const searchMatch=[o.displayId,o.orderId,o.customer?.name,o.customer?.phone,o.source].some(v=>String(v??'').toLowerCase().includes(search));
+            const dateMatch=!dateFilter||new Date(o.createdAt).toISOString().slice(0,10)===dateFilter;
+            const payMatch=!paymentFilter||String(o.paymentMethod||'').includes(paymentFilter);
+            const statusMatch=!statusFilter||o.status===statusFilter;
+            return tabMatch&&searchMatch&&dateMatch&&payMatch&&statusMatch;
+        });
+        const count=document.getElementById('filteredOrdersCount'); if(count)count.innerText=filtered.length;
+        if(!filtered.length){table.innerHTML='<tr><td colspan="7" style="text-align:center;padding:25px;">لا توجد طلبات مطابقة للبحث.</td></tr>';return;}
+        const canChange=window.hasDashboardPermission('orders','changeStatus');
+        const canDetails=window.hasDashboardPermission('orders','details');
+        filtered.forEach(order=>{
+            const statuses=['قيد المراجعة','جاري التجهيز','تم الشحن','تم تسليمه','ملغي'];
+            const options=statuses.map(st=>`<option value="${st}" ${order.status===st?'selected':''}>${st}</option>`).join('');
+            const statusHtml=canChange?`<select class="status-select" onchange="requestOrderStatusUpdate('${order.dbId}',this,'${order.status}','${escP(order.displayId||order.orderId)}')">${options}</select>`:`<span class="badge ${order.status==='تم الشحن'?'badge-active':'badge-inactive'}">${escP(order.status)}</span>`;
+            table.innerHTML+=`<tr>
+                <td style="font-weight:900;color:var(--primary);">#${escP(order.displayId||order.orderId)}</td>
+                <td><b>${escP(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escP(order.paymentMethod||'الدفع عند الاستلام')}</span></td>
+                <td><span class="source-chip">${escP(order.source||'الموقع الإلكتروني')}</span></td>
+                <td dir="ltr" class="meta-info">${escP(formatDateTime(order.createdAt))}</td>
+                <td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td>
+                <td>${statusHtml}</td>
+                <td>${canDetails?`<button class="btn-action btn-view" onclick="viewOrderDetails('${order.dbId}')"><i class="fas fa-eye"></i></button>`:'—'}</td>
+            </tr>`;
+        });
+    };
+
+    // -------------------- Product offer expiry --------------------
+    const offerDurationMs = (value, unit) => {
+        const n=Math.max(0,numP(value));
+        if(unit==='minutes') return n*60*1000;
+        if(unit==='days') return n*24*60*60*1000;
+        return n*60*60*1000;
+    };
+    const expireOffer = async p => {
+        if(!p?.id || !p.offerEndAt || numP(p.offerEndAt)>Date.now()) return;
+        try {
+            await update(ref(db,`products/${p.id}`),{discountPrice:null,offerEndAt:null,offerStartAt:null,offerDuration:null,offerUnit:null});
+        } catch(e) { console.warn('offer expiry update failed',e); }
+    };
+    const refreshOfferExpiry = () => {
+        (allProducts||[]).forEach(p=>{ if(p.offerEndAt && numP(p.offerEndAt)<=Date.now()) expireOffer(p); });
+        window.filterProducts?.();
+    };
+    setInterval(refreshOfferExpiry, 30000);
+    onValue(ref(db,'products'), snap => {
+        const now=Date.now();
+        if(snap.exists()) snap.forEach(c=>{const p={id:c.key,...c.val()}; if(p.offerEndAt && numP(p.offerEndAt)<=now) expireOffer(p);});
+    });
+
+    // Replace save product with duration-aware version (direct DB write).
+    window.saveProduct = async () => {
+        if (editingProductId) {
+            if (window.hasDashboardPermission('products','edit')) {
+                // Full edit path.
+            } else if (window.hasDashboardPermission('inventory','adjust')) {
+                const addStock = Math.max(0, parseInt(document.getElementById('prodAddStockOnly')?.value,10) || 0);
+                if (!addStock) return window.showAlert('اكتب كمية صحيحة لإضافتها للمخزون.', 'warning');
+                const p = (allProducts||[]).find(x=>x.id===editingProductId);
+                if (!p) return window.showAlert('المنتج غير موجود.', 'error');
+                await update(ref(db,`products/${editingProductId}`),{stock:numP(p.stock)+addStock});
+                await push(ref(db,'inventoryMovements'),cleanData({
+                    productId:p.id, productName:p.name, before:numP(p.stock), after:numP(p.stock)+addStock,
+                    reason:'زيادة مخزون يدوية', user:currentUser, timestamp:Date.now()
+                }));
+                closeModal('productModal');
+                return window.showAlert('تمت زيادة المخزون بنجاح.', 'success');
+            } else {
+                return window.showAlert('ليس لديك صلاحية تعديل المنتج.', 'error');
+            }
+        } else if (!window.hasDashboardPermission('products','add')) {
+            return window.showAlert('ليس لديك صلاحية إضافة منتجات.', 'error');
+        }
+
+        const name=document.getElementById('prodName')?.value.trim()||'';
+        const price=numP(document.getElementById('prodPrice')?.value);
+        const discountRaw=document.getElementById('prodDiscountPrice')?.value;
+        const discount=discountRaw==='' ? null : numP(discountRaw);
+        const stock=Math.max(0,parseInt(document.getElementById('prodStock')?.value,10)||0);
+        const category=document.getElementById('prodCategory')?.value||'';
+        const description=document.getElementById('prodDesc')?.value||'';
+        const image=document.getElementById('prodImage')?.value.trim()||'';
+        const duration=numP(document.getElementById('prodOfferDuration')?.value);
+        const unit=document.getElementById('prodOfferUnit')?.value||'hours';
+
+        if(!name||!price||!category) return window.showAlert('الاسم والسعر والقسم مطلوبين!', 'warning');
+        if(discount!==null && discount>0 && discount>=price) return window.showAlert('سعر العرض يجب أن يكون أقل من السعر الأساسي.', 'warning');
+
+        const data=cleanData({
+            name, price, discountPrice:discount && discount>0 ? discount : null, stock, category,
+            description, imageUrl:image||'https://via.placeholder.com/300',
+            createdAt:Date.now()
+        });
+
+        if(discount && discount>0) {
+            if(duration>0) {
+                const startAt=Date.now(), endAt=startAt+offerDurationMs(duration,unit);
+                data.offerStartAt=startAt; data.offerEndAt=endAt; data.offerDuration=duration; data.offerUnit=unit;
+            } else {
+                data.offerStartAt=null; data.offerEndAt=null; data.offerDuration=null; data.offerUnit=null;
+            }
+        } else {
+            data.offerStartAt=null; data.offerEndAt=null; data.offerDuration=null; data.offerUnit=null;
+        }
+
+        try {
+            if(editingProductId) {
+                delete data.createdAt;
+                await update(ref(db,`products/${editingProductId}`),data);
+                logAction('تعديل منتج',`تعديل بيانات المنتج: ${name}`);
+                showAlert('تم تعديل المنتج بنجاح!', 'success');
+            } else {
+                data.isActive=true;
+                const newRef=push(ref(db,'products'));
+                await set(newRef,data);
+                logAction('إضافة منتج',`إنشاء منتج جديد: ${name}`);
+                showAlert('تمت إضافة المنتج بنجاح!', 'success');
+            }
+            closeModal('productModal');
+        } catch(e) {
+            console.error(e);
+            showAlert('تعذر حفظ المنتج: '+(e.message||e),'error');
+        }
+    };
+
+    // Offer controls when opening/editing products.
+    const previousOpenProductModalV3 = window.openProductModal;
+    window.openProductModal = () => {
+        if(typeof previousOpenProductModalV3==='function') previousOpenProductModalV3();
+        const d=document.getElementById('prodOfferDuration'); if(d)d.value='';
+        const u=document.getElementById('prodOfferUnit'); if(u)u.value='hours';
+        const days=document.getElementById('prodOfferDays'); if(days)days.value='';
+    };
+    const previousEditProductV3 = window.editProduct;
+    window.editProduct = (id) => {
+        if(typeof previousEditProductV3==='function') previousEditProductV3(id);
+        const p=(allProducts||[]).find(x=>x.id===id);
+        if(!p)return;
+        const d=document.getElementById('prodOfferDuration'); if(d)d.value=p.offerDuration||'';
+        const u=document.getElementById('prodOfferUnit'); if(u)u.value=p.offerUnit||'hours';
+        const days=document.getElementById('prodOfferDays'); if(days)days.value=(p.offerUnit==='days'?p.offerDuration||'':'');
+    };
+
+    // Make product list use only active offers
+    const baseFilterProductsV3 = window.filterProducts;
+    window.filterProducts = () => {
+        if(!window.hasDashboardPermission('products','view')) return;
+        const table=document.getElementById('productsTableBody'); if(!table)return;
+        const term=(document.getElementById('searchProducts')?.value||'').toLowerCase();
+        const cat=document.getElementById('filterProductCat')?.value||'';
+        const offers=!!document.getElementById('filterProductOffers')?.checked;
+        const activeOffer = p => numP(p.discountPrice)>0 && (!p.offerEndAt || numP(p.offerEndAt)>Date.now());
+        let list=(allProducts||[]).filter(p=>(p.name||'').toLowerCase().includes(term)&&(!cat||p.category===cat)&&(!offers||activeOffer(p)));
+        if(currentProductTab==='active')list=list.filter(p=>p.isActive);
+        else if(currentProductTab==='inactive')list=list.filter(p=>!p.isActive);
+        else if(currentProductTab==='lowstock')list=list.filter(p=>numP(p.stock)<=5);
+        table.innerHTML=list.map(p=>{
+            const isOffer=activeOffer(p);
+            const price=isOffer?`<del style="color:#94a3b8">${numP(p.price)}</del> <span style="color:var(--accent);font-weight:bold">${numP(p.discountPrice)} ج.م</span>`:`${numP(p.price)} ج.م`;
+            const offerMeta=isOffer&&p.offerEndAt?`<div class="meta-info" style="color:#f97316;">ينتهي ${escP(formatDateTime(p.offerEndAt))}</div>`:'';
+            const stock=numP(p.stock)<=5?`<span style="color:var(--danger);font-weight:bold">${numP(p.stock)} (نواقص)</span>`:numP(p.stock);
+            return `<tr><td><div class="product-info"><img src="${escP(p.imageUrl||'https://via.placeholder.com/300')}" class="product-img"><span>${escP(p.name)}</span></div></td><td>${price}${offerMeta}</td><td style="font-weight:bold">${stock}</td><td>${escP(p.category||'-')}</td><td><span class="badge ${p.isActive?'badge-active':'badge-inactive'}">${p.isActive?'معروض':'مخفي'}</span></td><td><div class="actions">
+                ${window.hasDashboardPermission('products','edit')?`<button class="btn-action btn-edit" onclick="editProduct('${p.id}')"><i class="fas fa-pen"></i></button>`:''}
+                ${window.hasDashboardPermission('products','toggle')?`<button class="btn-action btn-hide" style="background:${p.isActive?'#64748b':'#22c55e'}" onclick="toggleProduct('${p.id}',${!!p.isActive},'${escP(p.name)}')"><i class="fas ${p.isActive?'fa-eye-slash':'fa-eye'}"></i></button>`:''}
+                ${window.hasDashboardPermission('products','delete')?`<button class="btn-action btn-delete" onclick="deleteProduct('${p.id}','${escP(p.name)}')"><i class="fas fa-trash"></i></button>`:''}
+            </div></td></tr>`;
+        }).join('');
+    };
+
+    // -------------------- Real analytics cards + sources --------------------
+    const refreshExtraAnalytics = () => {
+        const orders=allOrders||[];
+        const valid=orders.filter(o=>!['ملغي','مرتجع'].includes(o.status));
+        const avg=valid.length ? valid.reduce((s,o)=>s+numP(o.total),0)/valid.length : 0;
+        const pendingValue=orders.filter(o=>o.status==='قيد المراجعة').reduce((s,o)=>s+numP(o.total),0);
+        const avgEl=document.getElementById('statAverageOrder'); if(avgEl)avgEl.innerText=moneyP(avg);
+        const pv=document.getElementById('statPendingValue'); if(pv)pv.innerText=moneyP(pendingValue);
+
+        const sourceCounts={};
+        orders.forEach(o=>{const src=o.source||'الموقع الإلكتروني';sourceCounts[src]=(sourceCounts[src]||0)+1;});
+        const total=Object.values(sourceCounts).reduce((a,b)=>a+b,0);
+        const top=Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1])[0];
+        const topEl=document.getElementById('statTopOrderSource');if(topEl)topEl.innerText=top?.[0]||'-';
+        const topMeta=document.getElementById('statTopOrderSourceMeta');if(topMeta)topMeta.innerText=top?`${top[1]} طلب من إجمالي ${total}`:'لا توجد طلبات بعد';
+        const totalEl=document.getElementById('sourceOrdersTotal');if(totalEl)totalEl.innerText=`${total} طلب`;
+        const box=document.getElementById('orderSourcesBreakdown');
+        if(box){
+            if(!total){box.innerHTML='<div class="source-empty">لا توجد بيانات كافية بعد.</div>';}
+            else{
+                const rows=Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+                box.innerHTML=rows.map(([src,count])=>`<div class="source-row"><div class="source-label">${escP(src)}</div><div class="source-track"><div class="source-fill" style="width:${Math.max(4,(count/total)*100)}%"></div></div><div class="source-value">${count} طلب</div></div>`).join('');
+            }
+        }
+    };
+    window.refreshExtraAnalytics=refreshExtraAnalytics;
+    onValue(ref(db,'orders'), () => setTimeout(refreshExtraAnalytics, 0));
+
+    // -------------------- Paymob settings (safe frontend config) --------------------
+    const oldSaveSettingsV3 = window.saveSettings;
+    window.saveSettings = async () => {
+        if(window.currentUserRole!=='Admin') return window.showAlert('الإعدادات متاحة للمدير فقط!','error');
+        const before = await get(ref(db,'storeSettings')).catch(()=>null);
+        if(typeof oldSaveSettingsV3==='function') await oldSaveSettingsV3();
+        const patch = {
+            paymob: {
+                enabled: !!document.getElementById('setPaymobEnabled')?.checked,
+                publicKey: document.getElementById('setPaymobPublicKey')?.value.trim() || '',
+                integrationId: document.getElementById('setPaymobIntegrationId')?.value.trim() || '',
+                backendEndpoint: document.getElementById('setPaymobBackendEndpoint')?.value.trim() || '',
+                webhookEndpoint: document.getElementById('setPaymobWebhookEndpoint')?.value.trim() || ''
+            },
+            push: {
+                vapidKey: document.getElementById('setFcmVapidKey')?.value.trim() || ''
+            }
+        };
+        await update(ref(db,'storeSettings'),patch);
+        logAction('إعدادات الدفع والإشعارات','تحديث إعدادات Paymob وإشعارات الموبايل');
+        window.showAlert('تم حفظ إعدادات Paymob والإشعارات.', 'success');
+    };
+    onValue(ref(db,'storeSettings'), snap => {
+        if(!snap.exists())return;
+        const d=snap.val()||{};
+        const p=d.paymob||{};
+        const push=d.push||{};
+        const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val??'';};
+        const check=(id,val)=>{const e=document.getElementById(id);if(e)e.checked=!!val;};
+        check('setPaymobEnabled',p.enabled);
+        set('setPaymobPublicKey',p.publicKey);
+        set('setPaymobIntegrationId',p.integrationId);
+        set('setPaymobBackendEndpoint',p.backendEndpoint);
+        set('setPaymobWebhookEndpoint',p.webhookEndpoint);
+        set('setFcmVapidKey',push.vapidKey);
+    });
+
+    // -------------------- Firebase Cloud Messaging registration --------------------
+    let fcmRegistration = null;
+    window.initMobilePushNotifications = async () => {
+        try{
+            if(!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            const supported=await isMessagingSupported();
+            if(!supported)return;
+            const settingsSnap=await get(ref(db,'storeSettings'));
+            const vapidKey=settingsSnap.exists()?String(settingsSnap.val()?.push?.vapidKey||'').trim():'';
+            if(!vapidKey){
+                const s=document.getElementById('pushSetupStatus'); if(s)s.innerText='أدخل VAPID Key من إعدادات Firebase أولاً';
+                return;
+            }
+            fcmRegistration=await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            const messaging=getMessaging(app);
+            const permission=Notification.permission==='granted'? 'granted' : await Notification.requestPermission();
+            if(permission!=='granted')return;
+            const token=await getToken(messaging,{vapidKey,serviceWorkerRegistration:fcmRegistration});
+            if(!token)return;
+            const uid=window.currentEmpUid||auth.currentUser?.uid;
+            if(!uid)return;
+            await set(ref(db,`pushTokens/${uid}/${encodeURIComponent(token)}`),{token,updatedAt:Date.now(),user:currentUser,role:window.currentUserRole});
+            const status=document.getElementById('pushSetupStatus');if(status){status.innerText='الإشعارات مفعّلة على هذا الجهاز';status.classList.add('ok');}
+            onMessage(messaging,payload=>{
+                const title=payload.notification?.title||payload.data?.title||'ModyStore';
+                const body=payload.notification?.body||payload.data?.body||'لديك تحديث جديد';
+                if(document.visibilityState==='visible')window.showAlert(`${title} — ${body}`,'info');
+            });
+        }catch(e){
+            console.warn('FCM init failed',e);
+            const status=document.getElementById('pushSetupStatus');if(status)status.innerText='تعذر تفعيل إشعارات هذا الجهاز';
+        }
+    };
+    window.enableMobilePush = async () => {
+        await window.initMobilePushNotifications?.();
+    };
+
+    window.refreshManualOrderUI = () => {
+        try {
+            const list=document.getElementById('manualOrderItemsList');
+            if(!list) return;
+            if(!manualOrderItems.length){list.innerHTML='<div style="padding:25px;text-align:center;color:#94a3b8;">لم تتم إضافة منتجات بعد.</div>'; updateManualOrderTotals(); return;}
+            list.innerHTML=manualOrderItems.map((it,i)=>`<div class="manual-item"><strong>${escP(it.name)}</strong><span>× ${it.qty}</span><span>${moneyP(it.qty*it.price)}</span><button type="button" onclick="removeManualOrderItem(${i})"><i class="fas fa-times"></i></button></div>`).join('');
+            updateManualOrderTotals();
+        } catch(e) {}
+    };
+
+    // -------------------- Final auth/UI sync --------------------
+    const syncFinalUI = () => {
+        if(!window.__dashboardAuthReady)return;
+        applyExactPermissions();
+        refreshExtraAnalytics();
+        window.refreshManualOrderUI?.();
+    };
+    setTimeout(syncFinalUI, 50);
+    setTimeout(syncFinalUI, 400);
+    setTimeout(syncFinalUI, 1000);
 })();
