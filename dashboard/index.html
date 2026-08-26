@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=20260825-settings-final">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e293b'/%3E%3Cpath d='M34 8 17 36h12l-2 20 20-30H35z' fill='%23f59e0b'/%3E%3C/svg%3E">
     
     <!-- مكتبات التفاعل والأنيميشن -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
@@ -105,7 +106,17 @@
         }
     </style>
 </head>
-<body>
+<body class="auth-pending">
+
+    <div id="authGate" class="auth-gate" aria-live="polite">
+        <div class="auth-gate-card">
+            <div class="auth-gate-logo"><i class="fas fa-bolt"></i></div>
+            <div class="auth-gate-spinner"></div>
+            <strong>جاري تأمين لوحة التحكم</strong>
+            <span>يتم التحقق من الحساب والصلاحيات قبل إظهار أي بيانات.</span>
+        </div>
+    </div>
+
 
     <!-- ملف الصوت الخاص بالسكانر -->
     <audio id="barcodeBeep" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
@@ -249,25 +260,43 @@
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>طلبات قيد المراجعة</h3><p id="statPendingOrders2">0</p></div></div>
                 </div>
 
-                <div class="charts-container grid-2" style="margin-top: 30px;">
-                    <div class="card" style="padding: 20px;">
-                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات (آخر 7 أيام)</h3>
-                        <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;"><canvas id="salesChart"></canvas></div>
-                        <table style="width: 100%; text-align: right; border-collapse: collapse; font-size: 14px;">
-                            <thead>
-                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                                    <th style="padding: 10px;">التاريخ</th>
-                                    <th style="padding: 10px;">عدد الطلبات</th>
-                                    <th style="padding: 10px;">الإيرادات</th>
-                                </tr>
-                            </thead>
-                            <tbody id="last7DaysTableBody">
-                            </tbody>
-                        </table>
+                <div class="stat-cards analytics-extra-cards" style="margin-top:20px;">
+                    <div class="stat-card analytics-kpi-card">
+                        <div class="stat-icon" style="color:#0ea5e9;background:#e0f2fe;"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-info"><h3>متوسط قيمة الطلب</h3><p id="statAverageOrder">0 ج.م</p><small>من الطلبات غير الملغاة والمرتجعة</small></div>
                     </div>
-                    <div class="card" style="padding: 20px;">
-                        <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-pie"></i> حالة الطلبات الحالية</h3>
-                        <div style="position: relative; height: 250px; width: 100%;"><canvas id="ordersChart"></canvas></div>
+                    <div class="stat-card analytics-kpi-card">
+                        <div class="stat-icon" style="color:#f97316;background:#ffedd5;"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="stat-info"><h3>قيمة الطلبات قيد المراجعة</h3><p id="statPendingValue">0 ج.م</p><small>إجمالي قابل للتحويل للمبيعات</small></div>
+                    </div>
+                    <div class="stat-card analytics-kpi-card">
+                        <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-bullseye"></i></div>
+                        <div class="stat-info"><h3>أكثر مصدر للطلبات</h3><p id="statTopOrderSource">-</p><small id="statTopOrderSourceMeta">يتم الحساب من الطلبات الحقيقية</small></div>
+                    </div>
+                </div>
+
+                <div class="charts-container grid-2" style="margin-top: 30px;">
+                    <div class="card analytics-chart-card" style="padding: 20px;">
+                        <div class="analytics-card-head">
+                            <div>
+                                <span class="section-kicker">SALES TREND</span>
+                                <h3 style="color: var(--primary); margin: 0; font-size: 16px;"><i class="fas fa-chart-line"></i> المبيعات خلال آخر 7 أيام</h3>
+                            </div>
+                            <span class="analytics-live-badge"><i class="fas fa-circle"></i> بيانات مباشرة</span>
+                        </div>
+                        <div style="position: relative; height: 280px; width: 100%;"><canvas id="salesChart"></canvas></div>
+                    </div>
+                    <div class="card analytics-chart-card" style="padding: 20px;">
+                        <div class="analytics-card-head">
+                            <div>
+                                <span class="section-kicker">ORDER SOURCES</span>
+                                <h3 style="color: var(--primary); margin: 0; font-size: 16px;"><i class="fas fa-bullseye"></i> مصادر الطلبات</h3>
+                            </div>
+                            <span id="sourceOrdersTotal" class="analytics-total-badge">0 طلب</span>
+                        </div>
+                        <div id="orderSourcesBreakdown" class="source-breakdown">
+                            <div class="source-empty">لا توجد بيانات كافية بعد.</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -277,6 +306,9 @@
                 <div class="page-header" style="display:flex; flex-wrap:wrap; gap:10px;">
                     <h2 class="page-title">إدارة الطلبات</h2>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-save" id="btnCreateManualOrder" style="background-color: var(--success);" onclick="openManualOrderModal()">
+                            <i class="fas fa-plus"></i> إنشاء أوردر يدوي
+                        </button>
                         <button class="btn-save" style="background-color: #8b5cf6;" onclick="openScannerModal()">
                             <i class="fas fa-qrcode"></i> سكانر الشحن
                         </button>
@@ -321,6 +353,7 @@
                             <tr>
                                 <th>رقم الطلب</th>
                                 <th>العميل / الدفع</th>
+                                <th>مصدر الطلب</th>
                                 <th>التاريخ</th>
                                 <th>الإجمالي</th>
                                 <th>الحالة</th>
@@ -328,7 +361,7 @@
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody">
-                            <tr><td colspan="6" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
+                            <tr><td colspan="7" style="text-align: center; padding: 20px;">جاري التحميل...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -709,6 +742,38 @@
                     </section>
                 </div>
 
+
+                <div class="settings-section-title">
+                    <div><span class="section-kicker">PAYMENTS</span><h3>بوابة الدفع Paymob</h3></div>
+                    <p>إعدادات الربط الخاصة بالدفع الإلكتروني — المفاتيح السرية لا تُحفظ في الواجهة.</p>
+                </div>
+                <section class="settings-card paymob-settings-card">
+                    <div class="settings-card-head">
+                        <div class="settings-card-icon orange"><i class="fas fa-credit-card"></i></div>
+                        <div><h3>Paymob Checkout</h3><p>فعّل Paymob واربط الـ Checkout الآمن بالـ Backend الخاص بك.</p></div>
+                        <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setPaymobEnabled"><span></span></label>
+                    </div>
+                    <div class="settings-grid paymob-grid">
+                        <div class="settings-field"><label>Public Key <span>يمكن حفظه في الواجهة</span></label><div class="settings-input-wrap"><i class="fas fa-key"></i><input type="text" id="setPaymobPublicKey" dir="ltr" placeholder="pk_..."></div></div>
+                        <div class="settings-field"><label>Integration ID <span>من Paymob Dashboard</span></label><div class="settings-input-wrap"><i class="fas fa-hashtag"></i><input type="text" id="setPaymobIntegrationId" dir="ltr" inputmode="numeric" placeholder="123456"></div></div>
+                        <div class="settings-field"><label>Checkout Endpoint <span>رابط الـ Backend الآمن</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setPaymobBackendEndpoint" dir="ltr" placeholder="https://api.example.com/paymob/checkout"></div></div>
+                        <div class="settings-field"><label>Webhook Endpoint <span>لمتابعة نجاح/فشل الدفع</span></label><div class="settings-input-wrap"><i class="fas fa-link"></i><input type="url" id="setPaymobWebhookEndpoint" dir="ltr" placeholder="https://api.example.com/paymob/webhook"></div></div>
+                    </div>
+                    <div class="paymob-security-note"><i class="fas fa-shield-alt"></i><span>لا تضع Secret Key أو HMAC Secret داخل HTML / JavaScript. Paymob توصي بإنشاء الـ Intention من Backend والتحقق من Webhook/HMAC هناك.</span></div>
+                </section>
+
+
+                <section class="settings-card push-settings-card">
+                    <div class="settings-card-head">
+                        <div class="settings-card-icon green"><i class="fas fa-bell"></i></div>
+                        <div><h3>إشعارات الموبايل</h3><p>مفتاح VAPID العام لتسجيل الجهاز في Firebase Cloud Messaging.</p></div>
+                    </div>
+                    <div class="settings-field">
+                        <label>Firebase Web Push VAPID Key <span>Public Key فقط</span></label>
+                        <div class="settings-input-wrap"><i class="fas fa-mobile-screen-button"></i><input type="text" id="setFcmVapidKey" dir="ltr" placeholder="BP..."></div>
+                    </div>
+                    <div class="push-status-row"><span id="pushSetupStatus" class="push-status-pill">لم يتم تهيئة الإشعارات بعد</span><button type="button" class="btn-save" style="background:#10b981;" onclick="window.enableMobilePush?.()"><i class="fas fa-bell"></i> تفعيل إشعارات هذا الجهاز</button></div>
+                </section>
                 <div class="settings-section-title social-title">
                     <div><span class="section-kicker">SOCIAL</span><h3>قنوات التواصل الاجتماعي</h3></div>
                     <p>اختار القنوات التي تريد إظهارها للعملاء وأضف روابطها.</p>
@@ -784,14 +849,79 @@
             </div>
         </div>
 
+
+        <!-- ================= إنشاء أوردر يدوي ================= -->
+        <div class="modal-overlay" id="manualOrderModal">
+            <div class="modal animate__animated animate__zoomIn" style="width: 900px; max-width: 96%;">
+                <h3><i class="fas fa-cart-plus" style="color:var(--success);"></i> إنشاء أوردر يدوي</h3>
+                <div class="manual-order-grid">
+                    <div class="manual-order-panel">
+                        <div class="manual-order-section-title">بيانات العميل</div>
+                        <div class="grid-2">
+                            <div class="input-group"><label>اسم العميل *</label><input id="manualCustName" type="text" placeholder="اسم العميل"></div>
+                            <div class="input-group"><label>رقم الموبايل *</label><input id="manualCustPhone" type="tel" inputmode="tel" placeholder="01xxxxxxxxx"></div>
+                            <div class="input-group"><label>رقم بديل</label><input id="manualCustPhone2" type="tel" inputmode="tel" placeholder="اختياري"></div>
+                            <div class="input-group"><label>المحافظة *</label><input id="manualCustCity" type="text" placeholder="القاهرة"></div>
+                            <div class="input-group"><label>المنطقة</label><input id="manualCustRegion" type="text" placeholder="المنطقة / الحي"></div>
+                            <div class="input-group"><label>العنوان *</label><input id="manualCustAddress" type="text" placeholder="العنوان بالتفصيل"></div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group"><label>مصدر الطلب *</label>
+                                <select id="manualOrderSource">
+                                    <option value="واتساب">واتساب</option>
+                                    <option value="الموقع الإلكتروني">الموقع الإلكتروني</option>
+                                    <option value="فيسبوك / إنستجرام">فيسبوك / إنستجرام</option>
+                                    <option value="هاتف">هاتف</option>
+                                    <option value="تيك توك">تيك توك</option>
+                                    <option value="يدوي">يدوي</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                            <div class="input-group"><label>طريقة الدفع *</label>
+                                <select id="manualPaymentMethod">
+                                    <option value="كاش">الدفع عند الاستلام</option>
+                                    <option value="محفظة إلكترونية">محفظة إلكترونية</option>
+                                    <option value="إنستا باي">إنستا باي</option>
+                                    <option value="فيزا / بطاقة ائتمان">فيزا / بطاقة ائتمان</option>
+                                    <option value="Paymob">Paymob</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group"><label>ملاحظات</label><textarea id="manualOrderNotes" rows="3" placeholder="ملاحظات للعميل أو المندوب..."></textarea></div>
+                    </div>
+
+                    <div class="manual-order-panel">
+                        <div class="manual-order-section-title">المنتجات</div>
+                        <div class="manual-add-item-row">
+                            <select id="manualProductSelect"><option value="">اختر المنتج...</option></select>
+                            <input id="manualProductQty" type="number" min="1" value="1" placeholder="الكمية">
+                            <button class="btn-save" type="button" onclick="addManualOrderItem()"><i class="fas fa-plus"></i> إضافة</button>
+                        </div>
+                        <div id="manualOrderItemsList" class="manual-order-items-list"></div>
+                        <div class="grid-2" style="margin-top:15px;">
+                            <div class="input-group"><label>الشحن</label><input id="manualShippingCost" type="number" min="0" value="0" oninput="updateManualOrderTotals()"></div>
+                            <div class="input-group"><label>خصم</label><input id="manualDiscount" type="number" min="0" value="0" oninput="updateManualOrderTotals()"></div>
+                        </div>
+                        <div class="manual-order-total">
+                            <span>الإجمالي</span><strong id="manualOrderTotal">0 ج.م</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal('manualOrderModal')">إلغاء</button>
+                    <button class="btn-save" style="background:var(--success);" onclick="saveManualOrder()"><i class="fas fa-check"></i> إنشاء الطلب</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ================= سكانر تأكيد الشحن ================= -->
         <div class="modal-overlay" id="scannerModal">
             <div class="modal animate__animated animate__zoomIn" style="width: 450px;">
                 <h3><i class="fas fa-qrcode"></i> سكانر لتأكيد الشحن</h3>
-                <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">قم بتوجيه قارئ الباركود على بوليصة الشحن. يوجد فاصل زمني لمنع التكرار.</p>
+                <p style="text-align: center; margin-bottom: 15px; font-size: 14px; color: #64748b;">وجّه الكاميرا إلى الباركود الشريطي أو QR على البوليصة. يتم دعم CODE128 وEAN وQR مع فاصل لمنع التكرار.</p>
                 <div id="qr-reader" style="width: 100%; aspect-ratio: 2/1; border-radius: 8px; overflow: hidden; border: 2px solid var(--border);"></div>
                 <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
-                    <input id="manualScanOrderInput" type="text" inputmode="numeric" placeholder="اكتب رقم الأوردر يدوياً إذا لم يقرأ السكانر" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:8px;font-family:Cairo;direction:ltr;text-align:center;">
+                    <input id="manualScanOrderInput" type="text" inputmode="numeric" placeholder="اكتب رقم الطلب أو الكود السري إذا لم يقرأ السكانر" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:8px;font-family:Cairo;direction:ltr;text-align:center;">
                     <button class="btn-save" style="background:var(--secondary);" onclick="manualScanOrder()"><i class="fas fa-keyboard"></i> تأكيد</button>
                 </div>
                 <div class="modal-actions">
@@ -813,6 +943,7 @@
                             <strong>العنوان:</strong> <span id="oAddress"></span><br>
                             <strong>المحافظة:</strong> <span id="oCity" style="color: var(--secondary);"></span><br>
                             <strong>طريقة الدفع:</strong> <span id="oPayment" style="color: var(--secondary); font-weight: bold;"></span><br>
+                            <strong>مصدر الطلب:</strong> <span id="oSource" style="color: #8b5cf6; font-weight: bold;">-</span><br>
                             <strong>الرقم السري للعميل:</strong> <span id="oSecretCode" style="color: var(--danger); font-weight: bold; font-size: 18px; letter-spacing: 2px;"></span>
                         </div>
                         
@@ -973,7 +1104,18 @@
                         <label>المخزون (الكمية المتاحة)</label><input type="number" id="prodStock" value="10">
                         <div id="addStockDiv" style="display:none; margin-top:5px;"><label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label><input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1"></div>
                     </div>
-                    <div class="input-group"><label>أيام انتهاء العرض (اختياري)</label><input type="number" id="prodOfferDays" placeholder="مثال: 7"></div>
+                    <div class="input-group">
+                        <label>مدة العرض <span style="color:#94a3b8;font-size:11px;">اختياري — ينتهي تلقائياً ويرجع السعر الأساسي</span></label>
+                        <div class="offer-duration-row">
+                            <input type="number" id="prodOfferDuration" min="1" step="1" placeholder="مثال: 6">
+                            <select id="prodOfferUnit">
+                                <option value="hours">ساعات</option>
+                                <option value="days">أيام</option>
+                                <option value="minutes">دقائق</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="prodOfferDays">
+                    </div>
                 </div>
                 <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
                 <div class="input-group"><label>الوصف التفصيلي</label><textarea id="prodDesc" rows="4"></textarea></div>
@@ -1017,7 +1159,7 @@
                     <div class="permission-note">حدد أولاً هل يستطيع رؤية التاب، ثم اختر العمليات المسموح بها داخلها.</div>
                     <div class="permission-grid">
                         <div class="permission-row"><b>الإحصائيات</b><label><input type="checkbox" class="perm-view" data-module="analytics"> عرض</label><label><input type="checkbox" class="perm-export" data-module="analytics"> إصدار التقارير</label></div>
-                        <div class="permission-row"><b>إدارة الطلبات</b><label><input type="checkbox" class="perm-view" data-module="orders"> عرض</label><label><input type="checkbox" data-perm="orders.changeStatus"> تغيير الحالة</label><label><input type="checkbox" data-perm="orders.details"> تفاصيل الطلب</label></div>
+                        <div class="permission-row"><b>إدارة الطلبات</b><label><input type="checkbox" class="perm-view" data-module="orders"> عرض</label><label><input type="checkbox" data-perm="orders.create"> إنشاء طلب</label><label><input type="checkbox" data-perm="orders.changeStatus"> تغيير الحالة</label><label><input type="checkbox" data-perm="orders.details"> تفاصيل الطلب</label></div>
                         <div class="permission-row"><b>المشتريات والمصروفات</b><label><input type="checkbox" class="perm-view" data-module="finance"> عرض</label><label><input type="checkbox" data-perm="finance.purchase"> إدخال مشتريات</label><label><input type="checkbox" data-perm="finance.expense"> إدخال مصروفات</label><label><input type="checkbox" data-perm="finance.history"> البيانات السابقة</label><label><input type="checkbox" class="perm-export" data-module="finance"> تصدير</label></div>
                         <div class="permission-row"><b>المرتجعات</b><label><input type="checkbox" class="perm-view" data-module="returns"> عرض</label><label><input type="checkbox" data-perm="returns.create"> طلب مرتجع</label><label><input type="checkbox" data-perm="returns.details"> تفاصيل الطلب</label><label><input type="checkbox" data-perm="returns.archive"> أرشفة</label><label><input type="checkbox" class="perm-export" data-module="returns"> تصدير</label></div>
                         <div class="permission-row"><b>المنتجات</b><label><input type="checkbox" class="perm-view" data-module="products"> عرض</label><label><input type="checkbox" data-perm="products.add"> إضافة</label><label><input type="checkbox" data-perm="products.edit"> تعديل</label><label><input type="checkbox" data-perm="products.toggle"> تعطيل/تفعيل</label><label><input type="checkbox" data-perm="products.delete"> حذف</label></div>
