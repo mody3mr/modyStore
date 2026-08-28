@@ -49,11 +49,12 @@ function updateThemeIcon(theme) {
     }
 }
 
-// ==== جلب الإعدادات (الشريط الإخباري، طرق الدفع، الفوتر) ====
+// ==== جلب الإعدادات الخاصة بالمتجر ====
 onValue(ref(db, 'storeSettings'), (snapshot) => {
     if (snapshot.exists()) {
         storeSettings = snapshot.val();
         
+        // الشريط الإخباري
         const ticker = document.getElementById("newsTicker");
         if (ticker) {
             if (storeSettings.newsTicker) {
@@ -64,48 +65,102 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             }
         }
 
-        // طرق الدفع بأسماء مختصرة
+        // طرق الدفع
         const pmSelect = document.getElementById("paymentMethod");
         if (pmSelect && storeSettings.paymentMethods) {
             pmSelect.innerHTML = "";
-            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="كاش">💵 كاش</option>';
+            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
             if (storeSettings.paymentMethods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
-            if (storeSettings.paymentMethods.instapay) pmSelect.innerHTML += '<option value="إنستا باي (InstaPay)">⚡ إنستا باي (InstaPay)</option>';
-            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا</option>';
+            if (storeSettings.paymentMethods.instapay) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
+            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
         }
 
-        if (storeSettings.name) document.getElementById("footerName").innerText = storeSettings.name;
-        
+        // بيانات الفوتر
         if (storeSettings.email) {
             document.getElementById("footerEmail").innerHTML = `<i class="far fa-envelope"></i> <span class="info-text" dir="ltr">${storeSettings.email}</span>`;
             document.getElementById("footerEmail").style.display = "flex";
-        } else {
-            document.getElementById("footerEmail").style.display = "none";
         }
-
         if (storeSettings.phone) {
             document.getElementById("footerPhone").innerHTML = `<i class="fas fa-mobile-alt"></i> <span class="info-text" dir="ltr">${storeSettings.phone}</span>`;
             document.getElementById("footerPhone").style.display = "flex";
-        } else {
-            document.getElementById("footerPhone").style.display = "none";
         }
-
         if (storeSettings.address) {
             document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="info-text">${storeSettings.address}</span>`;
             document.getElementById("footerAddress").style.display = "flex";
-        } else {
-            document.getElementById("footerAddress").style.display = "none";
         }
 
-        if (storeSettings.social) {
-            const fb = document.getElementById("socFb"), ig = document.getElementById("socInsta"), tg = document.getElementById("socTg"), wa = document.getElementById("socWa");
-            if(storeSettings.social.facebook) { fb.href = storeSettings.social.facebook; fb.style.display = "flex"; } else { fb.style.display = "none"; }
-            if(storeSettings.social.instagram) { ig.href = storeSettings.social.instagram; ig.style.display = "flex"; } else { ig.style.display = "none"; }
-            if(storeSettings.social.telegram) { tg.href = storeSettings.social.telegram; tg.style.display = "flex"; } else { tg.style.display = "none"; }
-            if(storeSettings.social.whatsapp) { wa.href = `https://wa.me/${storeSettings.social.whatsapp.replace(/\D/g,'')}`; wa.style.display = "flex"; } else { wa.style.display = "none"; }
+        // السوشيال ميديا
+        if (storeSettings.social && storeSettings.socialEnabled) {
+            const fb = document.getElementById("socFb"), ig = document.getElementById("socInsta"), tg = document.getElementById("socTg"), wa = document.getElementById("socWa"), tiktok = document.getElementById("socTiktok");
+            
+            if(storeSettings.socialEnabled.facebook && storeSettings.social.facebook) { fb.href = storeSettings.social.facebook; fb.style.display = "flex"; } else { fb.style.display = "none"; }
+            if(storeSettings.socialEnabled.instagram && storeSettings.social.instagram) { ig.href = storeSettings.social.instagram; ig.style.display = "flex"; } else { ig.style.display = "none"; }
+            if(storeSettings.socialEnabled.telegram && storeSettings.social.telegram) { tg.href = storeSettings.social.telegram; tg.style.display = "flex"; } else { tg.style.display = "none"; }
+            if(storeSettings.socialEnabled.whatsapp && storeSettings.social.whatsapp) { wa.href = `https://wa.me/${storeSettings.social.whatsapp.replace(/\D/g,'')}`; wa.style.display = "flex"; } else { wa.style.display = "none"; }
+            if(storeSettings.socialEnabled.tiktok && storeSettings.social.tiktok) { tiktok.href = storeSettings.social.tiktok; tiktok.style.display = "flex"; } else { tiktok.style.display = "none"; }
         }
     }
 });
+
+// ==== جلب آراء العملاء ====
+onValue(ref(db, 'storeReviews'), (snapshot) => {
+    const container = document.getElementById("reviewsContainer");
+    if(!container) return;
+    container.innerHTML = "";
+    let hasReviews = false;
+    
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            const r = child.val();
+            // عرض المنشور فقط
+            if (r.isActive !== false) {
+                hasReviews = true;
+                const starsHtml = '<i class="fas fa-star"></i>'.repeat(r.rating || 5) + '<i class="far fa-star"></i>'.repeat(5 - (r.rating || 5));
+                const imgHtml = r.imageUrl ? `<img src="${r.imageUrl}" alt="صورة العميل">` : `<div class="review-placeholder"><i class="fas fa-user"></i></div>`;
+                
+                container.innerHTML += `
+                    <div class="swiper-slide review-card">
+                        ${imgHtml}
+                        <h4>${r.customerName || 'عميل مودي ستور'}</h4>
+                        <p>"${r.text}"</p>
+                        <div class="stars">${starsHtml}</div>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    if(hasReviews) {
+        document.getElementById("reviewsSection").style.display = "block";
+    } else {
+        document.getElementById("reviewsSection").style.display = "none";
+    }
+});
+
+// ==== تهيئة السلايدر (Swiper) ====
+document.addEventListener("DOMContentLoaded", () => {
+    new Swiper('.heroSwiper', {
+        loop: true,
+        autoplay: { delay: 3000, disableOnInteraction: false },
+        pagination: { el: '.swiper-pagination', clickable: true }
+    });
+
+    new Swiper('.reviewsSwiper', {
+        slidesPerView: 1.2,
+        spaceBetween: 15,
+        breakpoints: {
+            640: { slidesPerView: 2.2, spaceBetween: 20 },
+            1024: { slidesPerView: 3.5, spaceBetween: 25 },
+        },
+        autoplay: { delay: 4000 }
+    });
+});
+
+// تفعيل شريط التنقل السفلي
+window.setActiveNav = (element) => {
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(nav => nav.classList.remove('active'));
+    element.classList.add('active');
+};
 
 // ==== أسعار الشحن ====
 onValue(ref(db, 'shipping'), (snapshot) => {
@@ -189,7 +244,7 @@ window.renderProducts = (filterType) => {
         let countdownHtml = "";
         
         if (p.discountPrice) {
-            priceHtml = `<span class="product-price"><span class="old-price" style="font-size:16px;">${p.price}</span> ${p.discountPrice} <span>ج.م</span></span>`;
+            priceHtml = `<span class="product-price"><span class="old-price" style="font-size:14px;">${p.price}</span> ${p.discountPrice} <span>ج.م</span></span>`;
             badgeHtml = `<div class="discount-badge">خصم ${p.price - p.discountPrice} ج.م</div>`;
             
             if(p.offerDays) {
@@ -275,20 +330,15 @@ window.closeProductModal = () => {
     document.getElementById('productDetailsModal').style.display = 'none';
 };
 
-// دالة جديدة لقفل أي قوائم أو نوافذ منبثقة عند الضغط بره
 window.closeOverlay = () => {
     document.getElementById("cartSidebar").classList.remove("open");
-    
     const checkout = document.getElementById("checkoutModal");
     if (checkout) checkout.style.display = "none";
-    
     const tracking = document.getElementById("trackingModal");
     if (tracking) tracking.style.display = "none";
-    
     document.getElementById("overlay").classList.remove("show");
 };
 
-// تعديل الدالة بحيث تظهر أو تخفي الـ overlay بناءً على حالة السلة
 window.toggleCart = () => {
     const sidebar = document.getElementById("cartSidebar");
     const overlay = document.getElementById("overlay");
@@ -371,8 +421,13 @@ function updateCartUI() {
             `;
         });
     }
+    
     document.getElementById("cartCountBadge").innerText = count;
+    if(document.getElementById("bottomCartBadge")) {
+        document.getElementById("bottomCartBadge").innerText = count;
+    }
     document.getElementById("subtotalPrice").innerText = subtotal + " ج.م";
+    
     if (document.getElementById("shippingCostValue")) {
         document.getElementById("shippingCostValue").innerText = `+${currentShippingCost} ج.م`;
     }
@@ -440,6 +495,7 @@ window.openCheckoutModal = () => {
     document.getElementById("cartSidebar").classList.remove("open");
 };
 
+// ==== إرسال الطلب ومعالجة بوابات الدفع ====
 window.sendOrder = async () => {
     const name = document.getElementById("custName").value;
     const phone = document.getElementById("custPhone").value;
@@ -494,6 +550,7 @@ window.sendOrder = async () => {
 🔖 *علامة مميزة:* ${landmark || '-'}
 📝 *تفاصيل للوصول:* ${address}
 💳 *الدفع:* ${paymentMethod}
+🌐 *المصدر:* الموقع الإلكتروني
 
 📦 *المنتجات:*
 ${orderItemsText}
@@ -505,6 +562,7 @@ ${orderItemsText}
     const orderData = {
         orderId: orderId,
         secretCode: orderId,
+        source: "الموقع الإلكتروني",
         customer: { name, phone, phone2, city, region, building, floor, apartment, landmark, address },
         paymentMethod: paymentMethod,
         items: orderItemsForDb,
@@ -550,17 +608,29 @@ ${orderItemsText}
             })
         });
 
-        if(paymentMethod !== "كاش") {
-            Swal.fire({icon: 'info', title: 'توجيه للدفع', text: 'تم تسجيل طلبك بنجاح. سيتم توجيهك لبوابة الدفع الإلكتروني.', confirmButtonColor: 'var(--title-color)'});
-        }
+        // التعامل مع بوابات الدفع (Paymob)
+        if(paymentMethod !== "كاش" && storeSettings.paymob && storeSettings.paymob.enabled) {
+            Swal.fire({
+                title: 'جاري تحويلك لبوابة الدفع...',
+                html: 'يرجى الانتظار، سيتم نقلك لصفحة الدفع الآمنة الخاصه بـ Paymob.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
 
-        document.getElementById("checkoutForm").style.display = "none";
-        document.getElementById("successScreen").style.display = "block";
-        document.getElementById("successOrderId").innerText = orderId;
-        
-        cart = [];
-        appliedVoucher = null;
-        updateCartUI();
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'توجيه للدفع',
+                    html: `تم تسجيل الطلب! <br> سيتم توجيهك الآن للرابط التالي: <br><br><b>${storeSettings.paymob.backendEndpoint}</b><br><br><small>تنويه برمجي: بناءً على الأمان، التوجيه الفعلي لـ Paymob يتم عبر الـ Backend باستخدام Endpoint الخاص بك.</small>`,
+                    confirmButtonText: 'حسناً، إتمام الطلب'
+                }).then(() => {
+                    completeOrderSuccess(orderId);
+                });
+            }, 2500);
+        } else {
+            // كاش أو محفظة بدون ربط البوابة
+            completeOrderSuccess(orderId);
+        }
 
     } catch (error) {
         Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.', confirmButtonColor: 'var(--title-color)'});
@@ -569,6 +639,21 @@ ${orderItemsText}
     }
 };
 
+function completeOrderSuccess(orderId) {
+    const btn = document.getElementById("submitOrderBtn");
+    btn.innerHTML = `تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i>`;
+    btn.disabled = false;
+    
+    document.getElementById("checkoutForm").style.display = "none";
+    document.getElementById("successScreen").style.display = "block";
+    document.getElementById("successOrderId").innerText = orderId;
+    
+    cart = [];
+    appliedVoucher = null;
+    updateCartUI();
+}
+
+// ==== التتبع والأوامر الأخرى ====
 window.openTrackingModal = () => {
     document.getElementById('trackingModal').style.display = 'block';
     document.getElementById('overlay').classList.add('show');
