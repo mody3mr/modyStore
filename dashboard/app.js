@@ -3536,26 +3536,34 @@ if (myProfileBtn && myProfileMenu) {
 
     const applyExactPermissions = () => {
         if (!window.__dashboardAuthReady) return;
+
         let firstAllowedTarget = null;
+
         document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
             const target = nav.dataset.target;
             const module = target?.replace(/-view$/, '');
             if (!module || module === 'settings') return;
+
             const allowed = window.hasDashboardPermission(module, 'view');
             nav.style.display = allowed ? 'flex' : 'none';
+
             const view = document.getElementById(target);
             if (view && !allowed) view.classList.remove('active');
             if (allowed && !firstAllowedTarget) firstAllowedTarget = target;
         });
 
-        // Never leave a Supervisor on an unauthorized initially-active page.
+        // For Supervisors, always land on the first tab they are actually allowed to view.
         if (window.currentUserRole === 'Supervisor') {
             const activeView = document.querySelector('.view-section.active');
             const activeNav = document.querySelector('.nav-links .nav-item.active');
             const activeTarget = activeView?.id || activeNav?.dataset?.target;
-            if (!activeTarget || !window.hasDashboardPermission(activeTarget.replace(/-view$/, ''), 'view')) {
-                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                document.querySelectorAll('.nav-links .nav-item').forEach(n => n.classList.remove('active'));
+            const activeModule = activeTarget?.replace(/-view$/, '');
+            const activeAllowed = activeModule ? window.hasDashboardPermission(activeModule, 'view') : false;
+
+            if (!activeTarget || !activeAllowed) {
+                document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+                document.querySelectorAll('.nav-links .nav-item').forEach(nav => nav.classList.remove('active'));
+
                 if (firstAllowedTarget) {
                     document.getElementById(firstAllowedTarget)?.classList.add('active');
                     document.querySelector(`.nav-links .nav-item[data-target=\"${firstAllowedTarget}\"]`)?.classList.add('active');
@@ -3567,8 +3575,8 @@ if (myProfileBtn && myProfileMenu) {
             ['products','add','#btnAddProduct'], ['products','edit','#products-view .btn-edit'],
             ['products','toggle','#products-view .btn-hide'], ['products','delete','#products-view .btn-delete'],
             ['orders','create','#btnCreateManualOrder'], ['orders','changeStatus','#orders-view .status-select'],
-            ['orders','details','#orders-view .btn-view'], ['finance','purchase','[onclick="openPurchaseModal()"]'],
-            ['finance','expense','[onclick="openExpenseModal()"]'], ['returns','create','[onclick="openNewReturnModal()"]']
+            ['orders','details','#orders-view .btn-view'], ['finance','purchase','[onclick=\"openPurchaseModal()\"]'],
+            ['finance','expense','[onclick=\"openExpenseModal()\"]'], ['returns','create','[onclick=\"openNewReturnModal()\"]']
         ];
         actionSelectors.forEach(([module,action,selector]) => {
             const allowed = window.hasDashboardPermission(module, action);
@@ -3577,8 +3585,9 @@ if (myProfileBtn && myProfileMenu) {
                 if (el.matches('select')) el.disabled = !allowed;
             });
         });
+
         if (window.currentUserRole !== 'Admin') {
-            document.querySelector('[data-target="settings-view"]')?.style.setProperty('display','none');
+            document.querySelector('[data-target=\"settings-view\"]')?.style.setProperty('display','none');
         }
     };
     window.applyDashboardPermissions = applyExactPermissions;
@@ -4345,21 +4354,8 @@ if (myProfileBtn && myProfileMenu) {
                     difference: row.after-row.before, user: currentUser, timestamp: now
                 }));
             }
-            // Store the audit summary in the existing inventoryMovements path.
-            // This path is already permitted by the current Firebase rules, so the
-            // stocktake does not require opening a brand-new database node.
-            const audit = cleanData({
-                auditId,
-                type: 'auditSummary',
-                timestamp: now,
-                itemsCount: products.length,
-                changedItems: changes.length,
-                increase,
-                decrease,
-                user: currentUser,
-                status: 'completed'
-            });
-            await push(ref(db, 'inventoryMovements'), audit);
+            const audit = cleanData({ auditId, timestamp: now, itemsCount: products.length, changedItems: changes.length, increase, decrease, user: currentUser, status:'completed' });
+            await set(ref(db, `inventoryAudits/${auditId}`), audit);
             inventoryAuditHistory.unshift(audit);
             inventoryAuditDraft = {};
             initInventoryAuditDraft();
@@ -4372,17 +4368,10 @@ if (myProfileBtn && myProfileMenu) {
             window.showAlert?.('تعذر حفظ الجرد: ' + (e.message || e), 'error');
         }
     };
-    // Rebuild stocktake history from the already-permitted inventoryMovements path.
-    // Actual item movements remain untouched; only entries marked auditSummary are
-    // displayed in the stocktake history.
-    const rebuildInventoryAuditHistory = () => {
-        inventoryAuditHistory = (typeof inventoryMovements !== 'undefined' ? inventoryMovements : [])
-            .filter(m => m && m.type === 'auditSummary')
-            .map(m => ({ ...m }));
+    onValue(ref(db,'inventoryAudits'), snap => {
+        inventoryAuditHistory = [];
+        if (snap.exists()) snap.forEach(c => inventoryAuditHistory.push({id:c.key,...c.val()}));
         renderInventoryAuditHistory();
-    };
-    onValue(ref(db,'inventoryMovements'), () => {
-        rebuildInventoryAuditHistory();
     });
 
     // ---------------------------------------------------------------
