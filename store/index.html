@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مودي ستور</title>
+    <!-- الخطوط والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- مكتبة Swiper للبانرات المتحركة -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,7 +25,7 @@
                 </div>
                 
                 <button class="track-btn" onclick="openTrackingModal(); document.getElementById('overlay').classList.add('show');">
-                    <i class="fas fa-map-marker-alt"></i> تتبع طلبك
+                    <i class="fas fa-search-location"></i> تتبع طلبك
                 </button>
                 <div class="cart-icon" onclick="toggleCart()">
                     <i class="fas fa-shopping-cart"></i>
@@ -31,23 +36,53 @@
         <div id="newsTicker" class="news-ticker"></div>
     </header>
 
-    <section class="hero">
-        <h1>تسوق أحدث المنتجات بأفضل الأسعار</h1>
-        <p>جودة لا تقارن، وتوصيل سريع لباب بيتك</p>
-    </section>
+    <!-- بانر العروض (Hero Slider) -->
+    <div class="swiper heroSwiper">
+        <div class="swiper-wrapper">
+            <!-- الشريحة الأولى -->
+            <div class="swiper-slide hero-slide" style="background-image: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.95)), url('https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop');">
+                <div class="hero-content">
+                    <h1>تسوق أحدث المنتجات بأفضل الأسعار</h1>
+                    <p>جودة لا تقارن، وتوصيل سريع لباب بيتك</p>
+                    <button class="hero-btn" onclick="document.getElementById('catBar').scrollIntoView({behavior: 'smooth'})">تسوق الآن</button>
+                </div>
+            </div>
+            <!-- الشريحة الثانية -->
+            <div class="swiper-slide hero-slide" style="background-image: linear-gradient(135deg, rgba(37,99,235,0.85), rgba(15,23,42,0.95)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop');">
+                <div class="hero-content">
+                    <h1>عروض حصرية لا تفوتك</h1>
+                    <p>خصومات قوية على تشكيلة مختارة لفترة محدودة</p>
+                    <button class="hero-btn" onclick="document.getElementById('catBar').scrollIntoView({behavior: 'smooth'})">اكتشف العروض</button>
+                </div>
+            </div>
+        </div>
+        <!-- نقاط التنقل للبانر -->
+        <div class="swiper-pagination"></div>
+    </div>
 
     <!-- شريط الأقسام -->
     <div class="categories-bar" id="catBar"></div>
 
     <!-- شبكة المنتجات -->
     <div class="products-container" id="productsGrid">
-        <div style="text-align: center; width: 100%; padding: 50px; font-weight: bold; color: var(--text-light); font-size: 18px;">
+        <div style="text-align: center; width: 100%; padding: 50px; font-weight: bold; color: var(--text-light); font-size: 18px; grid-column: 1/-1;">
             <i class="fas fa-circle-notch fa-spin" style="margin-bottom: 15px; font-size: 30px; color: var(--secondary);"></i><br>
             جاري تحميل المنتجات...
         </div>
     </div>
 
-    <!-- الفوتر السفلي الجديد -->
+    <!-- قسم آراء العملاء (يُجلب ديناميكياً من الداش بورد) -->
+    <section class="reviews-section" id="reviewsSection" style="display: none;">
+        <h2 class="section-title">آراء عملائنا</h2>
+        <div class="swiper reviewsSwiper">
+            <div class="swiper-wrapper" id="reviewsContainer">
+                <!-- يتم التحميل من Firebase عن طريق الجافاسكريبت -->
+            </div>
+            <div class="swiper-pagination" style="position: relative; margin-top: 20px;"></div>
+        </div>
+    </section>
+
+    <!-- الفوتر -->
     <footer class="store-footer dark-theme-footer">
         <div class="footer-content">
             <div class="footer-info">
@@ -58,16 +93,28 @@
             </div>
             <div class="footer-social">
                 <a href="#" id="socWa" style="display:none;" target="_blank"><i class="fab fa-whatsapp"></i></a>
-                <a href="#" id="socTg" style="display:none;" target="_blank"><i class="fab fa-telegram"></i></a>
+                <a href="#" id="socTg" style="display:none;" target="_blank"><i class="fab fa-telegram-plane"></i></a>
                 <a href="#" id="socInsta" style="display:none;" target="_blank"><i class="fab fa-instagram"></i></a>
-                <a href="#" id="socFb" style="display:none;" target="_blank"><i class="fab fa-facebook"></i></a>
+                <a href="#" id="socFb" style="display:none;" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" id="socTiktok" style="display:none;" target="_blank"><i class="fab fa-tiktok"></i></a>
             </div>
         </div>
         <div class="footer-copyright">
-            <!-- مساحة الحقوق المشفرة -->
+            <!-- مساحة الحقوق -->
             <a href="#" id="devCopyLink" target="_blank"></a>
         </div>
     </footer>
+
+    <!-- شريط التنقل السفلي للموبايل (يظهر فقط في الشاشات الصغيرة) -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" onclick="setActiveNav(this)"><i class="fas fa-home"></i><span>الرئيسية</span></a>
+        <a href="#catBar" class="nav-item" onclick="setActiveNav(this)"><i class="fas fa-th-large"></i><span>الأقسام</span></a>
+        <a href="#" class="nav-item" onclick="toggleCart(); setActiveNav(this); return false;">
+            <i class="fas fa-shopping-cart"></i><span>السلة</span>
+            <span class="bottom-cart-badge" id="bottomCartBadge">0</span>
+        </a>
+        <a href="#" class="nav-item" onclick="openTrackingModal(); document.getElementById('overlay').classList.add('show'); setActiveNav(this); return false;"><i class="fas fa-search-location"></i><span>تتبع</span></a>
+    </nav>
 
     <!-- نافذة تفاصيل المنتج -->
     <div class="product-modal" id="productDetailsModal">
@@ -95,7 +142,7 @@
         </div>
     </div>
 
-    <!-- السلة الجانبية (تم تفعيل إغلاق القوائم عند الضغط عليها) -->
+    <!-- السلة الجانبية -->
     <div class="overlay" id="overlay" onclick="closeOverlay()"></div>
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
@@ -138,14 +185,18 @@
             </div>
             <div class="input-wrapper"><input type="text" id="custLandmark" class="checkout-input" placeholder="علامة مميزة (اختياري)"><i class="fas fa-map-pin"></i></div>
             <div class="input-wrapper"><textarea id="custAddress" class="checkout-input" rows="2" placeholder="العنوان بالتفصيل السردي (وصف للمندوب)"></textarea><i class="fas fa-map-marker-alt"></i></div>
+            
             <label class="checkout-label" style="margin-top: 15px;">طريقة الدفع</label>
             <div class="input-wrapper">
-                <select id="paymentMethod" class="checkout-input"><option value="كاش">💵 كاش</option></select>
+                <select id="paymentMethod" class="checkout-input">
+                    <!-- يتم جلبه من الداش بورد -->
+                </select>
             </div>
-            <!-- تم إرجاع زرار التأكيد والإرسال -->
+            
             <button class="confirm-btn" id="submitOrderBtn" onclick="sendOrder()">تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i></button>
             <div class="cancel-btn" onclick="document.getElementById('checkoutModal').style.display='none'; document.getElementById('cartSidebar').classList.add('open');">إلغاء والعودة للسلة</div>
         </div>
+        
         <div id="successScreen" class="success-msg">
             <i class="fas fa-check-circle success-icon"></i>
             <h3 style="color: var(--success); margin-bottom: 10px;">تم استلام طلبك بنجاح!</h3>
@@ -173,6 +224,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
