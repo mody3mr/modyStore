@@ -248,7 +248,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
         // التحقق الأمني المانع للمشرفين
         if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
             const allowedTabs = window.currentEmpPermissions.tabs || [];
-            if (targetView !== 'analytics-view' && !allowedTabs.includes(targetView)) {
+            if (!allowedTabs.includes(targetView)) {
                 window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
                 return; 
             }
@@ -3418,7 +3418,7 @@ if (myProfileBtn && myProfileMenu) {
                 if (!target) return;
                 if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
                     const tabs = window.currentEmpPermissions.tabs || [];
-                    if (target !== 'analytics-view' && !tabs.includes(target)) {
+                    if (!tabs.includes(target)) {
                         window.showAlert?.('عفواً، ليس لديك صلاحية لعرض هذه الصفحة!', 'error');
                         return;
                     }
@@ -3536,13 +3536,33 @@ if (myProfileBtn && myProfileMenu) {
 
     const applyExactPermissions = () => {
         if (!window.__dashboardAuthReady) return;
+        let firstAllowedTarget = null;
         document.querySelectorAll('.nav-links .nav-item').forEach(nav => {
             const target = nav.dataset.target;
             const module = target?.replace(/-view$/, '');
             if (!module || module === 'settings') return;
             const allowed = window.hasDashboardPermission(module, 'view');
             nav.style.display = allowed ? 'flex' : 'none';
+            const view = document.getElementById(target);
+            if (view && !allowed) view.classList.remove('active');
+            if (allowed && !firstAllowedTarget) firstAllowedTarget = target;
         });
+
+        // Never leave a Supervisor on an unauthorized initially-active page.
+        if (window.currentUserRole === 'Supervisor') {
+            const activeView = document.querySelector('.view-section.active');
+            const activeNav = document.querySelector('.nav-links .nav-item.active');
+            const activeTarget = activeView?.id || activeNav?.dataset?.target;
+            if (!activeTarget || !window.hasDashboardPermission(activeTarget.replace(/-view$/, ''), 'view')) {
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.nav-links .nav-item').forEach(n => n.classList.remove('active'));
+                if (firstAllowedTarget) {
+                    document.getElementById(firstAllowedTarget)?.classList.add('active');
+                    document.querySelector(`.nav-links .nav-item[data-target=\"${firstAllowedTarget}\"]`)?.classList.add('active');
+                }
+            }
+        }
+
         const actionSelectors = [
             ['products','add','#btnAddProduct'], ['products','edit','#products-view .btn-edit'],
             ['products','toggle','#products-view .btn-hide'], ['products','delete','#products-view .btn-delete'],
@@ -4325,8 +4345,21 @@ if (myProfileBtn && myProfileMenu) {
                     difference: row.after-row.before, user: currentUser, timestamp: now
                 }));
             }
-            const audit = cleanData({ auditId, timestamp: now, itemsCount: products.length, changedItems: changes.length, increase, decrease, user: currentUser, status:'completed' });
-            await set(ref(db, `inventoryAudits/${auditId}`), audit);
+            // Store the audit summary in the existing inventoryMovements path.
+            // This path is already permitted by the current Firebase rules, so the
+            // stocktake does not require opening a brand-new database node.
+            const audit = cleanData({
+                auditId,
+                type: 'auditSummary',
+                timestamp: now,
+                itemsCount: products.length,
+                changedItems: changes.length,
+                increase,
+                decrease,
+                user: currentUser,
+                status: 'completed'
+            });
+            await push(ref(db, 'inventoryMovements'), audit);
             inventoryAuditHistory.unshift(audit);
             inventoryAuditDraft = {};
             initInventoryAuditDraft();
@@ -4339,10 +4372,17 @@ if (myProfileBtn && myProfileMenu) {
             window.showAlert?.('تعذر حفظ الجرد: ' + (e.message || e), 'error');
         }
     };
-    onValue(ref(db,'inventoryAudits'), snap => {
-        inventoryAuditHistory = [];
-        if (snap.exists()) snap.forEach(c => inventoryAuditHistory.push({id:c.key,...c.val()}));
+    // Rebuild stocktake history from the already-permitted inventoryMovements path.
+    // Actual item movements remain untouched; only entries marked auditSummary are
+    // displayed in the stocktake history.
+    const rebuildInventoryAuditHistory = () => {
+        inventoryAuditHistory = (typeof inventoryMovements !== 'undefined' ? inventoryMovements : [])
+            .filter(m => m && m.type === 'auditSummary')
+            .map(m => ({ ...m }));
         renderInventoryAuditHistory();
+    };
+    onValue(ref(db,'inventoryMovements'), () => {
+        rebuildInventoryAuditHistory();
     });
 
     // ---------------------------------------------------------------
