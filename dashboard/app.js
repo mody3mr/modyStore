@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
 import { getDatabase, ref, get, child, remove, update, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-messaging.js";
 
@@ -14,6 +15,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const storage = getStorage(app);
 const auth = getAuth(app);
 
 // تأمين الجلسة: إجبار الموقع على طلب تسجيل الدخول عند فتح المتصفح من جديد
@@ -2891,13 +2893,13 @@ if (myProfileBtn && myProfileMenu) {
 // ModyStore Dashboard V2 - requested production enhancements
 // ================================================================
 (() => {
-    const MODULES = ['analytics','orders','finance','returns','products','categories','vouchers','shipping','employees','logs','inventory'];
+    const MODULES = ['analytics','orders','finance','returns','products','categories','vouchers','shipping','employees','logs','inventory','reviews'];
     const ACTIONS = {
         analytics:['view','export'], orders:['view','create','changeStatus','details'],
         finance:['view','purchase','expense','history','export'], returns:['view','create','details','archive','export'],
         products:['view','add','edit','toggle','delete'], categories:['view','add','edit','toggle','delete'],
         vouchers:['view','add','edit','toggle','delete','users'], shipping:['view','edit','toggle','delete'],
-        employees:['view','add','edit','delete'], logs:['view','export','archive'], inventory:['view','adjust','export']
+        employees:['view','add','edit','delete'], logs:['view','export','archive'], inventory:['view','adjust','export'], reviews:['view','add','edit','toggle','delete']
     };
     const TAB_BY_MODULE = Object.fromEntries(MODULES.map(m => [m, `${m}-view`]));
     TAB_BY_MODULE.analytics = 'analytics-view';
@@ -4124,4 +4126,534 @@ if (myProfileBtn && myProfileMenu) {
     setTimeout(syncFinalUI, 50);
     setTimeout(syncFinalUI, 400);
     setTimeout(syncFinalUI, 1000);
+})();
+
+
+/* ================================================================
+   ModyStore Final User Request Patch — 2026-08-28
+   Orders realtime UI + mobile sidebar + inventory stocktake +
+   customer reviews + product rating data + WhatsApp confirmation bridge.
+   ================================================================ */
+(() => {
+    const escFinal = (v='') => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const numFinal = v => Number(v || 0);
+    const moneyFinal = v => `${Math.round(numFinal(v))} ج.م`;
+
+    // ---------------------------------------------------------------
+    // Mobile sidebar: on mobile .collapsed means OPEN in the existing CSS.
+    // Add a click-outside overlay and close the sidebar after navigation.
+    // ---------------------------------------------------------------
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    let mobileSidebarOverlay = document.getElementById('mobileSidebarOverlay');
+    if (!mobileSidebarOverlay) {
+        mobileSidebarOverlay = document.createElement('div');
+        mobileSidebarOverlay.id = 'mobileSidebarOverlay';
+        mobileSidebarOverlay.className = 'mobile-sidebar-overlay';
+        document.body.appendChild(mobileSidebarOverlay);
+    }
+    const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+    const setSidebar = (open) => {
+        if (!sidebar) return;
+        if (isMobile()) {
+            sidebar.classList.toggle('collapsed', !!open);
+            mobileSidebarOverlay.classList.toggle('show', !!open);
+            document.body.classList.toggle('sidebar-mobile-open', !!open);
+        } else {
+            sidebar.classList.toggle('collapsed', !open);
+            mobileSidebarOverlay.classList.remove('show');
+            document.body.classList.remove('sidebar-mobile-open');
+        }
+    };
+    if (sidebarToggle) {
+        sidebarToggle.onclick = (e) => {
+            e.preventDefault();
+            setSidebar(!(sidebar?.classList.contains('collapsed')));
+        };
+    }
+    mobileSidebarOverlay.onclick = () => setSidebar(false);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isMobile()) setSidebar(false); });
+    window.addEventListener('resize', () => { if (!isMobile()) setSidebar(false); });
+
+    // Capture navigation in one place so the older listeners cannot leave
+    // the mobile sidebar in the wrong state.
+    document.querySelectorAll('.nav-links .nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (isMobile()) setSidebar(false);
+        }, true);
+    });
+    if (isMobile()) setSidebar(false);
+
+    // ---------------------------------------------------------------
+    // Realtime order status: optimistic local update + Firebase source of truth.
+    // This fixes the need to manually refresh.
+    // ---------------------------------------------------------------
+    const renderOrdersNow = () => {
+        try { window.renderOrdersTable?.(); } catch (e) { console.error(e); }
+        try { window.updateStatusSummary?.(); } catch (e) {}
+        try { window.updateChartsData?.(); } catch (e) {}
+        try { window.refreshExtraAnalytics?.(); } catch (e) {}
+    };
+    const previousUpdateOrderStatus = window.updateOrderStatus;
+    window.updateOrderStatus = async (orderId, selectElement, displayId, oldStatus) => {
+        const order = (window.allOrders || []).find?.(o => o.dbId === orderId) || (typeof allOrders !== 'undefined' ? allOrders.find(o => o.dbId === orderId) : null);
+        const newStatus = selectElement?.value;
+        if (!order || !newStatus) return previousUpdateOrderStatus?.(orderId, selectElement, displayId, oldStatus);
+        if (typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('orders','changeStatus')) {
+            if (selectElement) selectElement.value = oldStatus;
+            return window.showAlert?.('ليس لديك صلاحية لتغيير حالة الطلب!','error');
+        }
+        if (newStatus === oldStatus) return;
+
+        const before = { status: order.status, processedAt: order.processedAt, shippedAt: order.shippedAt, deliveredAt: order.deliveredAt, customerConfirmation: order.customerConfirmation };
+        const now = Date.now();
+        const updates = { status: newStatus };
+        if (newStatus === 'جاري التجهيز') updates.processedAt = now;
+        if (newStatus === 'تم الشحن') updates.shippedAt = now;
+        if (newStatus === 'تم تسليمه') updates.deliveredAt = now;
+
+        // Optimistic update: the row moves tabs immediately.
+        Object.assign(order, updates);
+        if (newStatus === 'جاري التجهيز' && oldStatus !== 'جاري التجهيز') {
+            order.customerConfirmation = { status: 'sending', requestedAt: now };
+        }
+        renderOrdersNow();
+
+        try {
+            await update(ref(db, `orders/${orderId}`), updates);
+            if (newStatus === 'جاري التجهيز' && oldStatus !== 'جاري التجهيز') {
+                await window.sendOrderConfirmationWhatsApp?.(order);
+            }
+            const filter = document.getElementById('filterOrderStatus');
+            if (filter && filter.value === oldStatus) filter.value = '';
+            logAction('تحديث حالة طلب', `تغيير حالة الطلب #${displayId} لـ ${newStatus}`);
+            window.showAlert?.(newStatus === 'جاري التجهيز' ? 'تم تحديث الحالة وإرسال طلب تأكيد العميل.' : 'تم تحديث الحالة بنجاح', 'success');
+            renderOrdersNow();
+        } catch (e) {
+            console.error('Realtime status update failed', e);
+            Object.assign(order, before);
+            if (selectElement) selectElement.value = oldStatus;
+            renderOrdersNow();
+            window.showAlert?.('تعذر تحديث حالة الطلب. تم إرجاع الحالة السابقة.', 'error');
+        }
+    };
+
+    // Make all-orders readable by this patch without changing existing globals.
+    try { window.getAllOrdersForPatch = () => (typeof allOrders !== 'undefined' ? allOrders : []); } catch(e) {}
+
+    // ---------------------------------------------------------------
+    // Inventory stocktake module.
+    // ---------------------------------------------------------------
+    let inventoryTab = 'current';
+    let inventoryAuditDraft = {};
+    let inventoryAuditHistory = [];
+    window.switchInventoryTab = (tab='current', btn) => {
+        inventoryTab = tab;
+        document.querySelectorAll('#inventory-view .custom-tab-btn').forEach(b => b.classList.remove('active'));
+        (btn || document.getElementById(tab === 'current' ? 'inventoryCurrentTabBtn' : 'inventoryAuditTabBtn'))?.classList.add('active');
+        const current = document.getElementById('inventory-current-panel');
+        const audit = document.getElementById('inventory-audit-panel');
+        if (current) current.style.display = tab === 'current' ? 'block' : 'none';
+        if (audit) audit.style.display = tab === 'audit' ? 'block' : 'none';
+        if (tab === 'audit') {
+            initInventoryAuditDraft();
+            renderInventoryAuditTable();
+            renderInventoryAuditHistory();
+        } else {
+            window.renderInventoryTable?.();
+        }
+    };
+    const activeProducts = () => (typeof allProducts !== 'undefined' ? allProducts : []).filter(p => p.isActive !== false);
+    function initInventoryAuditDraft() {
+        const products = activeProducts();
+        products.forEach(p => {
+            if (inventoryAuditDraft[p.id] === undefined) inventoryAuditDraft[p.id] = numFinal(p.stock);
+        });
+        Object.keys(inventoryAuditDraft).forEach(id => { if (!products.some(p => p.id === id)) delete inventoryAuditDraft[id]; });
+    }
+    window.fillInventoryAuditFromSystem = () => {
+        inventoryAuditDraft = {};
+        activeProducts().forEach(p => inventoryAuditDraft[p.id] = numFinal(p.stock));
+        renderInventoryAuditTable();
+        window.showAlert?.('تمت مطابقة كميات الجرد مع المخزون المسجل. عدّل الكميات الفعلية ثم احفظ.', 'success');
+    };
+    window.renderInventoryAuditTable = () => {
+        const body = document.getElementById('inventoryAuditTableBody');
+        if (!body) return;
+        initInventoryAuditDraft();
+        const term = (document.getElementById('searchInventoryAudit')?.value || '').toLowerCase();
+        let increase = 0, decrease = 0, count = 0;
+        const list = activeProducts().filter(p => String(p.name || '').toLowerCase().includes(term));
+        body.innerHTML = list.map(p => {
+            const system = numFinal(p.stock), actual = inventoryAuditDraft[p.id] === undefined ? system : numFinal(inventoryAuditDraft[p.id]);
+            const diff = actual - system;
+            count++;
+            if (diff > 0) increase += diff;
+            if (diff < 0) decrease += Math.abs(diff);
+            const state = diff === 0 ? '<span class="badge badge-active">مطابق</span>' : diff > 0 ? `<span class="badge inventory-diff-plus">+${diff} زيادة</span>` : `<span class="badge badge-inactive">${diff} نقص</span>`;
+            return `<tr><td><b>${escFinal(p.name)}</b></td><td>${system}</td><td><input class="inventory-audit-input" type="number" min="0" step="1" value="${actual}" data-product-id="${escFinal(p.id)}" onchange="window.updateInventoryAuditDraft(this)"></td><td class="inventory-diff-value ${diff>0?'plus':diff<0?'minus':''}">${diff>0?'+':''}${diff}</td><td>${state}</td></tr>`;
+        }).join('') || '<tr><td colspan="5" style="text-align:center;padding:25px;color:#94a3b8">لا توجد منتجات مطابقة للبحث.</td></tr>';
+        const itemsEl = document.getElementById('auditItemsCount'); if (itemsEl) itemsEl.innerText = count;
+        const varianceEl = document.getElementById('auditVarianceCount'); if (varianceEl) varianceEl.innerText = `+${increase} / -${decrease}`;
+    };
+    window.updateInventoryAuditDraft = (input) => {
+        const id = input?.dataset?.productId; if (!id) return;
+        inventoryAuditDraft[id] = Math.max(0, Math.floor(numFinal(input.value)));
+        renderInventoryAuditTable();
+    };
+    const renderInventoryAuditHistory = () => {
+        const body = document.getElementById('inventoryAuditHistoryBody'); if (!body) return;
+        const list = [...inventoryAuditHistory].sort((a,b) => numFinal(b.timestamp) - numFinal(a.timestamp)).slice(0, 12);
+        const last = document.getElementById('auditLastDate'); if (last) last.innerText = list[0]?.timestamp ? formatDateTime(list[0].timestamp) : 'لم يتم بعد';
+        body.innerHTML = list.map(a => `<tr><td dir="ltr">${escFinal(formatDateTime(a.timestamp))}</td><td>${numFinal(a.itemsCount)}</td><td style="color:#047857;font-weight:800">+${numFinal(a.increase)}</td><td style="color:#b91c1c;font-weight:800">-${numFinal(a.decrease)}</td><td>${escFinal(a.user || 'مدير')}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8">لا يوجد جرد سابق حتى الآن.</td></tr>';
+    };
+    window.saveInventoryAudit = async () => {
+        if (typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('inventory','adjust')) return window.showAlert?.('ليس لديك صلاحية تعديل المخزون من خلال الجرد.','error');
+        initInventoryAuditDraft();
+        const products = activeProducts();
+        const changes = products.map(p => ({ product: p, before: numFinal(p.stock), after: numFinal(inventoryAuditDraft[p.id]) })).filter(x => x.after !== x.before);
+        const increase = changes.reduce((s,x)=>s + Math.max(0, x.after-x.before), 0);
+        const decrease = changes.reduce((s,x)=>s + Math.max(0, x.before-x.after), 0);
+        const auditId = `AUD-${Date.now()}`;
+        const now = Date.now();
+        try {
+            for (const row of changes) {
+                await update(ref(db, `products/${row.product.id}`), { stock: row.after });
+                await push(ref(db,'inventoryMovements'), cleanData({
+                    productId: row.product.id, productName: row.product.name,
+                    before: row.before, after: row.after, reason: 'جرد مخزون', auditId,
+                    difference: row.after-row.before, user: currentUser, timestamp: now
+                }));
+            }
+            const audit = cleanData({ auditId, timestamp: now, itemsCount: products.length, changedItems: changes.length, increase, decrease, user: currentUser, status:'completed' });
+            await set(ref(db, `inventoryAudits/${auditId}`), audit);
+            inventoryAuditHistory.unshift(audit);
+            inventoryAuditDraft = {};
+            initInventoryAuditDraft();
+            renderInventoryAuditTable();
+            renderInventoryAuditHistory();
+            logAction('جرد المخزون', `تم حفظ جرد للمخزون — ${changes.length} منتج متغير، زيادة ${increase} ونقص ${decrease}`);
+            window.showAlert?.(changes.length ? `تم حفظ الجرد وتعديل ${changes.length} منتج.` : 'تم حفظ الجرد بدون فروقات.', 'success');
+        } catch (e) {
+            console.error('saveInventoryAudit', e);
+            window.showAlert?.('تعذر حفظ الجرد: ' + (e.message || e), 'error');
+        }
+    };
+    onValue(ref(db,'inventoryAudits'), snap => {
+        inventoryAuditHistory = [];
+        if (snap.exists()) snap.forEach(c => inventoryAuditHistory.push({id:c.key,...c.val()}));
+        renderInventoryAuditHistory();
+    });
+
+    // ---------------------------------------------------------------
+    // Customer reviews / trust gallery.
+    // ---------------------------------------------------------------
+    let allStoreReviews = [];
+    let editingReviewId = null;
+    window.openReviewModal = (id=null) => {
+        if (id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','edit')) return window.showAlert?.('ليس لديك صلاحية تعديل آراء العملاء.','error');
+        if (!id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','add')) return window.showAlert?.('ليس لديك صلاحية إضافة آراء العملاء.','error');
+        editingReviewId = id;
+        const r = id ? allStoreReviews.find(x=>x.id===id) : null;
+        document.getElementById('reviewModalTitle').innerText = r ? 'تعديل رأي عميل' : 'إضافة رأي عميل';
+        document.getElementById('reviewCustomerName').value = r?.customerName || '';
+        document.getElementById('reviewRating').value = String(r?.rating || 5);
+        document.getElementById('reviewText').value = r?.text || '';
+        document.getElementById('reviewImageUrl').value = r?.imageUrl || '';
+        document.getElementById('reviewIsActive').checked = r?.isActive !== false;
+        const preview = document.getElementById('reviewImagePreview'); if (preview) preview.innerHTML = r?.imageUrl ? `<img src="${escFinal(r.imageUrl)}" alt="preview">` : '';
+        const file = document.getElementById('reviewImageFile'); if (file) file.value = '';
+        document.getElementById('reviewModal').style.display='flex';
+    };
+    document.getElementById('reviewImageFile')?.addEventListener('change', e => {
+        const f = e.target.files?.[0];
+        const box = document.getElementById('reviewImagePreview');
+        if (!box) return;
+        box.innerHTML = '';
+        if (f) { const url = URL.createObjectURL(f); box.innerHTML = `<img src="${url}" alt="preview">`; }
+    });
+    window.saveReview = async () => {
+        const name = document.getElementById('reviewCustomerName')?.value.trim() || 'عميل ModyStore';
+        const text = document.getElementById('reviewText')?.value.trim() || '';
+        const rating = Math.min(5, Math.max(1, Number(document.getElementById('reviewRating')?.value || 5)));
+        const active = !!document.getElementById('reviewIsActive')?.checked;
+        const file = document.getElementById('reviewImageFile')?.files?.[0];
+        let imageUrl = document.getElementById('reviewImageUrl')?.value.trim() || '';
+        if (!text) return window.showAlert?.('اكتب نص رأي العميل أولاً.','warning');
+        if (editingReviewId ? !window.hasDashboardPermission?.('reviews','edit') : !window.hasDashboardPermission?.('reviews','add')) return window.showAlert?.('ليس لديك صلاحية حفظ آراء العملاء.','error');
+        try {
+            if (file) {
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+                const path = `storeReviews/${Date.now()}_${safeName}`;
+                const sref = storageRef(storage, path);
+                await uploadBytes(sref, file);
+                imageUrl = await getDownloadURL(sref);
+            }
+            const data = cleanData({ customerName:name, text, rating, imageUrl:imageUrl||null, isActive:active, updatedAt:Date.now() });
+            if (editingReviewId) {
+                await update(ref(db,`storeReviews/${editingReviewId}`), data);
+                logAction('تعديل رأي عميل', `تعديل رأي ${name}`);
+            } else {
+                data.createdAt=Date.now(); data.createdBy=currentUser;
+                const newRef=push(ref(db,'storeReviews')); await set(newRef,data);
+                logAction('إضافة رأي عميل', `إضافة رأي ${name}`);
+            }
+            closeModal('reviewModal');
+            window.showAlert?.('تم حفظ رأي العميل بنجاح.', 'success');
+        } catch(e) {
+            console.error('saveReview', e);
+            window.showAlert?.('تعذر حفظ الرأي أو رفع الصورة: ' + (e.message || e), 'error');
+        }
+    };
+    window.toggleReview = async (id, active) => {
+        if (!window.hasDashboardPermission?.('reviews','toggle')) return window.showAlert?.('ليس لديك صلاحية إظهار/إخفاء آراء العملاء.','error');
+        try { await update(ref(db,`storeReviews/${id}`),{isActive:!active,updatedAt:Date.now()}); logAction('حالة رأي عميل', `${!active?'نشر':'إخفاء'} رأي عميل`); } catch(e) { window.showAlert?.('تعذر تغيير حالة الرأي.','error'); }
+    };
+    window.deleteReview = async (id) => {
+        if (!window.hasDashboardPermission?.('reviews','delete')) return window.showAlert?.('ليس لديك صلاحية حذف آراء العملاء.','error');
+        window.showConfirm?.('سيتم حذف الرأي نهائياً.', async () => { try { await remove(ref(db,`storeReviews/${id}`)); logAction('حذف رأي عميل','حذف رأي من معرض ثقة العملاء'); } catch(e) { window.showAlert?.('تعذر حذف الرأي.','error'); } });
+    };
+    window.renderReviews = () => {
+        const grid = document.getElementById('reviewsGrid'); if (!grid) return;
+        const term = (document.getElementById('searchReviews')?.value || '').toLowerCase();
+        const status = document.getElementById('reviewStatusFilter')?.value || '';
+        const list = allStoreReviews.filter(r => {
+            const text = `${r.customerName||''} ${r.text||''}`.toLowerCase();
+            const st = r.isActive === false ? 'inactive':'active';
+            return text.includes(term) && (!status || status === st);
+        }).sort((a,b)=>numFinal(b.createdAt)-numFinal(a.createdAt));
+        grid.innerHTML = list.map(r => {
+            const stars = '★'.repeat(Math.min(5,Math.max(1,numFinal(r.rating||5)))) + '☆'.repeat(5-Math.min(5,Math.max(1,numFinal(r.rating||5))));
+            const image = r.imageUrl ? `<img src="${escFinal(r.imageUrl)}" alt="${escFinal(r.customerName||'Customer')}">` : `<div class="review-placeholder"><i class="fas fa-user"></i></div>`;
+            return `<article class="review-admin-card ${r.isActive===false?'is-hidden':''}">\n                <div class="review-admin-image">${image}<span class="review-state-badge ${r.isActive===false?'hidden':'published'}">${r.isActive===false?'مخفي':'منشور'}</span></div>\n                <div class="review-admin-body"><div class="review-rating-stars">${stars}</div><h3>${escFinal(r.customerName||'عميل')}</h3><p>${escFinal(r.text||'')}</p><div class="review-admin-actions"><button class="btn-action btn-edit" onclick="openReviewModal('${escFinal(r.id)}')"><i class="fas fa-pen"></i></button><button class="btn-action btn-hide" onclick="toggleReview('${escFinal(r.id)}',${r.isActive!==false})"><i class="fas ${r.isActive===false?'fa-eye':'fa-eye-slash'}"></i></button><button class="btn-action btn-delete" onclick="deleteReview('${escFinal(r.id)}')"><i class="fas fa-trash"></i></button></div></div>\n            </article>`;
+        }).join('') || '<div class="reviews-empty"><i class="fas fa-star"></i><h3>لا توجد آراء حتى الآن</h3><p>أضف أول رأي عميل لعرضه داخل المتجر.</p></div>';
+        const published = allStoreReviews.filter(r=>r.isActive!==false);
+        const named = published.filter(r=>String(r.customerName||'').trim());
+        const avg = published.length ? published.reduce((s,r)=>s+numFinal(r.rating||0),0)/published.length : 0;
+        const a=document.getElementById('reviewsAverageRating'); if(a)a.innerText=`${avg.toFixed(1)} / 5`;
+        const pc=document.getElementById('reviewsPublishedCount'); if(pc)pc.innerText=published.length;
+        const nc=document.getElementById('reviewsNamedCount'); if(nc)nc.innerText=named.length;
+    };
+    onValue(ref(db,'storeReviews'), snap => {
+        allStoreReviews=[];
+        if (snap.exists()) snap.forEach(c=>allStoreReviews.push({id:c.key,...c.val()}));
+        renderReviews();
+    });
+
+    // ---------------------------------------------------------------
+    // Product rating aggregation data.
+    // ---------------------------------------------------------------
+    let productRatings = {};
+    onValue(ref(db,'productRatings'), snap => {
+        productRatings = {};
+        if (snap.exists()) snap.forEach(c => {
+            const rows=[]; c.forEach(r=>rows.push(r.val()));
+            const avg = rows.length ? rows.reduce((s,r)=>s+numFinal(r.rating),0)/rows.length : 0;
+            productRatings[c.key] = { average: avg, count: rows.length };
+            // Keep aggregate on the product itself so the storefront can read it directly.
+            update(ref(db,`products/${c.key}`),{ratingAverage:Number(avg.toFixed(2)),ratingCount:rows.length}).catch(()=>{});
+        });
+        renderReviews();
+    });
+
+    // ---------------------------------------------------------------
+    // WhatsApp confirmation bridge.
+    // The browser never stores a WhatsApp secret; it calls a secure backend.
+    // ---------------------------------------------------------------
+    let whatsappConfirmationSettings = { enabled:false, endpoint:'', from:'' };
+    const normalizeEgyptPhone = (phone='') => {
+        let p = String(phone || '').replace(/[^0-9+]/g,'');
+        if (p.startsWith('00')) p = '+' + p.slice(2);
+        if (p.startsWith('+20')) return p.slice(1);
+        if (p.startsWith('20')) return p;
+        if (p.startsWith('0')) return '20' + p.slice(1);
+        return p;
+    };
+    const buildWhatsAppMessage = (order) => {
+        const id = order.displayId || order.orderId || order.dbId;
+        const items = (order.items || []).map(i => `• ${i.name} × ${i.qty} — ${moneyFinal(i.qty * i.price)}`).join('\n');
+        return `مرحباً ${order.customer?.name || ''} 👋\n\nتم تجهيز طلبك #${id} للمراجعة.\n\nالمنتجات:\n${items || 'لا توجد منتجات'}\n\nإجمالي الطلب: ${moneyFinal(order.total)}\n\nبرجاء تأكيد الطلب أو إلغائه من الأزرار الموجودة في رسالة WhatsApp.`;
+    };
+    window.sendOrderConfirmationWhatsApp = async (order) => {
+        const phone = normalizeEgyptPhone(order?.customer?.phone);
+        if (!phone) return;
+        const payload = cleanData({
+            orderDbId: order.dbId,
+            orderId: order.displayId || order.orderId,
+            customer: order.customer || {},
+            phone,
+            total: numFinal(order.total),
+            items: (order.items||[]).map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})),
+            message: buildWhatsAppMessage(order),
+            confirmationButtons: [
+                {id:'confirm_order',title:'تأكيد الطلب'},
+                {id:'cancel_order',title:'إلغاء الطلب'}
+            ]
+        });
+        if (!whatsappConfirmationSettings.enabled || !whatsappConfirmationSettings.endpoint) {
+            // Safe fallback: keep the dashboard state and offer a prefilled chat.
+            const wa = `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
+            order.customerConfirmation = { status:'manual', requestedAt:Date.now(), fallbackUrl:wa };
+            try { await update(ref(db,`orders/${order.dbId}`),{customerConfirmation:order.customerConfirmation}); } catch(e) {}
+            renderOrdersNow();
+            return wa;
+        }
+        order.customerConfirmation = { status:'pending', requestedAt:Date.now() };
+        renderOrdersNow();
+        try {
+            const res = await fetch(whatsappConfirmationSettings.endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            if (!res.ok) throw new Error(`Backend ${res.status}`);
+            const data = await res.json().catch(()=>({}));
+            await update(ref(db,`orders/${order.dbId}`),{customerConfirmation:{status:'pending',requestedAt:payload.requestedAt||Date.now(),messageId:data.messageId||null}});
+            return data;
+        } catch(e) {
+            console.error('WhatsApp confirmation send failed',e);
+            const fallback = `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
+            order.customerConfirmation = { status:'error', requestedAt:Date.now(), error:String(e.message||e), fallbackUrl:fallback };
+            try { await update(ref(db,`orders/${order.dbId}`),{customerConfirmation:order.customerConfirmation}); } catch(ex) {}
+            renderOrdersNow();
+            window.showAlert?.('تعذر الإرسال التلقائي عبر WhatsApp. تم تجهيز رابط إرسال يدوي.', 'warning');
+            return fallback;
+        }
+    };
+    const syncWhatsAppSettings = d => {
+        const w = d?.whatsappConfirmation || {};
+        whatsappConfirmationSettings = { enabled:!!w.enabled, endpoint:String(w.endpoint||''), from:String(w.from||'') };
+        const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val||'';};
+        const check=(id,val)=>{const e=document.getElementById(id);if(e)e.checked=!!val;};
+        check('setWhatsappConfirmationEnabled',w.enabled); set('setWhatsappConfirmationEndpoint',w.endpoint); set('setWhatsappConfirmationFrom',w.from);
+    };
+    onValue(ref(db,'storeSettings'), snap => { if (snap.exists()) syncWhatsAppSettings(snap.val()||{}); });
+
+    // Save WhatsApp fields together with the existing settings save by decorating it.
+    const oldSaveSettingsFinal = window.saveSettings;
+    window.saveSettings = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showAlert?.('الإعدادات متاحة للمدير فقط!','error');
+        const result = await oldSaveSettingsFinal?.();
+        const w = {
+            enabled: !!document.getElementById('setWhatsappConfirmationEnabled')?.checked,
+            endpoint: document.getElementById('setWhatsappConfirmationEndpoint')?.value.trim() || '',
+            from: document.getElementById('setWhatsappConfirmationFrom')?.value.trim() || ''
+        };
+        await update(ref(db,'storeSettings'),{whatsappConfirmation:w});
+        whatsappConfirmationSettings = w;
+        return result;
+    };
+
+    // ---------------------------------------------------------------
+    // Customer-confirmation realtime listener and dashboard notifications.
+    // Backend/webhook should write: whatsappConfirmations/<orderDbId> = {status:'confirmed'|'cancelled',...}
+    // ---------------------------------------------------------------
+    let confirmationNotifications = [];
+    onValue(ref(db,'whatsappConfirmations'), async snap => {
+        confirmationNotifications=[];
+        if (snap.exists()) snap.forEach(c => {
+            const item={id:c.key,...c.val()};
+            confirmationNotifications.push(item);
+            const oid = item.orderDbId || c.key;
+            const o = (typeof allOrders !== 'undefined' ? allOrders : []).find(x=>x.dbId===oid);
+            if (o && ['confirmed','cancelled'].includes(item.status)) {
+                const previous = o.customerConfirmation?.status;
+                o.customerConfirmation = { ...o.customerConfirmation, ...item, status:item.status, updatedAt:item.updatedAt||Date.now() };
+                if (previous !== item.status) {
+                    push(ref(db,'dashboardNotifications'), cleanData({type:'order_confirmation',orderDbId:o.dbId,orderId:o.displayId||o.orderId,status:item.status,title:item.status==='confirmed'?'العميل أكد الطلب':'العميل ألغى الطلب',message:`الطلب #${o.displayId||o.orderId} — ${item.status==='confirmed'?'تم التأكيد من العميل':'تم الإلغاء من العميل'}`,read:false,timestamp:Date.now()})).catch(()=>{});
+                    sendPushNotification(item.status==='confirmed'?'تم تأكيد طلب من العميل':'العميل ألغى طلباً', `الطلب #${o.displayId||o.orderId}`);
+                }
+            }
+        });
+        renderOrdersNow();
+        renderDashboardNotifications();
+    });
+    let dashboardNotifications = [];
+    onValue(ref(db,'dashboardNotifications'), snap => {
+        dashboardNotifications=[];
+        if (snap.exists()) snap.forEach(c=>dashboardNotifications.push({id:c.key,...c.val()}));
+        renderDashboardNotifications();
+    });
+    const renderDashboardNotifications = () => {
+        const list = document.getElementById('notifList');
+        const badge = document.getElementById('notifCount');
+        if (!list || !badge) return;
+        const low = (typeof allProducts !== 'undefined' ? allProducts : []).filter(p=>(p.stock||0)<=5 && p.isActive);
+        const confirmations = dashboardNotifications.filter(n=>n.type==='order_confirmation' && n.read!==true).sort((a,b)=>numFinal(b.timestamp)-numFinal(a.timestamp));
+        const total = low.length + confirmations.length;
+        badge.style.display = total ? 'block':'none';
+        badge.innerText = total;
+        list.innerHTML = `${confirmations.map(n=>`<div class="dashboard-notif-item confirmation-notif"><div class="dashboard-notif-icon"><i class="fas ${n.status==='confirmed'?'fa-check':'fa-xmark'}"></i></div><div><strong>${escFinal(n.title)}</strong><span>${escFinal(n.message)}</span></div></div>`).join('')}${confirmations.length && low.length ? '<div class="dashboard-notif-separator"></div>':''}${low.map(p=>`<div class="dashboard-notif-item"><img src="${escFinal(p.imageUrl||'https://via.placeholder.com/50')}" alt=""><div><strong>${escFinal(p.name)}</strong><span>الكمية المتبقية: ${numFinal(p.stock)}</span></div></div>`).join('')}${!total?'<div style="text-align:center;color:#94a3b8;padding:15px">لا توجد إشعارات حالياً</div>':''}`;
+    };
+    window.markNotificationsAsRead = async (e) => {
+        e?.stopPropagation();
+        const list = dashboardNotifications.filter(n=>n.type==='order_confirmation' && n.read!==true);
+        await Promise.all(list.map(n=>update(ref(db,`dashboardNotifications/${n.id}`),{read:true}).catch(()=>{})));
+        document.getElementById('notifCount').style.display='none';
+        renderDashboardNotifications();
+    };
+
+    // ---------------------------------------------------------------
+    // Order rendering override: adds customer confirmation state.
+    // ---------------------------------------------------------------
+    const baseRenderOrdersFinal = window.renderOrdersTable;
+    window.renderOrdersTable = () => {
+        const table = document.getElementById('ordersTableBody');
+        if (!table) return baseRenderOrdersFinal?.();
+        const allowed = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','view') : true;
+        if (!allowed) { table.innerHTML='<tr><td colspan="8" style="text-align:center;padding:25px">لا تملك صلاحية عرض الطلبات.</td></tr>'; return; }
+        const currentTab = typeof currentOrderTab !== 'undefined' ? currentOrderTab : 'active';
+        const search = (document.getElementById('searchOrders')?.value||'').toLowerCase();
+        const dateFilter = document.getElementById('filterOrderDate')?.value||'';
+        const paymentFilter = document.getElementById('filterOrderPayment')?.value||'';
+        const statusFilter = document.getElementById('filterOrderStatus')?.value||'';
+        const orders = (typeof allOrders !== 'undefined' ? allOrders : []).filter(o=>{
+            const tabMatch = currentTab==='active' ? ['قيد المراجعة','جاري التجهيز','تم الشحن'].includes(o.status) : ['تم تسليمه','ملغي','مرتجع'].includes(o.status);
+            const searchMatch = [o.displayId,o.orderId,o.customer?.name,o.customer?.phone,o.source].some(v=>String(v??'').toLowerCase().includes(search));
+            const dateMatch = !dateFilter || new Date(o.createdAt).toISOString().slice(0,10)===dateFilter;
+            const payMatch = !paymentFilter || String(o.paymentMethod||'').includes(paymentFilter);
+            const statusMatch = !statusFilter || o.status===statusFilter;
+            return tabMatch && searchMatch && dateMatch && payMatch && statusMatch;
+        });
+        const count = document.getElementById('filteredOrdersCount'); if(count) count.innerText=orders.length;
+        if(!orders.length){table.innerHTML='<tr><td colspan="8" style="text-align:center;padding:25px">لا توجد طلبات مطابقة للبحث.</td></tr>'; return;}
+        const canChange = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','changeStatus') : true;
+        const canDetails = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','details') : true;
+        table.innerHTML = orders.map(order => {
+            const statuses = ['قيد المراجعة','جاري التجهيز','تم الشحن','تم تسليمه','ملغي'];
+            const options = statuses.map(st=>`<option value="${escFinal(st)}" ${order.status===st?'selected':''}>${st}</option>`).join('');
+            const statusHtml = canChange ? `<select class="status-select" onchange="requestOrderStatusUpdate('${escFinal(order.dbId)}',this,'${escFinal(order.status)}','${escFinal(order.displayId||order.orderId)}')">${options}</select>` : `<span class="badge ${order.status==='تم الشحن'?'badge-active':'badge-inactive'}">${escFinal(order.status)}</span>`;
+            const c = order.customerConfirmation || {};
+            let confirmHtml = '<span class="order-confirmation-badge neutral">—</span>';
+            if (order.status === 'جاري التجهيز' || c.status) {
+                const st = c.status || 'pending';
+                if (st === 'confirmed') confirmHtml='<span class="order-confirmation-badge confirmed"><i class="fas fa-circle-check"></i> تم التأكيد</span>';
+                else if (st === 'cancelled') confirmHtml='<span class="order-confirmation-badge cancelled"><i class="fas fa-circle-xmark"></i> ألغاه العميل</span>';
+                else if (st === 'error') confirmHtml=`<span class="order-confirmation-badge error"><i class="fas fa-triangle-exclamation"></i> فشل الإرسال</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
+                else if (st === 'manual') confirmHtml=`<span class="order-confirmation-badge manual"><i class="fab fa-whatsapp"></i> إرسال يدوي</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
+                else confirmHtml='<span class="order-confirmation-badge pending"><i class="fas fa-clock"></i> في انتظار العميل</span>';
+            }
+            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td><td>${canDetails?`<button class="btn-action btn-view" onclick="viewOrderDetails('${escFinal(order.dbId)}')"><i class="fas fa-eye"></i></button>`:'—'}</td></tr>`;
+        }).join('');
+    };
+
+    // Details modal: show confirmation state live.
+    const oldViewDetailsFinal = window.viewOrderDetails;
+    window.viewOrderDetails = id => {
+        const result = oldViewDetailsFinal?.(id);
+        const order = (typeof allOrders !== 'undefined' ? allOrders : []).find(o=>o.dbId===id);
+        const box = document.getElementById('orderCustomerConfirmationBox');
+        if (box) {
+            const c=order?.customerConfirmation||{};
+            const state = c.status==='confirmed' ? '<span class="order-confirmation-badge confirmed">✅ تم تأكيد الطلب من العميل</span>' : c.status==='cancelled' ? '<span class="order-confirmation-badge cancelled">❌ العميل ألغى الطلب</span>' : order?.status==='جاري التجهيز' ? '<span class="order-confirmation-badge pending">⏳ في انتظار تأكيد العميل</span>' : '';
+            box.style.display=state?'block':'none'; box.innerHTML=state ? `<div><strong>حالة تأكيد العميل:</strong>${state}</div>` : '';
+        }
+        return result;
+    };
+
+    // Initialise audit + reviews visuals after DOM/auth are ready.
+    setTimeout(() => {
+        renderInventoryAuditHistory();
+        if (window.__dashboardAuthReady) {
+            try { window.applyDashboardPermissions?.(); } catch(e) {}
+            try { renderReviews(); } catch(e) {}
+            try { window.renderInventoryTable?.(); } catch(e) {}
+        }
+    }, 900);
 })();
