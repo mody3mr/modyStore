@@ -1,1 +1,1 @@
-# modytech
+# modystore
