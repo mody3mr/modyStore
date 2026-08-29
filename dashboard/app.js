@@ -230,45 +230,10 @@ window.logout = () => {
 };
 
 // ==========================================
-// القائمة الجانبية (ومشكلة الموبايل)
+// القائمة الجانبية
+// التحكم الموحد بها موجود في Final UI Patch أسفل الملف.
+// تم حذف الـ listener القديم لمنع تنفيذ toggle مرتين.
 // ==========================================
-const sidebarToggleEl = document.getElementById('sidebarToggle');
-const sidebarEl = document.getElementById('sidebar');
-if (sidebarToggleEl && sidebarEl) {
-    sidebarToggleEl.addEventListener('click', () => {
-        sidebarEl.classList.toggle('collapsed');
-    });
-}
-
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        const targetView = item.dataset.target;
-        if (!targetView) return;
-        
-        // التحقق الأمني المانع للمشرفين
-        if (window.currentUserRole === 'Supervisor' && window.currentEmpPermissions) {
-            const allowedTabs = window.currentEmpPermissions.tabs || [];
-            if (!allowedTabs.includes(targetView)) {
-                window.showAlert("عفواً، ليس لديك صلاحية لعرض هذه الصفحة!", "error");
-                return; 
-            }
-        }
-        
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        item.classList.add('active');
-        
-        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-        const targetEl = document.getElementById(targetView);
-        if (targetEl) targetEl.classList.add('active');
-
-        // قفل القائمة أوتوماتيك في الموبايل
-        if (window.innerWidth <= 768) {
-            document.getElementById('sidebar').classList.remove('collapsed');
-        } else {
-            document.getElementById('sidebar').classList.add('collapsed');
-        }
-    });
-});
 
 // ==========================================
 // الإشعارات والنواقص
