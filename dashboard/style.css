@@ -1624,3 +1624,593 @@ tr:hover{
         border-color:#ddd !important;
     }
 }
+/* ================================================================
+   FINAL LAYOUT FIX — Header / Text Visibility / RTL
+   This block intentionally overrides the previous theme safely.
+   ================================================================ */
+
+/* ---------- Global text visibility ---------- */
+body,
+.main-content,
+.workspace,
+.view-section,
+.card,
+.stat-card,
+.modal,
+table,
+label,
+p,
+h1,h2,h3,h4,h5,h6,
+span,
+td, th,
+.settings-page,
+.settings-section,
+.settings-card{
+    color: #e5edf8;
+}
+
+.page-title,
+.section-title,
+.card-title,
+.modal-title,
+h2,h3,h4{
+    color:#f4f7fb !important;
+}
+
+small,
+.text-muted,
+.meta-info,
+.form-hint,
+.description,
+.stat-info h3{
+    color:#94a3b8 !important;
+}
+
+/* Catch common old dark-text colors that disappear on dark backgrounds */
+.text-dark,
+.text-black,
+.text-secondary{
+    color:#dbe5f2 !important;
+}
+
+/* ---------- Header: clean RTL structure ---------- */
+.topbar{
+    direction:rtl;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    position:relative;
+    gap:18px;
+}
+
+/*
+   Existing HTML:
+   #sidebarToggle
+   <div> containing notifications + user
+   The title is visually supplied here without creating a third
+   flex item, so the existing JS/HTML structure remains untouched.
+*/
+#sidebarToggle{
+    order:1;
+    flex:0 0 40px;
+}
+
+.topbar > div:last-child{
+    order:2;
+    margin-right:auto !important;
+    margin-left:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:18px !important;
+    min-width:0;
+}
+
+/* User area */
+#userProfileBtn{
+    order:1;
+    display:flex !important;
+    align-items:center !important;
+    gap:10px !important;
+    white-space:nowrap;
+    min-width:0;
+}
+
+#currentUserNameDisplay{
+    display:block;
+    max-width:150px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#e8eef7 !important;
+    font-weight:700;
+}
+
+/* Notifications */
+#notifBtn{
+    order:2;
+    flex:0 0 38px;
+    width:38px;
+    height:38px;
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    color:#d8e2ef !important;
+}
+
+#notifBtn > i{
+    color:#b8c7da !important;
+}
+
+/* Title is a pseudo element anchored in the empty center area */
+.topbar::before{
+    content:"لوحة التحكم";
+    position:absolute;
+    right:78px;
+    top:50%;
+    transform:translateY(-50%);
+    margin:0 !important;
+    font-size:22px;
+    line-height:1;
+    font-weight:900;
+    color:#f1f5fb !important;
+    pointer-events:none;
+    white-space:nowrap;
+}
+
+/* ---------- Dropdowns: don't overlap the header ---------- */
+#profileDropdown{
+    right:0 !important;
+    left:auto !important;
+    top:calc(100% + 10px) !important;
+    min-width:210px;
+    z-index:10050;
+}
+
+#notifDropdown{
+    right:auto !important;
+    left:0 !important;
+    top:calc(100% + 10px) !important;
+    min-width:280px;
+    z-index:10050;
+}
+
+/* ---------- Tables: prevent text collision ---------- */
+table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    table-layout:auto;
+}
+
+th,td{
+    vertical-align:middle;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:normal;
+    line-height:1.65;
+}
+
+th{
+    white-space:nowrap;
+}
+
+td{
+    min-height:50px;
+}
+
+/* Keep IDs / numbers compact */
+td:first-child,
+td:nth-child(2){
+    white-space:nowrap;
+}
+
+/* ---------- Forms: readable labels and fields ---------- */
+.input-group label,
+.form-group label,
+label{
+    color:#cbd7e6 !important;
+}
+
+input,
+select,
+textarea{
+    color:#e5edf8 !important;
+    caret-color:#2dd4bf;
+}
+
+input::placeholder,
+textarea::placeholder{
+    color:#71839c !important;
+    opacity:1;
+}
+
+select option{
+    background:#101a2d;
+    color:#e5edf8;
+}
+
+/* ---------- Buttons: text must always contrast ---------- */
+button,
+.btn,
+.btn-add,
+.btn-save,
+.btn-cancel,
+.btn-action{
+    color:#f8fafc;
+}
+
+.btn-cancel{
+    color:#e5edf8 !important;
+}
+
+/* ---------- Empty states ---------- */
+.empty-state,
+.no-data,
+.no-results,
+.empty-message{
+    color:#94a3b8 !important;
+}
+
+/* ---------- Settings specifically ---------- */
+.settings-page *,
+.settings-section *,
+.settings-card *,
+.settings-hero *,
+.settings-status-card *{
+    color:inherit;
+}
+
+.settings-page h1,
+.settings-page h2,
+.settings-page h3,
+.settings-section h2,
+.settings-section h3,
+.settings-card h3{
+    color:#f4f7fb !important;
+}
+
+.settings-page p,
+.settings-section p,
+.settings-card p,
+.settings-status-card p{
+    color:#94a3b8 !important;
+}
+
+/* ---------- Keep sidebar text separate from main text ---------- */
+.sidebar{
+    color:#d8e2ef;
+}
+
+.sidebar .nav-links li{
+    color:#aebbd0;
+}
+
+.sidebar .nav-links li.active{
+    color:#f2b233;
+}
+
+/* ---------- Header on smaller screens ---------- */
+@media screen and (max-width:900px){
+    .topbar::before{
+        right:68px;
+        font-size:19px;
+    }
+
+    #currentUserNameDisplay{
+        max-width:105px;
+    }
+
+    .topbar > div:last-child{
+        gap:10px !important;
+    }
+}
+
+@media screen and (max-width:600px){
+    .topbar{
+        padding:0 12px;
+    }
+
+    .topbar::before{
+        display:none;
+    }
+
+    #currentUserNameDisplay{
+        max-width:85px;
+        font-size:12px;
+    }
+
+    #notifBtn{
+        width:34px;
+        flex-basis:34px;
+    }
+}
+/* ================================================================
+   ModyStore — Professional UI FIX v2
+   IMPORTANT: This is a final visual/layout override only.
+   Existing JavaScript and HTML functionality are intentionally kept.
+   ================================================================ */
+
+/* ---------- Header: use fixed visual zones instead of flex guessing ---------- */
+.topbar{
+    position:relative !important;
+    display:block !important;
+    min-height:82px !important;
+    padding:0 24px !important;
+    direction:rtl !important;
+}
+
+/* Menu button = right zone */
+.topbar > #sidebarToggle,
+#sidebarToggle{
+    position:absolute !important;
+    right:24px !important;
+    top:21px !important;
+    z-index:20 !important;
+    margin:0 !important;
+}
+
+/* Page title = next to menu, never participates in flex layout */
+.topbar::before{
+    content:"لوحة التحكم" !important;
+    position:absolute !important;
+    right:78px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    margin:0 !important;
+    width:auto !important;
+    z-index:10 !important;
+    color:#f7f9fc !important;
+    font-size:21px !important;
+    font-weight:900 !important;
+    white-space:nowrap !important;
+}
+
+/* User + notification group = left zone */
+.topbar > div:last-child{
+    position:absolute !important;
+    left:24px !important;
+    right:auto !important;
+    top:16px !important;
+    height:50px !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:16px !important;
+    z-index:30 !important;
+}
+
+/* User first, notification second, with no collision */
+#userProfileBtn{
+    position:relative !important;
+    order:1 !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    gap:9px !important;
+    height:44px !important;
+    max-width:220px !important;
+    min-width:0 !important;
+    padding:4px 8px !important;
+    border-radius:10px !important;
+}
+
+#currentUserNameDisplay{
+    color:#edf3fa !important;
+    font-size:13px !important;
+    font-weight:800 !important;
+    max-width:145px !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+}
+
+#currentUserAvatar{
+    width:40px !important;
+    height:40px !important;
+    flex:0 0 40px !important;
+    border-radius:50% !important;
+}
+
+/* Notification is a separate compact control */
+#notifBtn{
+    position:relative !important;
+    order:2 !important;
+    width:40px !important;
+    height:40px !important;
+    flex:0 0 40px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+#notifBtn > i{
+    color:#c7d3e2 !important;
+    font-size:19px !important;
+}
+
+#notifCount{
+    right:-3px !important;
+    top:-4px !important;
+}
+
+/* Dropdowns must be positioned relative to their own button */
+#userProfileBtn .profile-dropdown{
+    position:absolute !important;
+    right:0 !important;
+    left:auto !important;
+    top:calc(100% + 8px) !important;
+    z-index:9999 !important;
+}
+
+#notifBtn #notifDropdown{
+    position:absolute !important;
+    left:0 !important;
+    right:auto !important;
+    top:calc(100% + 8px) !important;
+    z-index:9999 !important;
+}
+
+/* ---------- Kill old dark/black text on the dark dashboard ---------- */
+.main-content .workspace h1,
+.main-content .workspace h2,
+.main-content .workspace h3,
+.main-content .workspace h4,
+.main-content .workspace h5,
+.main-content .workspace h6,
+.main-content .workspace p,
+.main-content .workspace span,
+.main-content .workspace label,
+.main-content .workspace td,
+.main-content .workspace th,
+.main-content .workspace .form-label,
+.main-content .workspace .section-title,
+.main-content .workspace .page-title{
+    color:#dce6f2 !important;
+}
+
+.main-content .workspace h1,
+.main-content .workspace h2,
+.main-content .workspace h3,
+.main-content .workspace h4,
+.main-content .workspace .page-title{
+    color:#f4f7fb !important;
+}
+
+/* Secondary/help text */
+.main-content .workspace small,
+.main-content .workspace .text-muted,
+.main-content .workspace .meta-info,
+.main-content .workspace .form-hint{
+    color:#91a2b9 !important;
+}
+
+/* Table headers */
+.main-content .workspace table thead th{
+    color:#aebed2 !important;
+    background:#17233b !important;
+}
+
+/* Inputs */
+.main-content .workspace input,
+.main-content .workspace select,
+.main-content .workspace textarea{
+    background:#0e182a !important;
+    color:#e8eef6 !important;
+    border-color:#2d3e5b !important;
+}
+
+.main-content .workspace input::placeholder,
+.main-content .workspace textarea::placeholder{
+    color:#71839c !important;
+}
+
+/* Don't let icons inherit an invisible text color */
+.main-content .workspace i,
+.main-content .workspace svg{
+    opacity:1;
+}
+
+/* ---------- Cards get consistent contrast ---------- */
+.main-content .workspace .stat-card,
+.main-content .workspace .card,
+.main-content .workspace .settings-card,
+.main-content .workspace .settings-section{
+    background:#141f34 !important;
+    border-color:#2a3a56 !important;
+    color:#dce6f2 !important;
+}
+
+.main-content .workspace .stat-info h3{
+    color:#91a2b9 !important;
+}
+
+.main-content .workspace .stat-info p{
+    color:#f2f6fb !important;
+}
+
+/* ---------- Buttons remain readable even when old inline styles exist ---------- */
+.main-content .workspace button,
+.main-content .workspace .btn{
+    font-weight:700;
+}
+
+.main-content .workspace .btn-add,
+.main-content .workspace .btn-save{
+    color:#fff !important;
+}
+
+.main-content .workspace .btn-cancel{
+    color:#eef3f9 !important;
+}
+
+/* ---------- Avoid text collisions in every data table ---------- */
+.main-content .workspace table{
+    table-layout:auto !important;
+}
+
+.main-content .workspace th,
+.main-content .workspace td{
+    line-height:1.7 !important;
+    vertical-align:middle !important;
+    overflow-wrap:anywhere !important;
+}
+
+.main-content .workspace td{
+    color:#d8e3ef !important;
+}
+
+/* ---------- Mobile header ---------- */
+@media (max-width:768px){
+    .topbar{
+        min-height:70px !important;
+        padding:0 12px !important;
+    }
+
+    #sidebarToggle{
+        right:12px !important;
+        top:15px !important;
+    }
+
+    .topbar::before{
+        display:none !important;
+    }
+
+    .topbar > div:last-child{
+        left:10px !important;
+        top:10px !important;
+        gap:7px !important;
+    }
+
+    #currentUserNameDisplay{
+        max-width:95px !important;
+        font-size:12px !important;
+    }
+
+    #currentUserAvatar{
+        width:36px !important;
+        height:36px !important;
+        flex-basis:36px !important;
+    }
+}
+
+/* ---------- Extra narrow screens ---------- */
+@media (max-width:430px){
+    #currentUserNameDisplay{
+        display:none !important;
+    }
+
+    #userProfileBtn{
+        padding:2px !important;
+    }
+
+    #notifBtn{
+        width:36px !important;
+        flex-basis:36px !important;
+    }
+}
