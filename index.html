@@ -1,596 +1,476 @@
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mody Store | مودي ستور</title>
+/* 
+    ModyStore Luxury CSS Framework 
+    Design Inspired by High-End Brands 
+*/
+
+:root {
+    --primary: #000000;
+    --accent: #2563eb; /* سيتم تحديثه ديناميكياً من الداش بورد */
+    --bg-body: #f4f7f6;
+    --card-bg: #ffffff;
+    --text-main: #1a1a1a;
+    --text-muted: #71717a;
+    --gold: #c5a059;
+    --radius: 24px;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+    --bg-body: #09090b;
+    --card-bg: #18181b;
+    --text-main: #fafafa;
+    --text-muted: #a1a1aa;
+    --primary: #ffffff;
+}
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Cairo', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    transition: background-color 0.4s ease, color 0.4s ease;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Header Luxury Glassmorphism */
+header {
+    background: rgba(var(--card-bg), 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.nav-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 26px;
+    font-weight: 900;
+    text-decoration: none;
+    color: var(--primary);
+    letter-spacing: -1px;
+}
+
+.logo span {
+    color: var(--accent);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.icon-btn {
+    background: var(--card-bg);
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(0,0,0,0.05);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+}
+
+.icon-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    background: var(--primary);
+    color: var(--bg-body);
+}
+
+.badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 900;
+    border: 2px solid var(--white);
+}
+
+/* Hero Slider Section */
+.main-slider {
+    margin: 20px auto;
+    max-width: 1350px;
+    padding: 0 15px;
+}
+
+.heroSwiper {
+    border-radius: var(--radius);
+    overflow: hidden;
+    height: 550px;
+    box-shadow: var(--shadow-lg);
+}
+
+.slide-content {
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: flex-end;
+    padding: 80px;
+    color: white;
+    position: relative;
+}
+
+.slide-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 10%, transparent 70%);
+}
+
+.slide-text {
+    position: relative;
+    z-index: 2;
+    max-width: 700px;
+}
+
+.slide-text h2 {
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Categories Navigation */
+.cat-scroll {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 25px;
+    max-width: 1400px;
+    margin: 0 auto;
+    scrollbar-width: none;
+}
+
+.cat-scroll::-webkit-scrollbar { display: none; }
+
+.cat-item {
+    background: var(--card-bg);
+    padding: 14px 32px;
+    border-radius: 50px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-weight: 700;
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: 0.3s;
+    color: var(--text-muted);
+}
+
+.cat-item.active {
+    background: var(--primary);
+    color: var(--bg-body);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* Products Grid System */
+.products-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 35px;
+}
+
+.p-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.03);
+}
+
+.p-card:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.15);
+}
+
+.p-img-box {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    overflow: hidden;
+    background: #f1f1f1;
+}
+
+.p-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.p-card:hover .p-img {
+    transform: scale(1.12);
+}
+
+.p-badge {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: var(--accent);
+    color: white;
+    padding: 6px 18px;
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 13px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.p-info {
+    padding: 25px;
+}
+
+.p-cat {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.p-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 8px 0 20px;
+    height: 56px;
+    overflow: hidden;
+    color: var(--text-main);
+}
+
+.p-price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.p-price {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--accent);
+}
+
+.p-old-price {
+    font-size: 15px;
+    text-decoration: line-through;
+    color: var(--text-muted);
+    margin-right: 10px;
+}
+
+.add-btn {
+    background: var(--primary);
+    color: var(--bg-body);
+    border: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    cursor: pointer;
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+}
+
+.add-btn:hover {
+    background: var(--accent);
+    transform: rotate(90deg) scale(1.1);
+    color: white;
+}
+
+/* Reviews Luxury Gallery */
+.reviews-section {
+    background: var(--card-bg);
+    padding: 100px 0;
+    margin-top: 80px;
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.section-title h2 {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.review-box {
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(0,0,0,0.05);
+    background: white;
+    transform: rotate(-1.5deg);
+    transition: 0.4s ease;
+}
+
+.review-box:hover {
+    transform: rotate(0deg) translateY(-10px);
+}
+
+.review-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Side Panels (Cart & Checkout) */
+.side-panel {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 500px;
+    max-width: 100%;
+    height: 100%;
+    background: var(--card-bg);
+    z-index: 2000;
+    transition: 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+    box-shadow: 30px 0 60px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.side-panel.active {
+    left: 0;
+}
+
+.panel-header {
+    padding: 35px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 35px;
+}
+
+.panel-footer {
+    padding: 35px;
+    background: rgba(0,0,0,0.02);
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Success Messaging */
+.success-card {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.wa-confirm {
+    background: #25d366;
+    color: white !important;
+    padding: 20px 40px;
+    border-radius: 50px;
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    font-weight: 800;
+    margin-top: 30px;
+    box-shadow: 0 15px 30px rgba(37,211,102,0.3);
+    transition: 0.3s;
+}
+
+.wa-confirm:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(37,211,102,0.4);
+}
+
+/* Footer Section */
+footer {
+    background: var(--primary);
+    color: var(--bg-body);
+    padding: 100px 25px 40px;
+}
+
+.footer-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 60px;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    z-index: 1500;
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsive Scaling */
+@media (max-width: 768px) {
+    .heroSwiper { height: 350px; }
+    .slide-text h2 { font-size: 32px; }
+    .slide-content { padding: 40px 25px; }
     
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .p-img-box { height: 220px; }
+    .p-info { padding: 15px; }
+    .p-title { font-size: 15px; height: 42px; margin-bottom: 10px; }
+    .p-price { font-size: 18px; }
+    .add-btn { width: 40px; height: 40px; border-radius: 12px; }
+    
+    .side-panel { width: 100%; left: -100%; }
+}
 
-    <style>
-        :root {
-            --primary: #000000;
-            --accent: #2563eb;
-            --bg-body: #f4f7f6;
-            --card-bg: #ffffff;
-            --text-main: #1a1a1a;
-            --text-muted: #71717a;
-            --gold: #c5a059;
-            --radius: 20px;
-            --shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
-        }
-
-        [data-theme="dark"] {
-            --bg-body: #09090b;
-            --card-bg: #18181b;
-            --text-main: #fafafa;
-            --text-muted: #a1a1aa;
-            --primary: #ffffff;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
-        
-        body { background-color: var(--bg-body); color: var(--text-main); transition: 0.4s; line-height: 1.6; }
-
-        /* Header Premium */
-        header { 
-            background: rgba(var(--card-bg), 0.8); 
-            backdrop-filter: blur(15px); 
-            position: sticky; top: 0; z-index: 1000;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        .nav-wrapper { 
-            max-width: 1400px; margin: 0 auto; padding: 15px 25px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .logo { font-size: 26px; font-weight: 900; text-decoration: none; color: var(--primary); letter-spacing: -1px; }
-        .logo span { color: var(--accent); }
-
-        .nav-actions { display: flex; gap: 15px; align-items: center; }
-        .icon-btn { 
-            background: var(--card-bg); width: 45px; height: 45px; border-radius: 15px;
-            display: flex; justify-content: center; align-items: center; border: 1px solid rgba(0,0,0,0.05);
-            cursor: pointer; position: relative; transition: 0.3s; color: var(--text-main);
-        }
-        .icon-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-        .badge { 
-            position: absolute; top: -5px; right: -5px; background: var(--accent);
-            color: white; font-size: 10px; width: 20px; height: 20px; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; font-weight: bold;
-        }
-
-        /* Hero Slider */
-        .main-slider { margin: 20px auto; max-width: 1350px; padding: 0 15px; }
-        .heroSwiper { border-radius: var(--radius); overflow: hidden; height: 500px; }
-        .slide-content { 
-            height: 100%; background-size: cover; background-position: center;
-            display: flex; align-items: flex-end; padding: 60px; color: white;
-            position: relative;
-        }
-        .slide-content::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
-        .slide-text { position: relative; z-index: 2; max-width: 600px; }
-        .slide-text h2 { font-size: 48px; font-weight: 900; line-height: 1.2; }
-
-        /* Categories Bar */
-        .cat-scroll { 
-            display: flex; gap: 12px; overflow-x: auto; padding: 20px 25px; 
-            max-width: 1400px; margin: 0 auto; scrollbar-width: none;
-        }
-        .cat-scroll::-webkit-scrollbar { display: none; }
-        .cat-item { 
-            background: var(--card-bg); padding: 12px 28px; border-radius: 50px;
-            white-space: nowrap; cursor: pointer; font-weight: 700; border: 1px solid rgba(0,0,0,0.05);
-            transition: 0.3s; color: var(--text-muted);
-        }
-        .cat-item.active { background: var(--primary); color: var(--bg-body); box-shadow: var(--shadow); }
-
-        /* Products Grid */
-        .products-grid { 
-            max-width: 1400px; margin: 0 auto; padding: 20px;
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;
-        }
-        .p-card { 
-            background: var(--card-bg); border-radius: var(--radius); overflow: hidden;
-            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative;
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-        .p-card:hover { transform: translateY(-12px); box-shadow: 0 30px 60px -15px rgba(0,0,0,0.15); }
-        .p-img-box { position: relative; width: 100%; height: 320px; overflow: hidden; }
-        .p-img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
-        .p-card:hover .p-img { transform: scale(1.1); }
-        .p-badge { 
-            position: absolute; top: 15px; left: 15px; background: var(--accent);
-            color: white; padding: 5px 15px; border-radius: 10px; font-weight: 900; font-size: 12px;
-        }
-        .p-info { padding: 20px; }
-        .p-cat { color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
-        .p-title { font-size: 18px; font-weight: 800; margin: 5px 0 15px; height: 50px; overflow: hidden; }
-        .p-price-row { display: flex; align-items: center; justify-content: space-between; }
-        .p-price { font-size: 22px; font-weight: 900; color: var(--accent); }
-        .p-old-price { font-size: 14px; text-decoration: line-through; color: var(--text-muted); margin-right: 8px; }
-        
-        .add-btn { 
-            background: var(--primary); color: var(--bg-body); border: none;
-            width: 45px; height: 45px; border-radius: 12px; cursor: pointer; transition: 0.3s;
-        }
-        .add-btn:hover { background: var(--accent); transform: rotate(90deg); }
-
-        /* Reviews Luxury Section */
-        .reviews-section { background: var(--card-bg); padding: 80px 0; margin-top: 60px; }
-        .section-title { text-align: center; margin-bottom: 50px; }
-        .section-title h2 { font-size: 32px; font-weight: 900; }
-        .review-box { 
-            border-radius: var(--radius); overflow: hidden; 
-            box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.05);
-            background: white; transform: rotate(-2deg); transition: 0.3s;
-        }
-        .review-box:hover { transform: rotate(0deg) scale(1.05); }
-        .review-box img { width: 100%; height: auto; display: block; }
-
-        /* Sidebar Cart */
-        .side-panel { 
-            position: fixed; top: 0; left: -450px; width: 450px; height: 100%;
-            background: var(--card-bg); z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1);
-            box-shadow: 20px 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column;
-        }
-        .side-panel.active { left: 0; }
-        .panel-header { padding: 30px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .panel-content { flex: 1; overflow-y: auto; padding: 30px; }
-        .panel-footer { padding: 30px; background: rgba(0,0,0,0.02); border-top: 1px solid rgba(0,0,0,0.05); }
-
-        /* Forms */
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: 700; font-size: 14px; }
-        .custom-input { 
-            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);
-            background: var(--bg-body); color: var(--text-main); font-size: 15px; outline: none;
-        }
-        .custom-input:focus { border-color: var(--accent); }
-
-        .checkout-btn { 
-            width: 100%; background: var(--accent); color: white; border: none;
-            padding: 18px; border-radius: 15px; font-weight: 900; font-size: 16px;
-            cursor: pointer; transition: 0.3s;
-        }
-
-        /* Success Card */
-        .success-card { text-align: center; display: none; padding: 40px 20px; }
-        .wa-confirm { 
-            background: #25d366; color: white; padding: 18px 35px; border-radius: 50px;
-            display: inline-flex; align-items: center; gap: 12px; text-decoration: none;
-            font-weight: 800; margin-top: 25px; box-shadow: 0 10px 20px rgba(37,211,102,0.3);
-        }
-
-        /* Footer */
-        footer { background: var(--primary); color: var(--bg-body); padding: 80px 25px 30px; }
-        .footer-grid { 
-            max-width: 1400px; margin: 0 auto; display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 50px;
-        }
-
-        .overlay { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.4); 
-            backdrop-filter: blur(5px); z-index: 1500; display: none; 
-        }
-
-        @media (max-width: 768px) {
-            .side-panel { width: 100%; left: -100%; }
-            .heroSwiper { height: 300px; }
-            .slide-text h2 { font-size: 28px; }
-            .products-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px; }
-            .p-img-box { height: 200px; }
-            .p-title { font-size: 14px; height: 40px; }
-            .p-price { font-size: 16px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="overlay" id="globalOverlay"></div>
-
-    <header>
-        <div class="nav-wrapper">
-            <a href="#" class="logo" id="headerLogo">MODY<span>STORE</span></a>
-            <div class="nav-actions">
-                <div class="icon-btn" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i></div>
-                <div class="icon-btn" onclick="toggleCart()">
-                    <i class="fas fa-shopping-bag"></i>
-                    <span class="badge" id="cartBadge">0</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <!-- Hero Slider -->
-        <section class="main-slider">
-            <div class="swiper heroSwiper">
-                <div class="swiper-wrapper" id="heroContainer">
-                    <!-- Slides loaded from Dashboard -->
-                </div>
-                <div class="swiper-pagination"></div>
-            </div>
-        </section>
-
-        <!-- Categories Scroll -->
-        <div class="cat-scroll" id="catList">
-            <div class="cat-item active" onclick="filterData('الكل', this)">الكل</div>
-        </div>
-
-        <!-- Products -->
-        <div class="products-grid" id="productsList">
-            <!-- Products loaded from Dashboard -->
-        </div>
-
-        <!-- Screenshots Reviews -->
-        <section class="reviews-section" id="reviewsArea">
-            <div class="section-title">
-                <h2>مجتمع عملاء مودي ستور</h2>
-                <p>آراء حقيقية وصادقة من عملائنا عبر واتساب وفيسبوك</p>
-            </div>
-            <div class="swiper reviewsSwiper" style="padding: 0 25px;">
-                <div class="swiper-wrapper" id="reviewsGrid">
-                    <!-- Image Reviews -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Side Cart -->
-    <div class="side-panel" id="cartPanel">
-        <div class="panel-header">
-            <h3>حقيبة التسوق</h3>
-            <div class="icon-btn" onclick="toggleCart()"><i class="fas fa-times"></i></div>
-        </div>
-        <div class="panel-content" id="cartItems">
-            <!-- Cart items -->
-        </div>
-        <div class="panel-footer">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <span style="font-weight: 700;">الإجمالي الفرعي</span>
-                <span id="cartTotalSum" style="font-weight: 900; font-size: 20px; color: var(--accent);">0 ج.م</span>
-            </div>
-            <button class="checkout-btn" onclick="goToCheckout()">إتمام الطلب الآن</button>
-        </div>
-    </div>
-
-    <!-- Checkout Panel -->
-    <div class="side-panel" id="checkoutPanel" style="left: auto; right: -100%;">
-        <div class="panel-header">
-            <h3>تفاصيل الشحن</h3>
-            <div class="icon-btn" onclick="toggleCheckout()"><i class="fas fa-times"></i></div>
-        </div>
-        <div class="panel-content">
-            <div id="checkoutForm">
-                <div class="input-group">
-                    <label>الاسم الكامل</label>
-                    <input type="text" id="cName" class="custom-input" placeholder="اسمك ثلاثي">
-                </div>
-                <div class="input-group">
-                    <label>رقم الموبايل</label>
-                    <input type="tel" id="cPhone" class="custom-input" placeholder="رقم الهاتف الأساسي">
-                </div>
-                <div class="input-group">
-                    <label>المحافظة</label>
-                    <select id="cCity" class="custom-input" onchange="calcShipping()">
-                        <option value="">اختر محافظتك</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>العنوان التفصيلي</label>
-                    <textarea id="cAddress" class="custom-input" rows="3" placeholder="الشارع، رقم العمارة، الشقة"></textarea>
-                </div>
-
-                <div style="margin-top: 25px;">
-                    <label style="font-weight: 900; margin-bottom: 15px; display: block;">طريقة الدفع آمنة</label>
-                    <div style="display: grid; gap: 10px;">
-                        <label style="padding: 15px; border: 2px solid var(--accent); border-radius: 12px; display: flex; gap: 10px; cursor: pointer;">
-                            <input type="radio" name="pMethod" value="COD" checked> الدفع عند الاستلام
-                        </label>
-                        <label style="padding: 15px; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; display: flex; gap: 10px; cursor: pointer;">
-                            <input type="radio" name="pMethod" value="PAYMOB"> كارت بنكي / محفظة (باي موب)
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div id="successPage" class="success-card">
-                <i class="fas fa-check-circle" style="font-size: 70px; color: #25d366;"></i>
-                <h2 style="margin: 20px 0 10px;">تم تأكيد طلبك!</h2>
-                <p>رقم الطلب الخاص بك: <strong id="orderIdNum"></strong></p>
-                <a href="#" id="waLink" class="wa-confirm" target="_blank">
-                    <i class="fab fa-whatsapp"></i> تأكيد الطلب عبر واتساب
-                </a>
-            </div>
-        </div>
-        <div class="panel-footer" id="checkoutFooter">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--text-muted);">
-                <span>قيمة الشحن:</span>
-                <span id="shipPrice">0 ج.م</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
-                <span style="font-weight: 900; font-size: 20px;">الإجمالي النهائي</span>
-                <span id="finalTotal" style="font-weight: 900; font-size: 24px; color: var(--accent);">0 ج.م</span>
-            </div>
-            <button class="checkout-btn" id="confirmOrderBtn" onclick="submitOrder()">تأكيد الطلب <i class="fas fa-paper-plane"></i></button>
-        </div>
-    </div>
-
-    <footer>
-        <div class="footer-grid">
-            <div>
-                <h2 style="font-size: 30px; margin-bottom: 20px;" id="fName">MODYSTORE</h2>
-                <p id="fDesc" style="color: var(--text-muted);"></p>
-                <div style="display: flex; gap: 15px; margin-top: 25px;" id="fSocial"></div>
-            </div>
-            <div>
-                <h3>تحتاج مساعدة؟</h3>
-                <p id="fPhone" style="margin: 15px 0;"></p>
-                <p id="fEmail"></p>
-            </div>
-        </div>
-        <p style="text-align: center; margin-top: 60px; color: var(--text-muted); font-size: 14px;">جميع الحقوق محفوظة لمودي ستور © 2024</p>
-    </footer>
-
-    <!-- Firebase & JS Logic -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-        import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBzXZ-olKlD76cCw5dtp8IU1qZMSKSTi1g",
-            authDomain: "modytech-850c2.firebaseapp.com",
-            projectId: "modytech-850c2",
-            storageBucket: "modytech-850c2.firebasestorage.app",
-            messagingSenderId: "909293461306",
-            appId: "1:909293461306:web:48e5492107ad32ceec7a03"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let products = [], cart = [], settings = {}, shippingData = {};
-
-        // 1. Sync Settings
-        onValue(ref(db, 'storeSettings'), (snap) => {
-            settings = snap.val() || {};
-            document.getElementById('headerLogo').innerHTML = settings.storeName ? `${settings.storeName.toUpperCase()}<span>STORE</span>` : "MODY<span>STORE</span>";
-            document.getElementById('fName').innerText = settings.storeName || "MODYSTORE";
-            document.getElementById('fDesc').innerText = settings.footerDesc || "تجربة تسوق فريدة لأرقى المنتجات.";
-            document.getElementById('fPhone').innerHTML = `<i class="fas fa-phone"></i> ${settings.phone || ''}`;
-            document.getElementById('fEmail').innerHTML = `<i class="fas fa-envelope"></i> ${settings.email || ''}`;
-            
-            if(settings.primaryColor) document.documentElement.style.setProperty('--accent', settings.primaryColor);
-
-            // Social
-            const socialBox = document.getElementById('fSocial');
-            socialBox.innerHTML = '';
-            if(settings.social?.whatsapp) socialBox.innerHTML += `<a href="https://wa.me/${settings.social.whatsapp}" style="color:white; font-size:24px;"><i class="fab fa-whatsapp"></i></a>`;
-            if(settings.social?.facebook) socialBox.innerHTML += `<a href="${settings.social.facebook}" style="color:white; font-size:24px;"><i class="fab fa-facebook"></i></a>`;
-        });
-
-        // 2. Load Categories
-        onValue(ref(db, 'categories'), (snap) => {
-            const list = document.getElementById('catList');
-            list.innerHTML = `<div class="cat-item active" onclick="filterData('الكل', this)">الكل</div>`;
-            snap.forEach(child => {
-                const c = child.val();
-                if(c.isActive) list.innerHTML += `<div class="cat-item" onclick="filterData('${c.name}', this)">${c.name}</div>`;
-            });
-        });
-
-        // 3. Load Products
-        onValue(ref(db, 'products'), (snap) => {
-            products = [];
-            const container = document.getElementById('productsList');
-            container.innerHTML = '';
-            snap.forEach(child => {
-                const p = child.val();
-                if(p.isActive) {
-                    p.id = child.key;
-                    products.push(p);
-                }
-            });
-            displayProducts(products);
-        });
-
-        // 4. Load Reviews (Screenshots)
-        onValue(ref(db, 'storeReviews'), (snap) => {
-            const grid = document.getElementById('reviewsGrid');
-            grid.innerHTML = '';
-            let count = 0;
-            snap.forEach(child => {
-                const r = child.val();
-                if(r.isActive && r.imageUrl) {
-                    count++;
-                    grid.innerHTML += `
-                        <div class="swiper-slide review-box">
-                            <img src="${r.imageUrl}" loading="lazy">
-                        </div>
-                    `;
-                }
-            });
-            document.getElementById('reviewsArea').style.display = count > 0 ? 'block' : 'none';
-            initSwipers();
-        });
-
-        // 5. Shipping
-        onValue(ref(db, 'shipping'), (snap) => {
-            const select = document.getElementById('cCity');
-            select.innerHTML = '<option value="">اختر محافظتك</option>';
-            snap.forEach(child => {
-                const s = child.val();
-                if(s.isActive) {
-                    shippingData[s.name] = s.price;
-                    select.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-                }
-            });
-        });
-
-        // Core Functions
-        window.displayProducts = (arr) => {
-            const container = document.getElementById('productsList');
-            container.innerHTML = arr.map(p => {
-                const disc = p.discountPrice ? Math.round(((p.price - p.discountPrice)/p.price)*100) : 0;
-                return `
-                    <div class="p-card">
-                        ${disc > 0 ? `<div class="p-badge">خصم ${disc}%</div>` : ''}
-                        <div class="p-img-box"><img src="${p.imageUrl}" class="p-img" alt="${p.name}"></div>
-                        <div class="p-info">
-                            <div class="p-cat">${p.category}</div>
-                            <div class="p-title">${p.name}</div>
-                            <div class="p-price-row">
-                                <div>
-                                    <span class="p-price">${p.discountPrice || p.price} ج.م</span>
-                                    ${p.discountPrice ? `<span class="p-old-price">${p.price} ج.م</span>` : ''}
-                                </div>
-                                <button class="add-btn" onclick="addToCart('${p.id}')"><i class="fas fa-plus"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        window.filterData = (cat, btn) => {
-            document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('active'));
-            btn.classList.add('active');
-            if(cat === 'الكل') displayProducts(products);
-            else displayProducts(products.filter(p => p.category === cat));
-        };
-
-        window.addToCart = (id) => {
-            const p = products.find(x => x.id === id);
-            const item = cart.find(x => x.id === id);
-            if(item) item.qty++;
-            else cart.push({...p, qty: 1});
-            updateCart();
-            toggleCart(true);
-        };
-
-        function updateCart() {
-            const list = document.getElementById('cartItems');
-            const subtotal = cart.reduce((s, i) => s + (i.discountPrice || i.price) * i.qty, 0);
-            document.getElementById('cartBadge').innerText = cart.reduce((s, i) => s + i.qty, 0);
-            document.getElementById('cartTotalSum').innerText = subtotal + " ج.م";
-            document.getElementById('finalTotal').innerText = (subtotal + (shippingData[document.getElementById('cCity').value] || 0)) + " ج.م";
-            
-            list.innerHTML = cart.map(i => `
-                <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
-                    <img src="${i.imageUrl}" style="width: 70px; height: 70px; border-radius: 12px; object-fit: cover;">
-                    <div style="flex: 1;">
-                        <h4 style="font-size: 14px;">${i.name}</h4>
-                        <div style="color: var(--accent); font-weight: 900;">${i.discountPrice || i.price} ج.م</div>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
-                            <button onclick="changeQty('${i.id}', -1)" style="border:none; width:25px; height:25px; border-radius:5px;">-</button>
-                            <span>${i.qty}</span>
-                            <button onclick="changeQty('${i.id}', 1)" style="border:none; width:25px; height:25px; border-radius:5px;">+</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.changeQty = (id, n) => {
-            const item = cart.find(x => x.id === id);
-            if(item) {
-                item.qty += n;
-                if(item.qty <= 0) cart = cart.filter(x => x.id !== id);
-                updateCart();
-            }
-        };
-
-        window.toggleCart = (open = false) => {
-            const p = document.getElementById('cartPanel');
-            const over = document.getElementById('globalOverlay');
-            if(open) { p.classList.add('active'); over.style.display = 'block'; }
-            else { p.classList.toggle('active'); over.style.display = p.classList.contains('active') ? 'block' : 'none'; }
-        };
-
-        window.goToCheckout = () => {
-            if(cart.length === 0) return Swal.fire("حقيبة فارغة", "أضف منتجات أولاً", "warning");
-            toggleCart(false);
-            document.getElementById('checkoutPanel').style.right = '0';
-            document.getElementById('globalOverlay').style.display = 'block';
-        };
-
-        window.toggleCheckout = () => {
-            document.getElementById('checkoutPanel').style.right = '-100%';
-            document.getElementById('globalOverlay').style.display = 'none';
-        };
-
-        window.calcShipping = () => {
-            const city = document.getElementById('cCity').value;
-            const price = shippingData[city] || 0;
-            document.getElementById('shipPrice').innerText = price + " ج.م";
-            updateCart();
-        };
-
-        window.submitOrder = async () => {
-            const name = document.getElementById('cName').value;
-            const phone = document.getElementById('cPhone').value;
-            const city = document.getElementById('cCity').value;
-            const addr = document.getElementById('cAddress').value;
-            const pay = document.querySelector('input[name="pMethod"]:checked').value;
-
-            if(!name || !phone || !city || !addr) return Swal.fire("بيانات ناقصة", "برجاء إكمال حقول الشحن", "error");
-
-            const btn = document.getElementById('confirmOrderBtn');
-            btn.disabled = true; btn.innerText = "جاري التأكيد...";
-
-            const id = "MODY-" + Math.floor(100000 + Math.random() * 900000);
-            const subtotal = cart.reduce((s, i) => s + (i.discountPrice || i.price) * i.qty, 0);
-            const finalTotal = subtotal + (shippingData[city] || 0);
-
-            const order = { 
-                orderId: id, name, phone, city, address: addr, 
-                items: cart, total: finalTotal, method: pay,
-                status: "قيد المراجعة", date: new Date().toISOString()
-            };
-
-            try {
-                await push(ref(db, 'orders'), order);
-                
-                // Success Handling
-                document.getElementById('checkoutForm').style.display = 'none';
-                document.getElementById('checkoutFooter').style.display = 'none';
-                document.getElementById('successPage').style.display = 'block';
-                document.getElementById('orderIdNum').innerText = id;
-                
-                const waMsg = `مرحباً مودي ستور، أود تأكيد طلبي رقم ${id} بقيمة ${finalTotal} ج.م.`;
-                document.getElementById('waLink').href = `https://wa.me/${settings.social?.whatsapp}?text=${encodeURIComponent(waMsg)}`;
-                
-                cart = []; updateCart();
-            } catch (e) {
-                Swal.fire("خطأ", "حدثت مشكلة، حاول مرة أخرى", "error");
-                btn.disabled = false; btn.innerText = "تأكيد الطلب";
-            }
-        };
-
-        function initSwipers() {
-            new Swiper('.heroSwiper', {
-                pagination: { el: '.swiper-pagination', clickable: true },
-                autoplay: { delay: 4000 },
-                loop: true
-            });
-            new Swiper('.reviewsSwiper', {
-                slidesPerView: 1.4, spaceBetween: 20,
-                breakpoints: { 768: { slidesPerView: 4.5 } },
-                autoplay: { delay: 3000 }
-            });
-        }
-
-        window.toggleTheme = () => {
-            const b = document.body;
-            const isDark = b.getAttribute('data-theme') === 'dark';
-            b.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            document.getElementById('themeIcon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
-        };
-
-    </script>
-</body>
-</html>
+/* Utility Animations */
+.p-card, .cat-item, .icon-btn {
+    will-change: transform;
+}
