@@ -12,8 +12,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const TELEGRAM_BOT_TOKEN = "8578331488:AAG8XHQBN7TSduQ1ip5Fd8pHggSrf_kIn90"; 
-const TELEGRAM_CHAT_ID = "5664540316";     
+const STORE_API_BASE_URL = "";
+
+function apiUrl(path) {
+    const base = STORE_API_BASE_URL.replace(/\/$/, "");
+    return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 let allActiveProducts = [];
 let cart = [];
@@ -67,12 +71,17 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
 
         // طرق الدفع
         const pmSelect = document.getElementById("paymentMethod");
-        if (pmSelect && storeSettings.paymentMethods) {
+        if (pmSelect) {
             pmSelect.innerHTML = "";
-            if (storeSettings.paymentMethods.cod) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
-            if (storeSettings.paymentMethods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
-            if (storeSettings.paymentMethods.instapay) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
-            if (storeSettings.paymentMethods.visa) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
+            const methods = storeSettings.paymentMethods || {};
+            if (methods.cod) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
+            if (storeSettings.paymob && storeSettings.paymob.enabled) {
+                pmSelect.innerHTML += '<option value="Paymob">💳 الدفع الإلكتروني - Paymob</option>';
+            }
+            // الحفاظ على طرق الدفع القديمة إن كانت مفعلة من لوحة التحكم.
+            if (methods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
+            if (methods.instapay) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
+            if (methods.visa && !(storeSettings.paymob && storeSettings.paymob.enabled)) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
         }
 
         // بيانات الفوتر
@@ -155,6 +164,8 @@ document.addEventListener("DOMContentLoaded", () => {
         autoplay: { delay: 4000 }
     });
 });
+
+handlePaymentReturn();
 
 // تفعيل شريط التنقل السفلي
 window.setActiveNav = (element) => {
@@ -497,147 +508,126 @@ window.openCheckoutModal = () => {
 
 // ==== إرسال الطلب ومعالجة بوابات الدفع ====
 window.sendOrder = async () => {
-    const name = document.getElementById("custName").value;
-    const phone = document.getElementById("custPhone").value;
-    const phone2 = document.getElementById("custPhone2").value;
-    const city = document.getElementById("custCity").value; 
-    const region = document.getElementById("custRegion").value;
-    const building = document.getElementById("custBuilding").value;
-    const floor = document.getElementById("custFloor").value;
-    const apartment = document.getElementById("custAppt").value;
-    const landmark = document.getElementById("custLandmark").value;
-    const address = document.getElementById("custAddress").value;
+    const name = document.getElementById("custName").value.trim();
+    const phone = document.getElementById("custPhone").value.trim();
+    const phone2 = document.getElementById("custPhone2").value.trim();
+    const city = document.getElementById("custCity").value;
+    const region = document.getElementById("custRegion").value.trim();
+    const building = document.getElementById("custBuilding").value.trim();
+    const floor = document.getElementById("custFloor").value.trim();
+    const apartment = document.getElementById("custAppt").value.trim();
+    const landmark = document.getElementById("custLandmark").value.trim();
+    const address = document.getElementById("custAddress").value.trim();
     const paymentMethod = document.getElementById("paymentMethod").value;
     const btn = document.getElementById("submitOrderBtn");
 
-    if(!name || !phone || !city || !region || !address) {
+    if (!name || !phone || !city || !region || !address) {
         Swal.fire({icon: 'error', title: 'بيانات ناقصة', text: 'الرجاء إكمال البيانات الأساسية للتوصيل (الاسم، الموبايل، المحافظة، المنطقة، العنوان)', confirmButtonColor: 'var(--title-color)'});
         return;
     }
 
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...`;
-    btn.disabled = true;
-
-    let subtotal = 0;
-    let orderItemsText = "";
-    let orderItemsForDb = [];
-    
-    cart.forEach(item => {
-        orderItemsText += `🔹 ${item.qty}x ${item.name} (${item.price * item.qty} ج)\n`;
-        subtotal += (item.price * item.qty);
-        orderItemsForDb.push({ id: item.id, name: item.name, price: item.price, qty: item.qty });
-    });
-
-    let finalTotal = subtotal + currentShippingCost;
-    let discountText = "";
-    let discountVal = 0;
-
-    if(appliedVoucher) {
-        discountVal = appliedVoucher.type === "percentage" ? subtotal * (appliedVoucher.value/100) : appliedVoucher.value;
-        if(discountVal > subtotal) discountVal = subtotal;
-        finalTotal -= discountVal;
-        discountText = `\n🎁 *كود الخصم (${appliedVoucher.code}):* -${Math.round(discountVal)} ج.م`;
+    if (!paymentMethod) {
+        Swal.fire({icon: 'error', title: 'طريقة الدفع', text: 'الرجاء اختيار طريقة الدفع أولاً.', confirmButtonColor: 'var(--title-color)'});
+        return;
     }
 
-    const orderId = Math.floor(10000000 + Math.random() * 90000000).toString(); 
+    if (!cart.length) {
+        Swal.fire({icon: 'warning', title: 'السلة فارغة', text: 'أضف منتجات قبل إرسال الطلب.', confirmButtonColor: 'var(--title-color)'});
+        return;
+    }
 
-    const telegramMessage = `
-🛍️ *طلب جديد #${orderId}*
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري تأكيد الطلب...`;
+    btn.disabled = true;
 
-👤 *الاسم:* ${name}
-📞 *التليفون:* ${phone} ${phone2 ? ' / ' + phone2 : ''}
-📍 *العنوان:* ${city} - ${region} - مبنى ${building || '-'} دور ${floor || '-'} شقة ${apartment || '-'}
-🔖 *علامة مميزة:* ${landmark || '-'}
-📝 *تفاصيل للوصول:* ${address}
-💳 *الدفع:* ${paymentMethod}
-🌐 *المصدر:* الموقع الإلكتروني
-
-📦 *المنتجات:*
-${orderItemsText}
-💰 *الإجمالي الفرعي:* ${subtotal} ج.م
-🚚 *رسوم الشحن:* ${currentShippingCost} ج.م${discountText}
-🔥 *الإجمالي النهائي: ${Math.round(finalTotal)} ج.م*
-    `;
-
-    const orderData = {
-        orderId: orderId,
-        secretCode: orderId,
-        source: "الموقع الإلكتروني",
+    const payload = {
         customer: { name, phone, phone2, city, region, building, floor, apartment, landmark, address },
-        paymentMethod: paymentMethod,
-        items: orderItemsForDb,
-        subtotal: subtotal,
-        shippingCost: currentShippingCost,
-        discount: discountVal,
-        total: finalTotal,
-        status: "قيد المراجعة", 
-        createdAt: Date.now()
+        paymentMethod,
+        items: cart.map(item => ({ id: item.id, qty: item.qty })),
+        voucherCode: appliedVoucher ? appliedVoucher.code : null
     };
 
     try {
-        await push(ref(db, 'orders'), orderData);
-        
-        if (appliedVoucher) {
-            await push(ref(db, `vouchers/${appliedVoucher.id}/usedBy`), {
-                name: name,
-                phone: phone,
-                orderId: orderId,
-                timestamp: Date.now()
-            });
-        }
-        
-        for (const item of cart) {
-            const productRef = ref(db, `products/${item.id}`);
-            const snapshot = await get(productRef);
-            if (snapshot.exists()) {
-                const p = snapshot.val();
-                let newStock = (p.stock || 0) - item.qty;
-                if (newStock < 0) newStock = 0;
-                await update(productRef, { stock: newStock });
-            }
-        }
-
-        const tgUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-        await fetch(tgUrl, {
+        const response = await fetch(apiUrl('/api/orders'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                text: telegramMessage,
-                parse_mode: "Markdown"
-            })
+            body: JSON.stringify(payload)
         });
 
-        // التعامل مع بوابات الدفع (Paymob)
-        if(paymentMethod !== "كاش" && storeSettings.paymob && storeSettings.paymob.enabled) {
-            Swal.fire({
-                title: 'جاري تحويلك لبوابة الدفع...',
-                html: 'يرجى الانتظار، سيتم نقلك لصفحة الدفع الآمنة الخاصه بـ Paymob.',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || 'تعذر إنشاء الطلب.');
 
-            setTimeout(() => {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'توجيه للدفع',
-                    html: `تم تسجيل الطلب! <br> سيتم توجيهك الآن للرابط التالي: <br><br><b>${storeSettings.paymob.backendEndpoint}</b><br><br><small>تنويه برمجي: بناءً على الأمان، التوجيه الفعلي لـ Paymob يتم عبر الـ Backend باستخدام Endpoint الخاص بك.</small>`,
-                    confirmButtonText: 'حسناً، إتمام الطلب'
-                }).then(() => {
-                    completeOrderSuccess(orderId);
-                });
-            }, 2500);
-        } else {
-            // كاش أو محفظة بدون ربط البوابة
-            completeOrderSuccess(orderId);
+        if (result.paymentRequired && result.checkoutUrl) {
+            sessionStorage.setItem('pendingPaymobOrderId', result.orderId);
+            Swal.fire({
+                icon: 'info',
+                title: 'جاري فتح الدفع الآمن',
+                html: `سيتم تحويلك الآن إلى صفحة الدفع الآمنة من Paymob.<br><small>رقم الطلب: <b>${result.orderId}</b></small>`,
+                confirmButtonText: 'الدفع الآن',
+                allowOutsideClick: false
+            }).then(() => {
+                window.location.href = result.checkoutUrl;
+            });
+            return;
         }
 
+        completeOrderSuccess(result.orderId);
+        Swal.fire({
+            icon: 'success',
+            title: 'تم استلام الطلب',
+            text: 'تم تسجيل طلبك بنجاح وسيتم التواصل معك لتأكيده.',
+            confirmButtonColor: 'var(--secondary)'
+        });
     } catch (error) {
-        Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.', confirmButtonColor: 'var(--title-color)'});
+        console.error('Order submission error:', error);
+        Swal.fire({icon: 'error', title: 'تعذر إرسال الطلب', text: error.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.', confirmButtonColor: 'var(--title-color)'});
+    } finally {
         btn.innerHTML = `تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i>`;
         btn.disabled = false;
     }
 };
+
+async function handlePaymentReturn() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment_return') !== '1') return;
+
+    const orderId = params.get('orderId') || sessionStorage.getItem('pendingPaymobOrderId');
+    if (!orderId) return;
+
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    const checkoutForm = document.getElementById('checkoutForm');
+    const successScreen = document.getElementById('successScreen');
+    if (checkoutForm) checkoutForm.style.display = 'none';
+    if (successScreen) successScreen.style.display = 'block';
+    const successTitle = successScreen ? successScreen.querySelector('h3') : null;
+    const successText = successScreen ? successScreen.querySelector('p') : null;
+    const successId = document.getElementById('successOrderId');
+    if (successId) successId.innerText = orderId;
+    if (successTitle) successTitle.innerText = 'جاري تأكيد الدفع...';
+    if (successText) successText.innerHTML = 'تم الرجوع من Paymob. نتحقق الآن من حالة الدفع بشكل آمن.';
+
+    try {
+        const response = await fetch(apiUrl(`/api/orders/status/${encodeURIComponent(orderId)}`), { cache: 'no-store' });
+        const data = await response.json();
+        if (data.paymentStatus === 'paid') {
+            if (successTitle) successTitle.innerText = 'تم الدفع واستلام الطلب بنجاح!';
+            if (successText) successText.innerHTML = `رقم الطلب: <strong>${orderId}</strong><br>تم تأكيد الدفع بنجاح.`;
+            sessionStorage.removeItem('pendingPaymobOrderId');
+            cart = [];
+            appliedVoucher = null;
+            updateCartUI();
+        } else if (data.paymentStatus === 'failed') {
+            if (successTitle) { successTitle.innerText = 'لم يتم الدفع'; successTitle.style.color = 'var(--accent)'; }
+            if (successText) successText.innerHTML = `لم تكتمل عملية الدفع للطلب <strong>${orderId}</strong>. يمكنك المحاولة مرة أخرى.`;
+        } else {
+            if (successText) successText.innerHTML = `عملية الدفع ما زالت قيد التأكيد للطلب <strong>${orderId}</strong>. يمكنك الانتظار قليلاً ثم تحديث الصفحة.`;
+        }
+    } catch (error) {
+        console.error('Payment status check failed:', error);
+        if (successText) successText.innerHTML = `تم استلام الرجوع من Paymob، لكن تعذر قراءة الحالة حالياً. رقم الطلب: <strong>${orderId}</strong>`;
+    }
+}
 
 function completeOrderSuccess(orderId) {
     const btn = document.getElementById("submitOrderBtn");
