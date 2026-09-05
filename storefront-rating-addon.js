@@ -38,7 +38,10 @@ export function attachProductRating(mount, productId) {
 }
 
 export function autoAttachProductRatings(root=document) {
-  root.querySelectorAll('[data-product-id]').forEach(card => {
+  const cards = [];
+  if (root?.matches?.('[data-product-id]')) cards.push(root);
+  root.querySelectorAll('[data-product-id]').forEach(card => cards.push(card));
+  cards.forEach(card => {
     if (card.dataset.modyRatingAttached === '1') return;
     const productId = card.dataset.productId;
     if (!productId) return;
@@ -50,5 +53,15 @@ export function autoAttachProductRatings(root=document) {
 }
 
 window.ModyStoreProductRating = { attachProductRating, autoAttachProductRatings };
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => autoAttachProductRatings());
-else autoAttachProductRatings();
+const attach = () => autoAttachProductRatings();
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
+else attach();
+
+// Product cards are rendered from Firebase after page load, so observe the grid
+// and attach listeners as soon as new cards appear.
+const observer = new MutationObserver(mutations => {
+  mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+    if (node.nodeType === 1) autoAttachProductRatings(node);
+  }));
+});
+observer.observe(document.body, { childList: true, subtree: true });
