@@ -187,13 +187,43 @@ async function calculateOrder(body) {
 }
 
 async function decrementStock(items) {
-    for (const item of items) {
-        const result = await db.ref(`products/${item.id}/stock`).transaction(current => {
-            const stock = Number(current) || 0;
-            if (stock < item.qty) return;
-            return stock - item.qty;
-        });
-        if (!result.committed) throw new Error(`المخزون لم يعد كافياً للمنتج: ${item.name}`);
+    const deducted = [];
+    try {
+        for (const item of items) {
+            const result = await db.ref(`products/${item.id}/stock`).transaction(current => {
+                const stock = Number(current) || 0;
+                if (stock < item.qty) return;
+                return stock - item.qty;
+            });
+            if (!result.committed) throw new Error(`المخزون لم يعد كافياً للمنتج: ${item.name}`);
+            deducted.push(item);
+        }
+        return deducted;
+    } catch (error) {
+        // لا نترك خصماً جزئياً إذا فشل منتج لاحق في نفس الطلب.
+        for (const item of deducted) {
+            await db.ref(`products/${item.id}/stock`).transaction(current => (Number(current) || 0) + item.qty);
+        }
+        throw error;
+    }
+}
+
+async function restoreStockOnce(orderRef, order) {
+    if (!order?.stockDeducted || order.stockRestored === true || order.stockRestoreInProgress === true) return false;
+    // Claim the restore operation before touching products. The claim is
+    // released on failure so a later cancellation/webhook can retry safely.
+    const claim = await orderRef.child('stockRestoreInProgress').transaction(current => current === true ? undefined : true);
+    if (!claim.committed) return false;
+    try {
+        for (const item of order.items || []) {
+            const result = await db.ref(`products/${item.id}/stock`).transaction(current => (Number(current) || 0) + Number(item.qty || 0));
+            if (!result.committed) throw new Error(`تعذر إعادة مخزون المنتج: ${item.name || item.id}`);
+        }
+        await orderRef.update({ stockRestored: true, stockRestoredAt: Date.now(), stockRestoreInProgress: null });
+        return true;
+    } catch (error) {
+        await orderRef.child('stockRestoreInProgress').remove().catch(() => {});
+        throw error;
     }
 }
 
@@ -237,15 +267,18 @@ app.post('/api/orders', async (req, res) => {
                 const allowed = paymentMethod === 'كاش' ? methods.cod !== false
                     : paymentMethod === 'محفظة إلكترونية' ? methods.wallet === true
                     : paymentMethod === 'إنستا باي' ? methods.instapay === true
-                    : paymentMethod === 'فيزا' ? (methods.visa === true || paymobEnabled)
-                    : paymobEnabled;
+                    : paymentMethod === 'فيزا' ? methods.visa === true && paymobEnabled
+                    : methods.paymob === true && paymobEnabled;
                 if (!allowed) return res.status(400).json({ message: 'طريقة الدفع غير متاحة حالياً.' });
             }
         }
 
         const calculated = await calculateOrder(body);
         const orderId = makeOrderId();
-        const isPaymob = paymentMethod === 'Paymob' || paymentMethod === 'فيزا' || paymentMethod === 'محفظة إلكترونية' || paymentMethod === 'إنستا باي';
+        // Only Paymob-backed methods wait for a gateway webhook. Wallet and
+        // InstaPay are manual transfer methods and remain controllable from
+        // the dashboard without requiring Paymob credentials.
+        const isPaymob = paymentMethod === 'Paymob' || paymentMethod === 'فيزا';
         const order = {
             orderId,
             secretCode: orderId,
@@ -256,7 +289,7 @@ app.post('/api/orders', async (req, res) => {
                 floor: clean(customer.floor), apartment: clean(customer.apartment), landmark: clean(customer.landmark), address: clean(customer.address)
             },
             paymentMethod,
-            paymentStatus: isPaymob ? 'pending' : 'cod_pending',
+            paymentStatus: isPaymob ? 'pending' : (paymentMethod === 'كاش' ? 'cod_pending' : 'manual_pending'),
             items: calculated.items,
             subtotal: calculated.subtotal,
             shippingCost: calculated.shippingCost,
@@ -271,16 +304,16 @@ app.post('/api/orders', async (req, res) => {
 
         if (!isPaymob) {
             await decrementStock(calculated.items);
-            await addVoucherUsage(calculated.voucher, order.customer, orderId);
             order.stockDeducted = true;
             order.status = 'قيد المراجعة';
-            await db.ref(`orders/${orderId}`).update({ stockDeducted: true, paymentStatus: 'cod_pending' });
-            await sendTelegram(telegramOrderMessage(order));
+            await db.ref(`orders/${orderId}`).update({ stockDeducted: true, paymentStatus: order.paymentStatus });
+            await addVoucherUsage(calculated.voucher, order.customer, orderId).catch(error => console.error('Voucher usage log failed:', error.message));
+            await sendTelegram(telegramOrderMessage(order)).catch(error => console.error('Telegram notification failed:', error.message));
             return res.json({ ok: true, orderId, paymentRequired: false });
         }
 
         if (!PAYMOB_SECRET_KEY || !PAYMOB_PUBLIC_KEY || !PAYMOB_INTEGRATION_IDS.length) {
-            await db.ref(`orders/${orderId}`).update({ paymentStatus: 'configuration_error', status: 'ملغي' });
+            await db.ref(`orders/${orderId}`).update({ paymentStatus: 'configuration_error', status: 'ملغي', cancelledAt: Date.now() });
             return res.status(503).json({ message: 'Paymob غير مكتمل الإعداد على السيرفر. أضف مفاتيح Paymob و Integration ID في ملف البيئة.' });
         }
 
@@ -324,7 +357,7 @@ app.post('/api/orders', async (req, res) => {
         const paymobData = await paymobResponse.json().catch(() => ({}));
         if (!paymobResponse.ok || !paymobData.client_secret) {
             console.error('Paymob intention error:', paymobResponse.status, paymobData);
-            await db.ref(`orders/${orderId}`).update({ paymentStatus: 'failed_to_initialize', status: 'ملغي' });
+            await db.ref(`orders/${orderId}`).update({ paymentStatus: 'failed_to_initialize', status: 'ملغي', cancelledAt: Date.now() });
             return res.status(502).json({ message: 'تعذر بدء عملية الدفع مع Paymob. تحقق من إعدادات Paymob وIntegration ID.' });
         }
 
@@ -356,6 +389,20 @@ app.post('/api/paymob/webhook', async (req, res) => {
         if (!orderSnap.exists()) return res.status(404).json({ ok: false, message: 'Order not found' });
         const order = orderSnap.val();
 
+        const refunded = obj.is_refunded === true || String(obj.is_refunded).toLowerCase() === 'true';
+        // A refund can arrive after the successful callback. Handle it before
+        // the duplicate guard so stock is restored exactly once.
+        if (refunded) {
+            const restored = await restoreStockOnce(orderRef, order);
+            await orderRef.update({
+                paymentStatus: 'refunded',
+                status: 'ملغي',
+                paymobTransactionId: obj.id || order.paymobTransactionId || null,
+                paymentUpdatedAt: Date.now(),
+                cancelledAt: Date.now()
+            });
+            return res.json({ ok: true, refunded: true, stockRestored: restored });
+        }
         if (order.paymentStatus === 'paid' && order.stockDeducted) {
             return res.json({ ok: true, duplicate: true });
         }
@@ -372,17 +419,18 @@ app.post('/api/paymob/webhook', async (req, res) => {
         const pending = obj.pending === true || String(obj.pending).toLowerCase() === 'true';
         const amountCents = Number(obj.amount_cents);
         if (amountCents !== Math.round(Number(order.total) * 100)) {
-            await orderRef.update({ paymentStatus: 'amount_mismatch', status: 'ملغي', paymobTransactionId: obj.id || null });
+            await restoreStockOnce(orderRef, order);
+            await orderRef.update({ paymentStatus: 'amount_mismatch', status: 'ملغي', paymobTransactionId: obj.id || null, cancelledAt: Date.now() });
             return res.status(400).json({ ok: false, message: 'Amount mismatch' });
         }
 
         if (!success || pending) {
-            await orderRef.update({ paymentStatus: 'failed', status: 'ملغي', paymobTransactionId: obj.id || null, paymentUpdatedAt: Date.now() });
+            await restoreStockOnce(orderRef, order);
+            await orderRef.update({ paymentStatus: 'failed', status: 'ملغي', paymobTransactionId: obj.id || null, paymentUpdatedAt: Date.now(), cancelledAt: Date.now() });
             return res.json({ ok: true, paid: false });
         }
 
         await decrementStock(order.items || []);
-        await addVoucherUsage(order.voucher || null, order.customer || {}, orderId);
         await orderRef.update({
             paymentStatus: 'paid',
             paymentTransactionId: String(obj.id || ''),
@@ -390,11 +438,50 @@ app.post('/api/paymob/webhook', async (req, res) => {
             stockDeducted: true,
             status: 'قيد المراجعة'
         });
-        await sendTelegram(telegramOrderMessage({ ...order, paymentMethod: 'Paymob - تم الدفع', paymentStatus: 'paid' }));
+        await addVoucherUsage(order.voucher || null, order.customer || {}, orderId).catch(error => console.error('Voucher usage log failed:', error.message));
+        await sendTelegram(telegramOrderMessage({ ...order, paymentMethod: 'Paymob - تم الدفع', paymentStatus: 'paid' })).catch(error => console.error('Telegram notification failed:', error.message));
         return res.json({ ok: true, paid: true });
     } catch (error) {
         console.error('Paymob webhook error:', error);
         return res.status(500).json({ ok: false });
+    }
+});
+
+app.post('/api/orders/:orderId/cancel', async (req, res) => {
+    try {
+        const requestedId = clean(req.params.orderId);
+        const phone = clean(req.body?.phone).replace(/\D/g, '');
+        let orderRef = db.ref(`orders/${requestedId}`);
+        let orderSnap = await orderRef.once('value');
+
+        if (!orderSnap.exists()) {
+            const ordersSnap = await db.ref('orders').orderByChild('orderId').equalTo(requestedId).once('value');
+            let matchedKey = null;
+            ordersSnap.forEach(child => { if (!matchedKey) matchedKey = child.key; });
+            if (!matchedKey) return res.status(404).json({ message: 'الطلب غير موجود.' });
+            orderRef = db.ref(`orders/${matchedKey}`);
+            orderSnap = await orderRef.once('value');
+        }
+
+        const order = orderSnap.val() || {};
+        const orderPhone = clean(order.customer?.phone).replace(/\D/g, '');
+        if (!phone || phone !== orderPhone) return res.status(403).json({ message: 'بيانات الطلب غير صحيحة.' });
+        if (['تم الشحن', 'تم تسليمه', 'مرتجع'].includes(order.status)) {
+            return res.status(409).json({ message: 'لا يمكن إلغاء الطلب بعد الشحن أو التسليم.' });
+        }
+        if (order.status === 'ملغي') return res.json({ ok: true, alreadyCancelled: true, stockRestored: !!order.stockRestored });
+
+        const restored = await restoreStockOnce(orderRef, order);
+        await orderRef.update({
+            status: 'ملغي',
+            paymentStatus: order.paymentStatus === 'paid' ? 'refund_required' : (order.paymentStatus || 'cancelled'),
+            cancelledAt: Date.now(),
+            cancelReason: clean(req.body?.reason, 'تم الإلغاء بواسطة العميل')
+        });
+        return res.json({ ok: true, stockRestored: restored });
+    } catch (error) {
+        console.error('Cancel order error:', error);
+        return res.status(500).json({ message: 'تعذر إلغاء الطلب حالياً.' });
     }
 });
 
