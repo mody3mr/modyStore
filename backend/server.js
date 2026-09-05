@@ -4,6 +4,12 @@ const path = require('path');
 const cors = require('cors');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
+let whatsappConfirmationRouter = null;
+try {
+    whatsappConfirmationRouter = require('../whatsapp-confirmation-route.example');
+} catch (error) {
+    console.warn('WhatsApp confirmation route is unavailable; bridge disabled.', error.message);
+}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -40,6 +46,9 @@ const db = admin.database();
 app.use(cors({ origin: true, methods: ['GET', 'POST', 'OPTIONS'], allowedHeaders: ['Content-Type'] }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+// Optional WhatsApp confirmation bridge used by the dashboard settings.
+// It remains inert until META_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID are configured.
+if (whatsappConfirmationRouter) app.use('/whatsapp', whatsappConfirmationRouter);
 
 function clean(value, fallback = '') {
     return String(value ?? fallback).trim();
@@ -120,7 +129,7 @@ async function getShippingCost(city) {
     let found = null;
     snapshot.forEach(child => {
         const value = child.val() || {};
-        if (value.isActive && clean(value.name) === clean(city)) found = Number(value.price) || 0;
+        if (value.isActive !== false && clean(value.name) === clean(city)) found = Number(value.price) || 0;
     });
     if (found === null) throw new Error('المحافظة/المدينة المختارة غير متاحة حالياً.');
     return found;
@@ -143,7 +152,12 @@ async function calculateOrder(body) {
         if (!product || product.isActive === false) throw new Error('أحد المنتجات لم يعد متاحاً.');
         const stock = Number(product.stock) || 0;
         if (qty > stock) throw new Error(`الكمية المطلوبة من ${product.name || 'المنتج'} أكبر من المخزون المتاح.`);
-        const price = Number(product.discountPrice || product.price || 0);
+        // Timed offers are authoritative in the dashboard. Once offerEndAt
+        // passes, both the storefront and backend must fall back to base price.
+        const discountPrice = Number(product.discountPrice || 0);
+        const offerEndAt = Number(product.offerEndAt || 0);
+        const hasActiveOffer = discountPrice > 0 && (!offerEndAt || offerEndAt > Date.now());
+        const price = hasActiveOffer ? discountPrice : Number(product.price || 0);
         if (price < 0) throw new Error('سعر منتج غير صالح.');
         items.push({ id, name: clean(product.name, 'منتج'), price, qty, imageUrl: product.imageUrl || '' });
         subtotal += price * qty;
@@ -213,6 +227,20 @@ app.post('/api/orders', async (req, res) => {
         }
         if (!['كاش', 'Paymob', 'محفظة إلكترونية', 'إنستا باي', 'فيزا'].includes(paymentMethod)) {
             return res.status(400).json({ message: 'طريقة الدفع غير مدعومة.' });
+        }
+        const settingsSnap = await db.ref('storeSettings').once('value');
+        if (settingsSnap.exists()) {
+            const settings = settingsSnap.val() || {};
+            const methods = settings.paymentMethods;
+            if (methods && typeof methods === 'object') {
+                const paymobEnabled = settings.paymob?.enabled === true;
+                const allowed = paymentMethod === 'كاش' ? methods.cod !== false
+                    : paymentMethod === 'محفظة إلكترونية' ? methods.wallet === true
+                    : paymentMethod === 'إنستا باي' ? methods.instapay === true
+                    : paymentMethod === 'فيزا' ? (methods.visa === true || paymobEnabled)
+                    : paymobEnabled;
+                if (!allowed) return res.status(400).json({ message: 'طريقة الدفع غير متاحة حالياً.' });
+            }
         }
 
         const calculated = await calculateOrder(body);
