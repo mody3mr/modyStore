@@ -693,6 +693,25 @@ tr:hover { background-color: #f8fafc; }
 @media(max-width:900px){.settings-hero{flex-direction:column}.settings-status-card{min-width:0}.settings-grid,.social-settings-grid{grid-template-columns:1fr}.settings-card-wide{min-height:auto}.settings-section-title{align-items:flex-start;flex-direction:column;gap:4px}.settings-save-bar{align-items:stretch;flex-direction:column}.settings-save-btn{width:100%!important}}
 @media(max-width:560px){.settings-hero{padding:20px 16px}.settings-hero h2{font-size:21px}.settings-hero-content{align-items:flex-start}.settings-hero-icon{width:48px;height:48px}.payment-settings-grid{grid-template-columns:1fr}.settings-card{padding:16px}}
 
+/* Keep the settings workspace compact on laptop and standard desktop widths. */
+@media (min-width: 901px) and (max-width: 1450px) {
+    .settings-page { padding-bottom: 18px; }
+    .settings-hero { padding: 18px 20px; margin-bottom: 20px; border-radius: 16px; }
+    .settings-hero-icon { width: 48px; height: 48px; font-size: 20px; }
+    .settings-hero h2 { font-size: 24px; }
+    .settings-grid { gap: 12px; margin-bottom: 18px; }
+    .settings-card { padding: 15px; border-radius: 14px; }
+    .settings-card-head { padding-bottom: 11px; margin-bottom: 12px; }
+    .settings-card-icon { width: 36px; height: 36px; font-size: 15px; border-radius: 10px; }
+    .settings-field { margin-bottom: 10px; }
+    .settings-input-wrap { height: 36px; border-radius: 9px; padding: 0 10px; }
+    .settings-section-title { margin-bottom: 9px; }
+    .settings-section-title h3 { font-size: 15px; }
+    .payment-setting { min-height: 54px; padding: 7px; }
+    .payment-check { width: 29px; height: 29px; }
+    .settings-card-wide { min-height: 205px; }
+}
+
 
 /* ===== Production patch 2026-08 ===== */
 .auth-pending > *:not(#authGate) { visibility: hidden !important; }
