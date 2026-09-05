@@ -843,3 +843,16 @@ tr:hover { background-color: #f8fafc; }
   .inventory-audit-input{width:82px}.reviews-grid{grid-template-columns:1fr}.review-admin-image{height:210px}
   .order-confirmation-badge{font-size:10px}.wa-fallback-link{display:block}
 }
+
+/* Final responsive dashboard controls. */
+.icon-toolbar-btn{width:38px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-dark);cursor:pointer;display:grid;place-items:center;font-size:16px}
+.icon-toolbar-btn:hover{border-color:var(--secondary);color:var(--secondary)}
+.analytics-good{color:#16a34a;margin-left:8px}.analytics-bad{color:#dc2626}
+.profile-dropdown#notifDropdown{left:auto!important;right:0!important;top:48px;max-width:calc(100vw - 24px)}
+body.dark-mode{--primary:#e2e8f0;--secondary:#60a5fa;--bg:#0b1120;--card-bg:#111827;--text-dark:#dbeafe;--border:#263449;color:var(--text-dark)}
+body.dark-mode .topbar,body.dark-mode .card,body.dark-mode .stat-card,body.dark-mode .filter-bar,body.dark-mode .profile-dropdown,body.dark-mode .modal,body.dark-mode .settings-card{background:#111827;color:var(--text-dark);border-color:#263449}
+body.dark-mode th,body.dark-mode .dropdown-header,body.dark-mode .manual-order-panel{background:#172236;color:#cbd5e1}
+body.dark-mode td,body.dark-mode tr:hover{border-color:#263449}body.dark-mode tr:hover{background:#172236}
+body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#172236;color:#e2e8f0;border-color:#334155}
+body.dark-mode .page-title,body.dark-mode .stat-info p,body.dark-mode .stat-info h3,body.dark-mode h1,body.dark-mode h2,body.dark-mode h3{color:#e2e8f0}
+@media(max-width:768px){.topbar>div:last-child{gap:10px!important}.workspace{padding:18px 12px}.page-header{align-items:flex-start}.page-title{font-size:20px}.profile-dropdown#notifDropdown{right:-8px!important;top:45px;width:min(300px,calc(100vw - 24px))!important}}
