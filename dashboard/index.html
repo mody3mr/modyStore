@@ -182,10 +182,11 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 20px;">
+                <button id="darkModeToggle" class="icon-toolbar-btn" type="button" title="الوضع الداكن" aria-label="الوضع الداكن"><i class="fas fa-moon"></i></button>
                 <div class="user-profile" id="notifBtn" style="position: relative; cursor: pointer;">
                     <i class="fas fa-bell" style="font-size: 22px; color: #64748b;"></i>
                     <span id="notifCount" style="position:absolute; top:-5px; right:-8px; background:var(--danger); color:white; font-size:11px; padding:2px 6px; border-radius:50%; display:none;">0</span>
-                    <div class="profile-dropdown" id="notifDropdown" style="width: 280px; right: auto; left: 0;">
+                    <div class="profile-dropdown" id="notifDropdown" style="width: 280px; right: 0; left: auto;">
                         <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
                             <strong style="color:var(--danger);">نواقص المنتجات ⚠️</strong>
                             <button id="markNotifReadBtn" onclick="markNotificationsAsRead(event)" style="background:var(--bg); border:1px solid var(--border); border-radius:4px; font-size:11px; padding:4px 8px; cursor:pointer; font-family:'Cairo'; font-weight:bold;">تعليم كمقروء</button>
@@ -261,7 +262,6 @@
                 </div>
 
                 <div id="analyticsStatusCards" class="stat-cards analytics-status-cards" style="margin-top:20px;">
-                    <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#10b981;background:#dcfce7;"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3>إجمالي الطلبات التي تم تسليمها</h3><p id="statDeliveredOrders">0</p></div></div>
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#8b5cf6;background:#f3e8ff;"><i class="fas fa-truck"></i></div><div class="stat-info"><h3>إجمالي الطلبات التي تم شحنها</h3><p id="statShippedOrders">0</p></div></div>
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#3b82f6;background:#eff6ff;"><i class="fas fa-box"></i></div><div class="stat-info"><h3>طلبات قيد التجهيز حالياً</h3><p id="statProcessingOrders">0</p></div></div>
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>طلبات قيد المراجعة</h3><p id="statPendingOrders2">0</p></div></div>
@@ -279,6 +279,18 @@
                     <div class="stat-card analytics-kpi-card">
                         <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-bullseye"></i></div>
                         <div class="stat-info"><h3>أكثر مصدر للطلبات</h3><p id="statTopOrderSource">-</p><small id="statTopOrderSourceMeta">يتم الحساب من الطلبات الحقيقية</small></div>
+                    </div>
+                    <div class="stat-card analytics-kpi-card">
+                        <div class="stat-icon" style="color:#06b6d4;background:#cffafe;"><i class="fas fa-users"></i></div>
+                        <div class="stat-info"><h3>عدد الزيارات</h3><p id="statVisits">0</p><small>من سجل الزيارات الحقيقي</small></div>
+                    </div>
+                    <div class="stat-card analytics-kpi-card">
+                        <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-cart-plus"></i></div>
+                        <div class="stat-info"><h3>مرات الإضافة للسلة</h3><p id="statCartAdds">0</p><small><span class="analytics-good">مكتملة: <b id="statCartCompleted">0</b></span> <span class="analytics-bad">غير مكتملة: <b id="statCartAbandoned">0</b></span></small></div>
+                    </div>
+                    <div class="stat-card analytics-kpi-card clickable-card" onclick="exportProfitReport()">
+                        <div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-chart-line"></i></div>
+                        <div class="stat-info"><h3>صافي الربح</h3><p id="statNetProfit">0 ج.م</p><small>اضغط لاستخراج التقرير</small></div>
                     </div>
                 </div>
 
@@ -316,11 +328,11 @@
                         <button class="btn-save" id="btnCreateManualOrder" style="background-color: var(--success);" onclick="openManualOrderModal()">
                             <i class="fas fa-plus"></i> إنشاء أوردر يدوي
                         </button>
-                        <button class="btn-save" style="background-color: #8b5cf6;" onclick="openScannerModal()">
-                            <i class="fas fa-qrcode"></i> سكانر الشحن
+                        <button class="btn-save" style="background-color: #10b981;" onclick="exportOrdersToExcel()">
+                            <i class="fas fa-file-excel"></i> تصدير Excel
                         </button>
-                        <button class="btn-save" style="background-color: var(--primary);" onclick="bulkPrintWaybills()">
-                            <i class="fas fa-print"></i> طباعة بوليصات (جاري التجهيز)
+                        <button class="btn-save" style="background-color: #ef4444;" onclick="exportOrdersToPDF()">
+                            <i class="fas fa-file-pdf"></i> تصدير PDF
                         </button>
                     </div>
                 </div>
@@ -1079,7 +1091,6 @@
 
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('orderDetailsModal')">إغلاق</button>
-                    <button class="btn-save" style="background-color: var(--primary);" onclick="printDocument('waybill')"><i class="fas fa-truck"></i> طباعة البوليصة</button>
                     <button class="btn-save" style="background-color: var(--success);" onclick="printDocument('invoice')"><i class="fas fa-print"></i> طباعة الفاتورة</button>
                 </div>
             </div>
