@@ -7,7 +7,7 @@
     <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260828-production">
+    <link rel="stylesheet" href="style.css?v=20260905-1">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e293b'/%3E%3Cpath d='M34 8 17 36h12l-2 20 20-30H35z' fill='%23f59e0b'/%3E%3C/svg%3E">
     
     <!-- مكتبات التفاعل والأنيميشن -->
@@ -351,7 +351,7 @@
                     <select id="filterOrderPayment" onchange="renderOrdersTable()">
                         <option value="">كل طرق الدفع</option>
                         <option value="كاش">كاش</option>
-                            <option value="باي موب">Paymob</option>
+                            <option value="Paymob">Paymob</option>
                     </select>
                 </div>
 
@@ -365,7 +365,7 @@
                                 <th>التاريخ</th>
                                 <th>الإجمالي</th>
                                 <th>الحالة</th>
-                                <th>التفاصيل</th>
+                                <th>تأكيد العميل</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody">
@@ -414,7 +414,6 @@
                                 <th>البيان / المورد</th>
                                 <th>القيمة</th>
                                 <th>بواسطة</th>
-                                <th>تأكيد العميل</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
@@ -728,34 +727,33 @@
             <div id="reviews-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header reviews-page-header">
                     <div>
-                        <h2 class="page-title">آراء العملاء</h2>
-                        <p class="reviews-subtitle">اعرض صور وآراء العملاء الموثقة داخل المتجر لبناء ثقة أكبر قبل الشراء.</p>
+                        <h2 class="page-title">صور العملاء</h2>
+                        <p class="reviews-subtitle">أدر صور العملاء التي ستظهر في المعرض المتحرك داخل المتجر.</p>
                     </div>
-                    <button class="btn-add reviews-add-btn" onclick="openReviewModal()"><i class="fas fa-plus"></i> إضافة رأي عميل</button>
+                    <button class="btn-add reviews-add-btn" onclick="openReviewModal()"><i class="fas fa-plus"></i> إضافة صورة</button>
                 </div>
 
                 <div class="stat-cards reviews-stats">
-                    <div class="stat-card"><div class="stat-icon" style="color:#f59e0b;background:#fffbeb;"><i class="fas fa-star"></i></div><div class="stat-info"><h3>متوسط تقييمات المنتجات</h3><p id="reviewsAverageRating">0.0 / 5</p></div></div>
+                    <div class="stat-card"><div class="stat-icon" style="color:#8b5cf6;background:#f3e8ff;"><i class="fas fa-images"></i></div><div class="stat-info"><h3>إجمالي الصور</h3><p id="reviewsTotalCount">0</p></div></div>
                     <div class="stat-card"><div class="stat-icon" style="color:#3b82f6;background:#eff6ff;"><i class="fas fa-images"></i></div><div class="stat-info"><h3>آراء منشورة</h3><p id="reviewsPublishedCount">0</p></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="color:#10b981;background:#ecfdf5;"><i class="fas fa-user-check"></i></div><div class="stat-info"><h3>آراء ببيانات عميل</h3><p id="reviewsNamedCount">0</p></div></div>
+                    <div class="stat-card"><div class="stat-icon" style="color:#64748b;background:#f1f5f9;"><i class="fas fa-eye-slash"></i></div><div class="stat-info"><h3>صور مخفية</h3><p id="reviewsHiddenCount">0</p></div></div>
                 </div>
 
                 <div class="filter-bar reviews-filter-bar">
-                    <input type="text" id="searchReviews" placeholder="بحث باسم العميل أو نص الرأي..." onkeyup="renderReviews()">
                     <select id="reviewStatusFilter" onchange="renderReviews()"><option value="">كل الحالات</option><option value="active">منشور</option><option value="inactive">مخفي</option></select>
                 </div>
 
                 <div id="reviewsGrid" class="reviews-grid"></div>
-
-                <div class="reviews-rating-note">
-                    <i class="fas fa-circle-info"></i>
-                    <div><strong>تقييم المنتج على المتجر</strong><span>سيتم حفظ متوسط النجوم وعدد التقييمات داخل بيانات المنتج، ويظهر في صفحة المنتج عند ربط واجهة المتجر ببيانات <b>ratingAverage</b> و <b>ratingCount</b>.</span></div>
-                </div>
             </div>
 
             <div id="offers-view" class="view-section animate__animated animate__fadeIn">
                 <div class="page-header"><h2 class="page-title">إدارة العروض</h2><p class="meta-info">حدد سعر العرض ومدته لكل منتج من مكان مستقل.</p></div>
-                <div class="card offers-panel"><div class="table-scroll"><table><thead><tr><th>المنتج</th><th>السعر الأساسي</th><th>سعر العرض</th><th>المدة</th><th>ينتهي في</th><th>إجراء</th></tr></thead><tbody id="offersTableBody"></tbody></table></div></div>
+                <div class="custom-tabs offers-tabs">
+                    <button class="custom-tab-btn active" onclick="switchOffersTab('current', this)">العروض الحالية</button>
+                    <button class="custom-tab-btn" onclick="switchOffersTab('previous', this)">العروض السابقة</button>
+                </div>
+                <div id="currentOffersPanel" class="card offers-panel"><div class="table-scroll"><table><thead><tr><th>المنتج</th><th>السعر الأساسي</th><th>سعر العرض</th><th>المدة</th><th>ينتهي في</th><th>إجراء</th></tr></thead><tbody id="offersTableBody"></tbody></table></div></div>
+                <div id="previousOffersPanel" class="card offers-panel" style="display:none;"><div class="table-scroll"><table><thead><tr><th>رقم الطلب</th><th>العميل</th><th>رقم الهاتف</th><th>قيمة الطلب</th><th>قيمة الخصم</th><th>التفاصيل</th></tr></thead><tbody id="previousOffersTableBody"></tbody></table></div></div>
             </div>
 
             <div id="settings-view" class="view-section animate__animated animate__fadeIn settings-page">
@@ -818,6 +816,9 @@
                         <div class="payment-settings-grid">
                             <label class="payment-setting"><input type="checkbox" id="setPayCod"><span class="payment-check"><i class="fas fa-money-bill-wave"></i></span><span><b>كاش</b><small>عند الاستلام</small></span><em></em></label>
                             <label class="payment-setting"><input type="checkbox" id="setPayPaymob"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Paymob</b><small>دفع إلكتروني</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayWallet"><span class="payment-check"><i class="fas fa-mobile-screen-button"></i></span><span><b>محفظة إلكترونية</b><small>دفع بالمحفظة</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayInsta"><span class="payment-check"><i class="fas fa-bolt"></i></span><span><b>InstaPay</b><small>تحويل فوري</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayVisa"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Visa / Mastercard</b><small>بطاقات بنكية</small></span><em></em></label>
                         </div>
                     </section>
                 </div>
@@ -834,6 +835,7 @@
                         <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setPaymobEnabled"><span></span></label>
                     </div>
                     <div class="settings-grid paymob-grid">
+                        <div class="settings-field"><label>Orders API Base URL <span>عنوان السيرفر المسؤول عن إنشاء الطلبات</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setOrderApiBaseUrl" dir="ltr" placeholder="https://api.example.com"></div></div>
                         <div class="settings-field"><label>Public Key <span>يمكن حفظه في الواجهة</span></label><div class="settings-input-wrap"><i class="fas fa-key"></i><input type="text" id="setPaymobPublicKey" dir="ltr" placeholder="pk_..."></div></div>
                         <div class="settings-field"><label>Integration ID <span>من Paymob Dashboard</span></label><div class="settings-input-wrap"><i class="fas fa-hashtag"></i><input type="text" id="setPaymobIntegrationId" dir="ltr" inputmode="numeric" placeholder="123456"></div></div>
                         <div class="settings-field"><label>Checkout Endpoint <span>رابط الـ Backend الآمن</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setPaymobBackendEndpoint" dir="ltr" placeholder="https://api.example.com/paymob/checkout"></div></div>
@@ -1091,19 +1093,15 @@
         <!-- ================= إضافة / تعديل رأي عميل ================= -->
         <div class="modal-overlay" id="reviewModal">
             <div class="modal animate__animated animate__zoomIn" style="width:720px;max-width:96%;">
-                <div class="review-modal-head"><div><span class="section-kicker">CUSTOMER TRUST</span><h3 id="reviewModalTitle">إضافة رأي عميل</h3></div><button class="icon-close-btn" type="button" onclick="closeModal('reviewModal')"><i class="fas fa-times"></i></button></div>
-                <div class="grid-2">
-                    <div class="input-group"><label>اسم العميل</label><input id="reviewCustomerName" type="text" placeholder="مثال: أحمد محمد"></div>
-                    <div class="input-group"><label>التقييم</label><select id="reviewRating"><option value="5">★★★★★ — 5</option><option value="4">★★★★☆ — 4</option><option value="3">★★★☆☆ — 3</option><option value="2">★★☆☆☆ — 2</option><option value="1">★☆☆☆☆ — 1</option></select></div>
-                </div>
-                <div class="input-group"><label>نص الرأي</label><textarea id="reviewText" rows="4" placeholder="اكتب رأي العميل كما تريد ظهوره في المتجر..."></textarea></div>
+                <div class="review-modal-head"><div><span class="section-kicker">CUSTOMER PHOTOS</span><h3 id="reviewModalTitle">إضافة صورة عميل</h3></div><button class="icon-close-btn" type="button" onclick="closeModal('reviewModal')"><i class="fas fa-times"></i></button></div>
                 <div class="review-upload-box">
-                    <div class="review-upload-title"><i class="fas fa-camera"></i><div><strong>صورة العميل / صورة الشراء</strong><span>يفضل صورة واضحة مربعة أو عمودية.</span></div></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>رابط صورة العميل أو الشراء</label><input id="reviewImageUrl" type="url" dir="ltr" placeholder="https://drive.google.com/... أو رابط صورة مباشر"></div>
+                    <div class="review-upload-title"><i class="fas fa-camera"></i><div><strong>صورة العميل أو المنتج بعد الشراء</strong><span>يفضل صورة واضحة بنسبة طولية 4:5.</span></div></div>
+                    <div class="input-group"><label>رفع صورة من الجهاز</label><input id="reviewImageFile" type="file" accept="image/*"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>أو رابط صورة مباشر</label><input id="reviewImageUrl" type="url" dir="ltr" placeholder="https://example.com/photo.jpg"></div>
                     <div id="reviewImagePreview" class="review-image-preview"></div>
                 </div>
-                <label class="review-publish-toggle"><input id="reviewIsActive" type="checkbox" checked><span>نشر هذا الرأي في المتجر فوراً</span></label>
-                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('reviewModal')">إلغاء</button><button class="btn-save" style="background:#10b981;" onclick="saveReview()"><i class="fas fa-check"></i> حفظ الرأي</button></div>
+                <label class="review-publish-toggle"><input id="reviewIsActive" type="checkbox" checked><span>نشر هذه الصورة في المتجر فوراً</span></label>
+                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('reviewModal')">إلغاء</button><button class="btn-save" style="background:#10b981;" onclick="saveReview()"><i class="fas fa-check"></i> حفظ الصورة</button></div>
             </div>
         </div>
 
@@ -1160,6 +1158,22 @@
 
         <div class="modal-overlay" id="viewFinanceModal">
             <div class="modal finance-detail-modal"><h3>تفاصيل العملية المالية</h3><div id="viewFinanceContent"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('viewFinanceModal')">إغلاق</button></div></div>
+        </div>
+
+        <div class="modal-overlay" id="editFinanceModal">
+            <div class="modal finance-detail-modal">
+                <h3>تعديل العملية المالية</h3>
+                <input type="hidden" id="editFinanceId">
+                <div class="input-group"><label>البيان</label><input type="text" id="editFinanceTitle"></div>
+                <div class="grid-2">
+                    <div class="input-group"><label>رقم الفاتورة</label><input type="text" id="editFinanceInvoiceNo"></div>
+                    <div class="input-group"><label>المورد</label><input type="text" id="editFinanceSupplier"></div>
+                </div>
+                <div class="input-group"><label>القيمة</label><input type="number" id="editFinanceAmount" min="0"></div>
+                <div class="input-group"><label>ملاحظات</label><textarea id="editFinanceNotes" rows="3"></textarea></div>
+                <div class="input-group"><label>رابط الصورة</label><input type="url" id="editFinanceImageUrl" dir="ltr"></div>
+                <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('editFinanceModal')">إلغاء</button><button class="btn-save" onclick="saveFinanceEdit()"><i class="fas fa-save"></i> حفظ التعديل</button></div>
+            </div>
         </div>
 
         <!-- إنشاء مرتجع جديد -->
@@ -1384,6 +1398,6 @@
     <div id="printRoot"></div>
 
     <!-- ربط ملف الجافاسكريبت -->
-    <script type="module" src="app.js?v=20260828-production"></script>
+    <script type="module" src="app.js?v=20260905-1"></script>
 </body>
 </html>
