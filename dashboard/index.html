@@ -147,6 +147,9 @@
             <li class="nav-item" data-target="products-view">
                 <i class="fas fa-box-open"></i> <span class="nav-text">المنتجات</span>
             </li>
+            <li class="nav-item" data-target="offers-view">
+                <i class="fas fa-tags"></i> <span class="nav-text">العروض</span>
+            </li>
             <li class="nav-item" data-target="inventory-view">
                 <i class="fas fa-warehouse"></i> <span class="nav-text">المخزون</span>
             </li>
@@ -750,6 +753,11 @@
                 </div>
             </div>
 
+            <div id="offers-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header"><h2 class="page-title">إدارة العروض</h2><p class="meta-info">حدد سعر العرض ومدته لكل منتج من مكان مستقل.</p></div>
+                <div class="card offers-panel"><div class="table-scroll"><table><thead><tr><th>المنتج</th><th>السعر الأساسي</th><th>سعر العرض</th><th>المدة</th><th>ينتهي في</th><th>إجراء</th></tr></thead><tbody id="offersTableBody"></tbody></table></div></div>
+            </div>
+
             <div id="settings-view" class="view-section animate__animated animate__fadeIn settings-page">
                 <div class="settings-hero">
                     <div class="settings-hero-content">
@@ -950,7 +958,7 @@
                             <div class="input-group"><label>اسم العميل *</label><input id="manualCustName" type="text" placeholder="اسم العميل"></div>
                             <div class="input-group"><label>رقم الموبايل *</label><input id="manualCustPhone" type="tel" inputmode="tel" placeholder="01xxxxxxxxx"></div>
                             <div class="input-group"><label>رقم بديل</label><input id="manualCustPhone2" type="tel" inputmode="tel" placeholder="اختياري"></div>
-                            <div class="input-group"><label>المحافظة *</label><input id="manualCustCity" type="text" placeholder="القاهرة"></div>
+                            <div class="input-group"><label>المحافظة *</label><select id="manualCustCity"><option value="">اختر المحافظة...</option></select></div>
                             <div class="input-group"><label>المنطقة</label><input id="manualCustRegion" type="text" placeholder="المنطقة / الحي"></div>
                             <div class="input-group"><label>العنوان *</label><input id="manualCustAddress" type="text" placeholder="العنوان بالتفصيل"></div>
                         </div>
@@ -1127,7 +1135,7 @@
                     <div class="input-group" style="margin:0;"><label>مصاريف شحن/نقل البضاعة</label><input type="number" id="purShipping" value="0" onkeyup="calculatePurTotal()"></div>
                     <div style="text-align:left; font-size:18px; font-weight:900; color:var(--primary);">الإجمالي: <span id="purTotalAmount">0</span> ج.م</div>
                 </div>
-                <div class="input-group"><label>صورة الفاتورة</label><input type="file" id="purInvoiceImage" accept="image/*,.pdf"></div>
+                <div class="input-group"><label>رابط صورة الفاتورة</label><input type="url" id="purInvoiceImage" dir="ltr" placeholder="https://example.com/invoice.jpg"></div>
 
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('purchaseModal')">إلغاء</button>
@@ -1143,7 +1151,7 @@
                 <div class="input-group"><label>بيان المصروف (عشان إيه؟)</label><input type="text" id="expTitle" placeholder="مثال: كهرباء، أكياس تغليف..."></div>
                 <div class="input-group"><label>التكلفة (ج.م)</label><input type="number" id="expAmount" min="1"></div>
                 <div class="input-group"><label>ملاحظات إضافية</label><textarea id="expNotes" rows="2"></textarea></div>
-                <div class="input-group"><label>صورة المصروف</label><input type="file" id="expReceiptImage" accept="image/*,.pdf"></div>
+                <div class="input-group"><label>رابط صورة المصروف</label><input type="url" id="expReceiptImage" dir="ltr" placeholder="https://example.com/receipt.jpg"></div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('expenseModal')">إلغاء</button>
                     <button class="btn-save" style="background:var(--danger);" onclick="saveExpense()">تسجيل المصروف</button>
@@ -1215,18 +1223,6 @@
                     <div class="input-group">
                         <label>المخزون (الكمية المتاحة)</label><input type="number" id="prodStock" value="10">
                         <div id="addStockDiv" style="display:none; margin-top:5px;"><label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label><input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1"></div>
-                    </div>
-                    <div class="input-group">
-                        <label>مدة العرض <span style="color:#94a3b8;font-size:11px;">اختياري — ينتهي تلقائياً ويرجع السعر الأساسي</span></label>
-                        <div class="offer-duration-row">
-                            <input type="number" id="prodOfferDuration" min="1" step="1" placeholder="مثال: 6">
-                            <select id="prodOfferUnit">
-                                <option value="hours">ساعات</option>
-                                <option value="days">أيام</option>
-                                <option value="minutes">دقائق</option>
-                            </select>
-                        </div>
-                        <input type="hidden" id="prodOfferDays">
                     </div>
                 </div>
                 <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
