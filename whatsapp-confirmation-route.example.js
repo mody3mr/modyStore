@@ -1,7 +1,7 @@
 // ModyStore — secure WhatsApp confirmation bridge (example)
 // Mount this Express router from your existing Node/Express backend.
 // Keep META_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in server environment variables.
-// The dashboard POSTs order data here when status becomes "جاري التجهيز".
+// The storefront posts order data here immediately after a customer completes an order.
 
 const express = require('express');
 const router = express.Router();
@@ -20,7 +20,7 @@ function normalizePhone(v='') {
   return p;
 }
 
-router.post('/whatsapp/order-confirmation', async (req, res) => {
+router.post('/order-confirmation', async (req, res) => {
   try {
     if (!ACCESS_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({error:'WhatsApp credentials are not configured on the backend.'});
     const body = req.body || {};
