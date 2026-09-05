@@ -3323,6 +3323,16 @@ if (myProfileBtn && myProfileMenu) {
         setMetric('statCartAbandoned', Math.max(0, cartAdds - completed));
     };
     window.refreshDashboardMetrics = refreshDashboardMetrics;
+    window.exportProfitReport = () => {
+        const orders = currentOrders().filter(o => !['ملغي','مرتجع'].includes(o.status));
+        const revenue = orders.reduce((sum, o) => sum + safeNumber(o.total), 0);
+        const expenses = (typeof allFinance !== 'undefined' ? allFinance : []).reduce((sum, f) => sum + safeNumber(f.amount), 0);
+        const rows = [{ 'إجمالي المبيعات': Math.round(revenue), 'إجمالي التكاليف': Math.round(expenses), 'صافي الربح': Math.round(revenue - expenses), 'تاريخ التقرير': new Date().toLocaleString('ar-EG') }];
+        if (typeof XLSX === 'undefined') return window.showAlert('مكتبة Excel غير متاحة حالياً.', 'error');
+        const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Net Profit');
+        XLSX.writeFile(wb, `Net_Profit_Report_${Date.now()}.xlsx`);
+    };
     onValue(ref(db, 'orders'), () => setTimeout(refreshDashboardMetrics, 0));
     onValue(ref(db, 'finance'), () => setTimeout(refreshDashboardMetrics, 0));
     // Visits/cart paths are optional and are read when the order/finance data changes.
