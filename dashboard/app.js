@@ -324,7 +324,8 @@ function updateNotifications() {
 // النوافذ الاحترافية (Custom Popups)
 // ==========================================
 window.closeModal = (id) => {
-    document.getElementById(id).style.display = 'none';
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'none';
 };
 
 window.showAlert = (msg, icon = 'success') => {
@@ -339,13 +340,13 @@ window.showAlert = (msg, icon = 'success') => {
             timerProgressBar: true,
         });
     } else {
-        document.getElementById("alertMsg").innerText = msg;
-        document.getElementById("customAlert").style.display = "flex";
+        window.alert(String(msg || ''));
     }
 };
 
 window.closeAlert = () => {
-    document.getElementById("customAlert").style.display = "none";
+    const alertBox = document.getElementById("customAlert");
+    if (alertBox) alertBox.style.display = "none";
 };
 
 let confirmCallback = null;
@@ -367,14 +368,13 @@ window.showConfirm = (msg, callback) => {
             }
         });
     } else {
-        document.getElementById("confirmMsg").innerText = msg;
-        confirmCallback = callback;
-        document.getElementById("customConfirm").style.display = "flex";
+        if (window.confirm(String(msg || 'هل أنت متأكد؟'))) callback?.();
     }
 };
 
 window.closeConfirm = () => {
-    document.getElementById("customConfirm").style.display = "none";
+    const confirmBox = document.getElementById("customConfirm");
+    if (confirmBox) confirmBox.style.display = "none";
 };
 
 const confirmBtnEl = document.getElementById("confirmBtn");
@@ -3167,8 +3167,10 @@ if (myProfileBtn && myProfileMenu) {
         const search=(document.getElementById('searchFinance')?.value||'').toLowerCase(),month=document.getElementById('filterFinanceMonth')?.value||'',date=document.getElementById('filterFinanceDate')?.value||'';
         return (allFinance||[]).filter(f=>{
             const text=((f.title||'')+' '+(f.supplier||'')+' '+(f.invoiceNo||'')).toLowerCase().includes(search);
-            const d=new Date(f.timestamp);const mm=d.toISOString().slice(0,7),dd=d.toISOString().slice(0,10);
-            return text && (!month||mm===month) && (!date||dd===date) && (currentFinanceTab==='all'||(currentFinanceTab==='purchases'&&f.type==='purchase')||(currentFinanceTab==='expenses'&&f.type==='expense'));
+            const d=new Date(f.timestamp);
+            const validDate=Number.isFinite(d.getTime());
+            const mm=validDate?d.toISOString().slice(0,7):'',dd=validDate?d.toISOString().slice(0,10):'';
+            return text && (!month||(validDate&&mm===month)) && (!date||(validDate&&dd===date)) && (currentFinanceTab==='all'||(currentFinanceTab==='purchases'&&f.type==='purchase')||(currentFinanceTab==='expenses'&&f.type==='expense'));
         });
     }
     const oldFinanceRender=window.renderFinanceTable;
@@ -4576,8 +4578,8 @@ if (myProfileBtn && myProfileMenu) {
     let allStoreReviews = [];
     let editingReviewId = null;
     window.openReviewModal = (id=null) => {
-        if (id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','edit')) return window.showAlert?.('ليس لديك صلاحية تعديل آراء العملاء.','error');
-        if (!id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','add')) return window.showAlert?.('ليس لديك صلاحية إضافة آراء العملاء.','error');
+        if (id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','edit')) return window.showAlert?.('ليس لديك صلاحية تعديل صور العملاء.','error');
+        if (!id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','add')) return window.showAlert?.('ليس لديك صلاحية إضافة صور العملاء.','error');
         editingReviewId = id;
         const r = id ? allStoreReviews.find(x=>x.id===id) : null;
         document.getElementById('reviewModalTitle').innerText = r ? 'تعديل صورة العميل' : 'إضافة صورة عميل';
@@ -4598,7 +4600,7 @@ if (myProfileBtn && myProfileMenu) {
         const active = !!document.getElementById('reviewIsActive')?.checked;
         const file = document.getElementById('reviewImageFile')?.files?.[0];
         let imageUrl = document.getElementById('reviewImageUrl')?.value.trim() || '';
-        if (editingReviewId ? !window.hasDashboardPermission?.('reviews','edit') : !window.hasDashboardPermission?.('reviews','add')) return window.showAlert?.('ليس لديك صلاحية حفظ آراء العملاء.','error');
+        if (editingReviewId ? !window.hasDashboardPermission?.('reviews','edit') : !window.hasDashboardPermission?.('reviews','add')) return window.showAlert?.('ليس لديك صلاحية حفظ صور العملاء.','error');
         try {
             if (file) {
                 const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
@@ -4625,12 +4627,12 @@ if (myProfileBtn && myProfileMenu) {
         }
     };
     window.toggleReview = async (id, active) => {
-        if (!window.hasDashboardPermission?.('reviews','toggle')) return window.showAlert?.('ليس لديك صلاحية إظهار/إخفاء آراء العملاء.','error');
-        try { await update(ref(db,`storeReviews/${id}`),{isActive:!active,updatedAt:Date.now()}); logAction('حالة رأي عميل', `${!active?'نشر':'إخفاء'} رأي عميل`); } catch(e) { window.showAlert?.('تعذر تغيير حالة الرأي.','error'); }
+        if (!window.hasDashboardPermission?.('reviews','toggle')) return window.showAlert?.('ليس لديك صلاحية إظهار/إخفاء صور العملاء.','error');
+        try { await update(ref(db,`storeReviews/${id}`),{isActive:!active,updatedAt:Date.now()}); logAction('حالة صورة عميل', `${!active?'نشر':'إخفاء'} صورة عميل`); } catch(e) { window.showAlert?.('تعذر تغيير حالة الصورة.','error'); }
     };
     window.deleteReview = async (id) => {
-        if (!window.hasDashboardPermission?.('reviews','delete')) return window.showAlert?.('ليس لديك صلاحية حذف آراء العملاء.','error');
-        window.showConfirm?.('سيتم حذف الرأي نهائياً.', async () => { try { await remove(ref(db,`storeReviews/${id}`)); logAction('حذف رأي عميل','حذف رأي من معرض ثقة العملاء'); } catch(e) { window.showAlert?.('تعذر حذف الرأي.','error'); } });
+        if (!window.hasDashboardPermission?.('reviews','delete')) return window.showAlert?.('ليس لديك صلاحية حذف صور العملاء.','error');
+        window.showConfirm?.('سيتم حذف الصورة نهائياً.', async () => { try { await remove(ref(db,`storeReviews/${id}`)); logAction('حذف صورة عميل','حذف صورة من معرض العملاء'); } catch(e) { window.showAlert?.('تعذر حذف الصورة.','error'); } });
     };
     window.renderReviews = () => {
         const grid = document.getElementById('reviewsGrid'); if (!grid) return;
@@ -4806,7 +4808,8 @@ if (myProfileBtn && myProfileMenu) {
         const orders = (typeof allOrders !== 'undefined' ? allOrders : []).filter(o=>{
             const tabMatch = currentTab==='active' ? ['قيد المراجعة','جاري التجهيز','تم الشحن'].includes(o.status) : ['تم تسليمه','ملغي','مرتجع'].includes(o.status);
             const searchMatch = [o.displayId,o.orderId,o.customer?.name,o.customer?.phone,o.source].some(v=>String(v??'').toLowerCase().includes(search));
-            const dateMatch = !dateFilter || new Date(o.createdAt).toISOString().slice(0,10)===dateFilter;
+            const createdDate = new Date(o.createdAt);
+            const dateMatch = !dateFilter || (Number.isFinite(createdDate.getTime()) && createdDate.toISOString().slice(0,10)===dateFilter);
             const payMatch = !paymentFilter || String(o.paymentMethod||'').includes(paymentFilter);
             const statusMatch = !statusFilter || o.status===statusFilter;
             return tabMatch && searchMatch && dateMatch && payMatch && statusMatch;
