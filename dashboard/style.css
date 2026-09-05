@@ -695,6 +695,14 @@ tr:hover { background-color: #f8fafc; }
 
 /* Keep the settings workspace compact on laptop and standard desktop widths. */
 @media (min-width: 901px) and (max-width: 1450px) {
+    .workspace { padding: 20px; }
+    .topbar { padding: 11px 20px; }
+    .page-header { margin-bottom: 16px; }
+    .page-title { font-size: 21px; }
+    .stat-cards { gap: 12px; margin-bottom: 18px; }
+    .stat-card { padding: 14px; gap: 10px; }
+    .stat-icon { width: 48px; height: 48px; font-size: 20px; }
+    .card { padding: 16px; }
     .settings-page { padding-bottom: 18px; }
     .settings-hero { padding: 18px 20px; margin-bottom: 20px; border-radius: 16px; }
     .settings-hero-icon { width: 48px; height: 48px; font-size: 20px; }
@@ -710,6 +718,27 @@ tr:hover { background-color: #f8fafc; }
     .payment-setting { min-height: 54px; padding: 7px; }
     .payment-check { width: 29px; height: 29px; }
     .settings-card-wide { min-height: 205px; }
+}
+
+@media screen and (max-width: 768px) {
+    .workspace { padding: 12px 10px 24px; }
+    .topbar { min-height: 58px; padding: 9px 10px; }
+    .topbar .user-profile span { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page-title { font-size: 19px; }
+    .page-header { gap: 10px; margin-bottom: 14px; }
+    .card { padding: 13px; border-radius: 10px; }
+    .filter-bar { padding: 10px; gap: 8px; }
+    .filter-bar input, .filter-bar select { min-height: 36px; font-size: 12px; }
+    .btn-add, .btn-save, .btn-cancel { min-height: 38px; padding: 8px 13px; font-size: 12px; }
+    table { min-width: 520px; font-size: 12px; }
+    th, td { padding: 8px 6px; }
+    .settings-page { padding-bottom: 10px; }
+    .settings-hero { margin-bottom: 16px; }
+    .settings-hero h2 { font-size: 20px; }
+    .settings-card-head h3 { font-size: 13px; }
+    .settings-card-head p { font-size: 9px; }
+    .settings-section-title h3 { font-size: 15px; }
+    .settings-section-title p { font-size: 10px; line-height: 1.6; }
 }
 
 
@@ -875,3 +904,32 @@ body.dark-mode .sidebar{background:#111827;color:#e2e8f0}body.dark-mode .brand{c
 @media(max-width:600px){.analytics-hero{padding:18px 16px;display:block}.analytics-hero-status{display:inline-block;margin-top:12px}.analytics-dashboard .stat-cards,.analytics-dashboard .analytics-extra-cards{grid-template-columns:1fr;gap:10px}.analytics-dashboard .stat-card{min-height:82px;padding:14px}.analytics-dashboard .charts-container{grid-template-columns:1fr!important;margin-top:18px!important}.analytics-dashboard .analytics-chart-card{padding:14px!important}}
 .offers-panel{padding:0}.offers-panel .table-scroll{overflow-x:auto}.offers-panel table{min-width:760px}.offer-price-input{width:90px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-family:Cairo}.offers-panel .offer-duration-row{display:grid;grid-template-columns:90px 90px;gap:6px}.offers-panel .offer-duration-row input,.offers-panel .offer-duration-row select{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-family:Cairo}
 .finance-detail-modal{max-width:560px}.finance-detail{line-height:2;color:var(--text-dark)}.finance-detail p{margin:3px 0}.finance-attachment{display:block;max-width:100%;max-height:320px;object-fit:contain;border:1px solid var(--border);border-radius:10px;margin:12px auto}.dark-mode .finance-detail{color:#e2e8f0}
+
+/* Compact desktop workspace: equivalent to a comfortable 88% browser zoom. */
+@media screen and (min-width: 769px) {
+    html { zoom: .88; }
+    body { min-height: 114vh; }
+    .sidebar { min-height: 114vh; }
+}
+
+/* Customer photo management */
+.reviews-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.reviews-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.review-admin-card { min-height: 0; border-radius: 8px; }
+.review-admin-image { height: auto; aspect-ratio: 4 / 5; }
+.review-admin-body { padding: 10px 12px; }
+.review-admin-actions { justify-content: flex-end; }
+.review-admin-actions .btn-action { width: 34px; height: 34px; }
+.review-photo-meta { margin-left: auto; color: #64748b; font-size: 11px; font-weight: 800; }
+.reviews-empty { border-radius: 8px; }
+
+.offers-tabs { margin-bottom: 16px; }
+.offer-discount-value { color: #dc2626; font-weight: 900; }
+#financeTableBody .actions { justify-content: flex-start; gap: 7px; }
+
+body.dark-mode .review-admin-card,
+body.dark-mode .reviews-empty { background: var(--card-bg); }
+
+@media screen and (max-width: 768px) {
+    .reviews-stats { grid-template-columns: 1fr; }
+}
