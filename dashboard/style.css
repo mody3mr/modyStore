@@ -905,13 +905,6 @@ body.dark-mode .sidebar{background:#111827;color:#e2e8f0}body.dark-mode .brand{c
 .offers-panel{padding:0}.offers-panel .table-scroll{overflow-x:auto}.offers-panel table{min-width:760px}.offer-price-input{width:90px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-family:Cairo}.offers-panel .offer-duration-row{display:grid;grid-template-columns:90px 90px;gap:6px}.offers-panel .offer-duration-row input,.offers-panel .offer-duration-row select{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-family:Cairo}
 .finance-detail-modal{max-width:560px}.finance-detail{line-height:2;color:var(--text-dark)}.finance-detail p{margin:3px 0}.finance-attachment{display:block;max-width:100%;max-height:320px;object-fit:contain;border:1px solid var(--border);border-radius:10px;margin:12px auto}.dark-mode .finance-detail{color:#e2e8f0}
 
-/* Compact desktop workspace: equivalent to a comfortable 88% browser zoom. */
-@media screen and (min-width: 769px) {
-    html { zoom: .88; }
-    body { min-height: 114vh; }
-    .sidebar { min-height: 114vh; }
-}
-
 /* Customer photo management */
 .reviews-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .reviews-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
