@@ -13,8 +13,7 @@
     <!-- مكتبة Swiper للبانرات المتحركة -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
     
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="storefront-rating-addon.css">
+    <link rel="stylesheet" href="style.css?v=20260905-1">
 </head>
 <body>
 
@@ -75,13 +74,25 @@
     </div>
 
     <!-- قسم آراء العملاء (يُجلب ديناميكياً من الداش بورد) -->
-    <section class="reviews-section" id="reviewsSection" style="display: none;">
-        <h2 class="section-title">آراء عملائنا</h2>
+    <section class="reviews-section" id="reviewsSection">
+        <div class="reviews-heading">
+            <div>
+                <span class="reviews-kicker">من عملائنا</span>
+                <h2 class="section-title">صور وتجارب حقيقية</h2>
+            </div>
+            <div class="reviews-controls" aria-label="التنقل بين الصور">
+                <button class="reviews-next" type="button" title="الصورة التالية" aria-label="الصورة التالية"><i class="fas fa-arrow-right"></i></button>
+                <button class="reviews-prev" type="button" title="الصورة السابقة" aria-label="الصورة السابقة"><i class="fas fa-arrow-left"></i></button>
+            </div>
+        </div>
+        <div id="reviewsEmptyMessage" class="reviews-empty-message">
+            <i class="fas fa-camera-retro"></i>
+            <p>كن أول من يشتري منّا ويدعمنا ويشارك رأيه على صفحات السوشيال ميديا.</p>
+        </div>
         <div class="swiper reviewsSwiper">
             <div class="swiper-wrapper" id="reviewsContainer">
                 <!-- يتم التحميل من Firebase عن طريق الجافاسكريبت -->
             </div>
-            <div class="swiper-pagination" style="position: relative; margin-top: 20px;"></div>
         </div>
     </section>
 
@@ -127,7 +138,6 @@
             <div class="product-modal-info">
                 <div class="modal-cat" id="modalProductCat">القسم</div>
                 <h2 class="modal-title" id="modalProductTitle">اسم المنتج</h2>
-                <div id="modalProductRating" aria-live="polite"></div>
                 <div id="modalOfferTimer" style="display:none;"></div>
                 <div class="modal-price-wrapper" id="modalProductPriceWrapper"></div>
                 <div class="modal-desc" id="modalProductDesc">لا يوجد وصف متاح لهذا المنتج حالياً.</div>
@@ -204,8 +214,17 @@
         <div id="successScreen" class="success-msg">
             <i class="fas fa-check-circle success-icon"></i>
             <h3 style="color: var(--success); margin-bottom: 10px;">تم استلام طلبك بنجاح!</h3>
-            <p style="color: var(--text-light); font-weight: 600; margin-bottom: 10px;">رقم التتبع السري لطلبك هو: <strong id="successOrderId" style="color:var(--title-color);"></strong></p>
-            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">احتفظ بالرقم السري لتتمكن من تتبع أو تعديل طلبك لاحقاً.</p>
+            <div class="success-order-summary">
+                <div><span>سعر الطلب</span><strong id="successSubtotal">0 ج.م</strong></div>
+                <div><span>الشحن</span><strong id="successShipping">0 ج.م</strong></div>
+                <div><span>الخصم</span><strong id="successDiscount">0 ج.م</strong></div>
+                <div class="success-total"><span>الإجمالي</span><strong id="successTotal">0 ج.م</strong></div>
+            </div>
+            <div class="success-secret-box">
+                <span>الرقم السري لمتابعة الطلب</span>
+                <strong id="successOrderId"></strong>
+            </div>
+            <p class="success-reminder">الرجاء الاحتفاظ بالرقم السري لمتابعة حالة طلبك.</p>
             <button class="confirm-btn" onclick="location.reload()">متابعة التسوق <i class="fas fa-shopping-bag"></i></button>
         </div>
     </div>
@@ -229,7 +248,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-    <script type="module" src="app.js"></script>
-    <script type="module" src="storefront-rating-addon.js"></script>
+    <script type="module" src="app.js?v=20260905-2"></script>
 </body>
 </html>
