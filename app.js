@@ -19,11 +19,37 @@ function apiUrl(path) {
     return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+// Keep storefront pricing aligned with the dashboard's timed offers.
+const isOfferActive = (product) => {
+    const discount = Number(product?.discountPrice || 0);
+    const endAt = Number(product?.offerEndAt || 0);
+    return discount > 0 && (!endAt || endAt > Date.now());
+};
+const activeProductPrice = (product) => isOfferActive(product)
+    ? Number(product.discountPrice)
+    : Number(product?.price || 0);
+const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const jsArg = (value = '') => String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]/g, ' ');
+const offerRemaining = (product) => {
+    const endAt = Number(product?.offerEndAt || 0);
+    if (!endAt) return product?.offerDays ? `${product.offerDays} أيام` : '';
+    const remaining = Math.max(0, endAt - Date.now());
+    const minutes = Math.ceil(remaining / 60000);
+    if (minutes <= 0) return 'انتهى العرض';
+    if (minutes < 60) return `${minutes} دقيقة`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours < 24) return `${hours} ساعة${mins ? ` و${mins} دقيقة` : ''}`;
+    const days = Math.floor(hours / 24);
+    return `${days} يوم${days > 1 ? 'اً' : ''}`;
+};
+
 let allActiveProducts = [];
 let cart = [];
 let appliedVoucher = null; 
 let storeSettings = {}; 
 let currentShippingCost = 0; 
+let currentFilterType = 'الكل';
 
 const Toast = Swal.mixin({
     toast: true,
@@ -62,7 +88,7 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         const ticker = document.getElementById("newsTicker");
         if (ticker) {
             if (storeSettings.newsTicker) {
-                ticker.innerHTML = `<div class="scrolling-text"><i class="fas fa-bullhorn"></i> ${storeSettings.newsTicker}</div>`;
+                ticker.innerHTML = `<div class="scrolling-text"><i class="fas fa-bullhorn"></i> ${escapeHtml(storeSettings.newsTicker)}</div>`;
                 ticker.style.display = "block";
             } else {
                 ticker.style.display = "none";
@@ -86,15 +112,15 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
 
         // بيانات الفوتر
         if (storeSettings.email) {
-            document.getElementById("footerEmail").innerHTML = `<i class="far fa-envelope"></i> <span class="info-text" dir="ltr">${storeSettings.email}</span>`;
+            document.getElementById("footerEmail").innerHTML = `<i class="far fa-envelope"></i> <span class="info-text" dir="ltr">${escapeHtml(storeSettings.email)}</span>`;
             document.getElementById("footerEmail").style.display = "flex";
         }
         if (storeSettings.phone) {
-            document.getElementById("footerPhone").innerHTML = `<i class="fas fa-mobile-alt"></i> <span class="info-text" dir="ltr">${storeSettings.phone}</span>`;
+            document.getElementById("footerPhone").innerHTML = `<i class="fas fa-mobile-alt"></i> <span class="info-text" dir="ltr">${escapeHtml(storeSettings.phone)}</span>`;
             document.getElementById("footerPhone").style.display = "flex";
         }
         if (storeSettings.address) {
-            document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="info-text">${storeSettings.address}</span>`;
+            document.getElementById("footerAddress").innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="info-text">${escapeHtml(storeSettings.address)}</span>`;
             document.getElementById("footerAddress").style.display = "flex";
         }
 
@@ -125,13 +151,13 @@ onValue(ref(db, 'storeReviews'), (snapshot) => {
             if (r.isActive !== false) {
                 hasReviews = true;
                 const starsHtml = '<i class="fas fa-star"></i>'.repeat(r.rating || 5) + '<i class="far fa-star"></i>'.repeat(5 - (r.rating || 5));
-                const imgHtml = r.imageUrl ? `<img src="${r.imageUrl}" alt="صورة العميل">` : `<div class="review-placeholder"><i class="fas fa-user"></i></div>`;
+                const imgHtml = r.imageUrl ? `<img src="${escapeHtml(r.imageUrl)}" alt="صورة العميل">` : `<div class="review-placeholder"><i class="fas fa-user"></i></div>`;
                 
                 container.innerHTML += `
                     <div class="swiper-slide review-card">
                         ${imgHtml}
-                        <h4>${r.customerName || 'عميل مودي ستور'}</h4>
-                        <p>"${r.text}"</p>
+                        <h4>${escapeHtml(r.customerName || 'عميل مودي ستور')}</h4>
+                        <p>"${escapeHtml(r.text || '')}"</p>
                         <div class="stars">${starsHtml}</div>
                     </div>
                 `;
@@ -181,8 +207,8 @@ onValue(ref(db, 'shipping'), (snapshot) => {
         if (snapshot.exists()) {
             snapshot.forEach(child => {
                 const s = child.val();
-                if (s.isActive) {
-                    citySelect.innerHTML += `<option value="${s.name}" data-price="${s.price}">${s.name} (شحن: ${s.price} ج.م)</option>`;
+                if (s.isActive !== false) {
+                    citySelect.innerHTML += `<option value="${escapeHtml(s.name)}" data-price="${Number(s.price) || 0}">${escapeHtml(s.name)} (شحن: ${Number(s.price) || 0} ج.م)</option>`;
                 }
             });
         }
@@ -209,8 +235,8 @@ onValue(ref(db, 'categories'), (snapshot) => {
     if(snapshot.exists()){
         snapshot.forEach(child => {
             const c = child.val();
-            if(c.isActive) {
-                catBar.innerHTML += `<button class="cat-btn" onclick="filterBy('${c.name}', this)">${c.name}</button>`;
+            if(c.isActive !== false) {
+                catBar.innerHTML += `<button class="cat-btn" onclick="filterBy('${jsArg(c.name)}', this)">${escapeHtml(c.name)}</button>`;
             }
         });
     }
@@ -221,14 +247,14 @@ onValue(ref(db, 'products'), (snapshot) => {
     if (snapshot.exists()) {
         snapshot.forEach(child => {
             const p = child.val();
-            if (p.isActive) {
+            if (p.isActive !== false) {
                 p.id = child.key;
-                p.effectivePrice = p.discountPrice ? p.discountPrice : p.price;
+                p.effectivePrice = activeProductPrice(p);
                 allActiveProducts.push(p);
             }
         });
     }
-    renderProducts("الكل");
+    renderProducts(currentFilterType);
 });
 
 window.renderProducts = (filterType) => {
@@ -237,7 +263,7 @@ window.renderProducts = (filterType) => {
     let filtered = [];
 
     if (filterType === "الكل") filtered = allActiveProducts;
-    else if (filterType === "عروض") filtered = allActiveProducts.filter(p => p.discountPrice != null && p.discountPrice > 0);
+    else if (filterType === "عروض") filtered = allActiveProducts.filter(isOfferActive);
     else filtered = allActiveProducts.filter(p => p.category === filterType);
 
     if (filtered.length === 0) {
@@ -250,36 +276,40 @@ window.renderProducts = (filterType) => {
     }
 
     filtered.forEach((p, index) => {
-        let priceHtml = `<span class="product-price">${p.effectivePrice} <span>ج.م</span></span>`;
+        const offerActive = isOfferActive(p);
+        const effectivePrice = activeProductPrice(p);
+        p.effectivePrice = effectivePrice;
+        let priceHtml = `<span class="product-price">${effectivePrice} <span>ج.م</span></span>`;
         let badgeHtml = "";
         let countdownHtml = "";
         
-        if (p.discountPrice) {
-            priceHtml = `<span class="product-price"><span class="old-price" style="font-size:14px;">${p.price}</span> ${p.discountPrice} <span>ج.م</span></span>`;
-            badgeHtml = `<div class="discount-badge">خصم ${p.price - p.discountPrice} ج.م</div>`;
+        if (offerActive) {
+            priceHtml = `<span class="product-price"><span class="old-price" style="font-size:14px;">${Number(p.price || 0)}</span> ${effectivePrice} <span>ج.م</span></span>`;
+            badgeHtml = `<div class="discount-badge">خصم ${Math.max(0, Number(p.price || 0) - effectivePrice)} ج.م</div>`;
             
-            if(p.offerDays) {
-                countdownHtml = `<div class="offer-countdown"><i class="fas fa-stopwatch"></i> ينتهي العرض خلال: <span>${p.offerDays} أيام</span></div>`;
+            const remaining = offerRemaining(p);
+            if (remaining) {
+                countdownHtml = `<div class="offer-countdown"><i class="fas fa-stopwatch"></i> ينتهي العرض خلال: <span>${escapeHtml(remaining)}</span></div>`;
             }
         }
         
         let btnHtml = '';
-        if (p.stock === 0) {
+        if (Number(p.stock || 0) <= 0) {
             badgeHtml += `<div class="discount-badge" style="background:var(--accent); color:white; left:15px; right:auto;">نفذت الكمية</div>`;
             btnHtml = `<button class="add-to-cart out-of-stock" disabled onclick="event.stopPropagation();">نفذ المخزون <i class="fas fa-ban"></i></button>`;
         } else {
-            btnHtml = `<button class="add-to-cart" onclick="event.stopPropagation(); addToCart('${p.id}', '${p.name}', ${p.effectivePrice}, '${p.imageUrl}', ${p.stock || 0})">إضافة للسلة <i class="fas fa-cart-plus"></i></button>`;
+            btnHtml = `<button class="add-to-cart" onclick="event.stopPropagation(); addToCart('${jsArg(p.id)}', '${jsArg(p.name)}', ${effectivePrice}, '${jsArg(p.imageUrl || '')}', ${Number(p.stock || 0)})">إضافة للسلة <i class="fas fa-cart-plus"></i></button>`;
         }
 
         grid.innerHTML += `
-            <div class="product-card" style="animation-delay: ${index * 0.05}s" onclick="openProductDetails('${p.id}')">
+            <div class="product-card" data-product-id="${escapeHtml(p.id)}" style="animation-delay: ${index * 0.05}s" onclick="openProductDetails('${jsArg(p.id)}')">
                 ${badgeHtml}
                 <div class="product-img-wrapper">
-                    <img src="${p.imageUrl}" class="product-img" onerror="this.src='https://via.placeholder.com/300x300?text=صورة+المنتج'">
+                    <img src="${escapeHtml(p.imageUrl || 'https://via.placeholder.com/300x300?text=صورة+المنتج')}" class="product-img" onerror="this.src='https://via.placeholder.com/300x300?text=صورة+المنتج'">
                 </div>
                 <div class="product-details">
-                    <div class="product-cat">${p.category}</div>
-                    <h3 class="product-title">${p.name}</h3>
+                    <div class="product-cat">${escapeHtml(p.category || '')}</div>
+                    <h3 class="product-title">${escapeHtml(p.name || '')}</h3>
                     ${countdownHtml}
                     <div class="price-wrapper">${priceHtml}</div>
                     ${btnHtml}
@@ -287,9 +317,11 @@ window.renderProducts = (filterType) => {
             </div>
         `;
     });
+    window.ModyStoreProductRating?.autoAttachProductRatings?.(grid);
 };
 
 window.filterBy = (catName, btn) => {
+    currentFilterType = catName;
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     renderProducts(catName);
@@ -299,22 +331,33 @@ window.openProductDetails = (id) => {
     const p = allActiveProducts.find(prod => prod.id === id);
     if(!p) return;
 
-    document.getElementById('modalProductImg').src = p.imageUrl;
+    document.getElementById('modalProductImg').src = p.imageUrl || 'https://via.placeholder.com/600x600?text=صورة+المنتج';
     document.getElementById('modalProductCat').innerText = p.category;
     document.getElementById('modalProductTitle').innerText = p.name;
     document.getElementById('modalProductDesc').innerText = p.description || 'لا توجد تفاصيل إضافية مسجلة لهذا المنتج.';
+    const modalRating = document.getElementById('modalProductRating');
+    if (modalRating) {
+        modalRating.dataset.productId = p.id;
+        modalRating.classList.remove('mody-product-rating');
+        modalRating.innerHTML = '';
+        window.ModyStoreProductRating?.attachProductRating?.(modalRating, p.id);
+    }
 
-    let priceHtml = `<span class="product-price" style="font-size: 30px;">${p.effectivePrice} <span>ج.م</span></span>`;
+    const offerActive = isOfferActive(p);
+    const effectivePrice = activeProductPrice(p);
+    p.effectivePrice = effectivePrice;
+    let priceHtml = `<span class="product-price" style="font-size: 30px;">${effectivePrice} <span>ج.م</span></span>`;
     let timerHtml = '';
-    
-    if (p.discountPrice) {
+
+    if (offerActive) {
         priceHtml = `
-            <span class="product-price" style="font-size: 30px;">${p.discountPrice} <span>ج.م</span></span>
-            <span class="old-price" style="font-size: 20px; color: #94a3b8; margin-right: 15px;">${p.price} ج.م</span>
-            <span style="background: var(--accent); color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-right: 15px;">توفير ${p.price - p.discountPrice} ج.م</span>
+            <span class="product-price" style="font-size: 30px;">${effectivePrice} <span>ج.م</span></span>
+            <span class="old-price" style="font-size: 20px; color: #94a3b8; margin-right: 15px;">${Number(p.price || 0)} ج.م</span>
+            <span style="background: var(--accent); color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; margin-right: 15px;">توفير ${Math.max(0, Number(p.price || 0) - effectivePrice)} ج.م</span>
         `;
-        if (p.offerDays) {
-            timerHtml = `<div class="offer-countdown" style="margin-bottom:15px; font-size:14px;"><i class="fas fa-stopwatch"></i> ينتهي العرض خلال: <span>${p.offerDays} أيام</span></div>`;
+        const remaining = offerRemaining(p);
+        if (remaining) {
+            timerHtml = `<div class="offer-countdown" style="margin-bottom:15px; font-size:14px;"><i class="fas fa-stopwatch"></i> ينتهي العرض خلال: <span>${escapeHtml(remaining)}</span></div>`;
         }
     }
     document.getElementById('modalProductPriceWrapper').innerHTML = priceHtml;
@@ -324,18 +367,25 @@ window.openProductDetails = (id) => {
     else { timerDiv.style.display = 'none'; }
 
     const btnContainer = document.getElementById('modalBtnContainer');
-    if (p.stock === 0) {
+    if (Number(p.stock || 0) <= 0) {
         btnContainer.innerHTML = `<button class="modal-add-btn out-of-stock" disabled>نفذ المخزون <i class="fas fa-ban"></i></button>`;
     } else {
         btnContainer.innerHTML = `<button class="modal-add-btn" id="modalAddBtn">إضافة للسلة <i class="fas fa-cart-plus"></i></button>`;
         document.getElementById('modalAddBtn').onclick = () => {
-            addToCart(p.id, p.name, p.effectivePrice, p.imageUrl, p.stock || 0);
+            addToCart(p.id, p.name, effectivePrice, p.imageUrl, Number(p.stock || 0));
             closeProductModal();
         };
     }
 
     document.getElementById('productDetailsModal').style.display = 'flex';
 };
+
+// Re-render when a timed offer crosses its expiry boundary.
+setInterval(() => {
+    if (allActiveProducts.some(p => p.offerEndAt && Number(p.offerEndAt) <= Date.now())) {
+        renderProducts(currentFilterType);
+    }
+}, 60000);
 
 window.closeProductModal = () => {
     document.getElementById('productDetailsModal').style.display = 'none';
@@ -417,15 +467,15 @@ function updateCartUI() {
             count += item.qty;
             container.innerHTML += `
                 <div class="cart-item">
-                    <i class="fas fa-times remove-item" onclick="removeFromCart('${item.id}')"></i>
-                    <img src="${item.img}" onerror="this.src='https://via.placeholder.com/100'">
+                    <i class="fas fa-times remove-item" onclick="removeFromCart('${jsArg(item.id)}')"></i>
+                    <img src="${escapeHtml(item.img || 'https://via.placeholder.com/100')}" onerror="this.src='https://via.placeholder.com/100'">
                     <div class="cart-item-details">
-                        <div class="cart-item-title">${item.name}</div>
-                        <div class="cart-item-price">${item.price} ج.م</div>
+                        <div class="cart-item-title">${escapeHtml(item.name || '')}</div>
+                        <div class="cart-item-price">${Number(item.price || 0)} ج.م</div>
                         <div class="qty-controls">
-                            <button class="qty-btn" onclick="updateQty('${item.id}', 1)"><i class="fas fa-plus" style="font-size:10px;"></i></button>
-                            <span class="qty-num">${item.qty}</span>
-                            <button class="qty-btn" onclick="updateQty('${item.id}', -1)"><i class="fas fa-minus" style="font-size:10px;"></i></button>
+                            <button class="qty-btn" onclick="updateQty('${jsArg(item.id)}', 1)"><i class="fas fa-plus" style="font-size:10px;"></i></button>
+                            <span class="qty-num">${Number(item.qty || 0)}</span>
+                            <button class="qty-btn" onclick="updateQty('${jsArg(item.id)}', -1)"><i class="fas fa-minus" style="font-size:10px;"></i></button>
                         </div>
                     </div>
                 </div>
@@ -671,7 +721,7 @@ window.trackOrder = () => {
         if(snapshot.exists()) {
             snapshot.forEach(child => {
                 const order = child.val();
-                if(order.orderId === orderIdInput && order.customer.phone === phoneInput) {
+                if((order.orderId === orderIdInput || order.secretCode === orderIdInput) && order.customer?.phone === phoneInput) {
                     foundOrder = order;
                     foundDbId = child.key;
                 }
@@ -683,7 +733,7 @@ window.trackOrder = () => {
         if(foundOrder) {
             let statusColor = "var(--secondary)";
             if(foundOrder.status === "تم تسليمه") statusColor = "var(--success)";
-            if(foundOrder.status === "ملغي") statusColor = "var(--accent)";
+            if(foundOrder.status === "ملغي" || foundOrder.status === "مرتجع") statusColor = "var(--accent)";
             
             statusText.style.color = statusColor;
             statusText.innerText = foundOrder.status;
@@ -700,6 +750,12 @@ window.trackOrder = () => {
             const orderDate = new Date(foundOrder.createdAt).toLocaleDateString('ar-EG');
             let discountHtml = foundOrder.discount > 0 ? `<div style="color:var(--accent); display:flex; justify-content:space-between; margin-bottom:5px;"><span>الخصم:</span> <span>-${Math.round(foundOrder.discount)} ج.م</span></div>` : "";
             let shippingHtml = `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الشحن:</span> <span>${foundOrder.shippingCost || 0} ج.م</span></div>`;
+            const confirmation = foundOrder.customerConfirmation?.status;
+            const confirmationHtml = confirmation === 'confirmed'
+                ? '<div style="color:var(--success);font-weight:800;margin:8px 0;"><i class="fas fa-circle-check"></i> تم تأكيد الطلب من العميل</div>'
+                : confirmation === 'cancelled'
+                    ? '<div style="color:var(--accent);font-weight:800;margin:8px 0;"><i class="fas fa-circle-xmark"></i> تم إلغاء الطلب بواسطة العميل</div>'
+                    : '';
 
             let actionsHtml = '';
             if (foundOrder.status === 'قيد المراجعة') {
@@ -714,6 +770,7 @@ window.trackOrder = () => {
             detailsBox.innerHTML = `
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>تاريخ الطلب:</strong> ${orderDate}</div>
                 <div style="margin-bottom: 5px; color: var(--text-light); text-align: right;"><strong>طريقة الدفع:</strong> ${foundOrder.paymentMethod || 'كاش'}</div>
+                ${confirmationHtml}
                 ${itemsHtml}
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-light);"><span>الإجمالي الفرعي:</span> <span>${foundOrder.subtotal} ج.م</span></div>
                 ${shippingHtml}
