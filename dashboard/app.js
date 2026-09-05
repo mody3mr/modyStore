@@ -2841,9 +2841,14 @@ window.saveSettings = () => {
         }
     };
 
-    update(ref(db, 'storeSettings'), data).then(() => {
+    return update(ref(db, 'storeSettings'), data).then(() => {
         logAction("تحديث الإعدادات", "تم تحديث بيانات المتجر الأساسية بنجاح");
         window.showAlert("تم حفظ الإعدادات بنجاح!", "success");
+        return data;
+    }).catch(error => {
+        console.error('Saving store settings failed:', error);
+        window.showAlert("تعذر حفظ الإعدادات. تحقق من صلاحيات Firebase ثم حاول مرة أخرى.", "error");
+        throw error;
     });
 };
 
