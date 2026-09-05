@@ -3177,7 +3177,7 @@ if (myProfileBtn && myProfileMenu) {
         const purchases=(allFinance||[]).filter(f=>f.type==='purchase').reduce((s,f)=>s+n(f.amount),0),expenses=(allFinance||[]).filter(f=>f.type==='expense').reduce((s,f)=>s+n(f.amount),0);
         const a=document.getElementById('statTotalPurchases'),b=document.getElementById('statTotalExpenses');if(a)a.innerText=money(purchases);if(b)b.innerText=money(expenses);
         if(!modulePerm('finance','history')){table.innerHTML='<tr><td colspan="7" style="text-align:center;padding:25px;">لا تملك صلاحية عرض البيانات السابقة.</td></tr>';return;}
-        list.forEach(f=>{table.innerHTML+=`<tr><td dir="ltr">${reportDate(f.timestamp)}</td><td>${f.type==='purchase'?'<span class="badge badge-active">مشتريات</span>':'<span class="badge badge-inactive">مصروف</span>'}</td><td>${esc(f.invoiceNo||'-')}</td><td><b>${esc(f.title||'-')}</b>${f.supplier?`<div class="meta-info">المورد: ${esc(f.supplier)}</div>`:''}</td><td style="font-weight:bold;">${money(f.amount)}</td><td>${esc(f.user||'-')}</td><td>${isAdmin()?`<button class="btn-action btn-delete" onclick="deleteFinance('${f.id}')"><i class="fas fa-trash"></i></button>`:''}</td></tr>`;});
+        list.forEach(f=>{table.innerHTML+=`<tr><td dir="ltr">${reportDate(f.timestamp)}</td><td>${f.type==='purchase'?'<span class="badge badge-active">مشتريات</span>':'<span class="badge badge-inactive">مصروف</span>'}</td><td>${esc(f.invoiceNo||'-')}</td><td><b>${esc(f.title||'-')}</b>${f.supplier?`<div class="meta-info">المورد: ${esc(f.supplier)}</div>`:''}</td><td style="font-weight:bold;">${money(f.amount)}</td><td>${esc(f.user||'-')}</td><td><div class="actions finance-actions"><button class="btn-action btn-view" title="عرض التفاصيل" onclick="viewFinanceDetails('${f.id}')"><i class="fas fa-eye"></i></button>${isAdmin()?`<button class="btn-action btn-edit" title="تعديل" onclick="editFinance('${f.id}')"><i class="fas fa-pen"></i></button><button class="btn-action btn-delete" title="حذف" onclick="deleteFinance('${f.id}')"><i class="fas fa-trash"></i></button>`:''}</div></td></tr>`;});
     };
     window.openPurchaseModal=()=>{if(!guard('finance','purchase','ليس لديك صلاحية إدخال فاتورة مشتريات!'))return;purItems=[];document.getElementById('purSupplier').value='';document.getElementById('purInvoiceNo').value='';document.getElementById('purQty').value='1';document.getElementById('purCost').value='0';document.getElementById('purShipping').value='0';renderPurItems();const s=document.getElementById('purProductSelect');s.innerHTML='<option value="">اختر المنتج...</option>';allProducts.forEach(p=>s.innerHTML+=`<option value="${p.id}" data-name="${esc(p.name)}">${esc(p.name)}</option>`);document.getElementById('purchaseModal').style.display='flex';};
     window.openExpenseModal=()=>{if(!guard('finance','expense','ليس لديك صلاحية إدخال مصروفات!'))return;document.getElementById('expTitle').value='';document.getElementById('expAmount').value='';document.getElementById('expNotes').value='';document.getElementById('expenseModal').style.display='flex';};
@@ -3293,19 +3293,55 @@ if (myProfileBtn && myProfileMenu) {
 
 (() => {
     const escOffer = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let currentOffersTab = 'current';
+    const orderOfferDiscount = order => (order.items || []).reduce((sum, item) => {
+        const saved = Number(item.offerDiscount || 0);
+        if (saved > 0) return sum + saved;
+        const product = (typeof allProducts !== 'undefined' ? allProducts : []).find(p => p.id === item.id);
+        const original = Number(item.originalPrice || product?.price || item.price || 0);
+        return sum + (Math.max(0, original - Number(item.price || 0)) * Number(item.qty || 0));
+    }, 0);
+    const renderPreviousOffers = () => {
+        const table = document.getElementById('previousOffersTableBody');
+        if (!table) return;
+        const orders = (typeof allOrders !== 'undefined' ? allOrders : [])
+            .map(order => ({ order, discount: Number(order.discount || 0) + Number(order.offerDiscount || orderOfferDiscount(order)) }))
+            .filter(entry => entry.discount > 0)
+            .sort((a, b) => Number(b.order.createdAt || 0) - Number(a.order.createdAt || 0));
+        table.innerHTML = orders.map(({order, discount}) => `<tr>
+            <td><b>#${escOffer(order.displayId || order.orderId || '-')}</b></td>
+            <td>${escOffer(order.customer?.name || '-')}</td>
+            <td dir="ltr">${escOffer(order.customer?.phone || '-')}</td>
+            <td><b>${Math.round(Number(order.total || 0))} ج.م</b></td>
+            <td class="offer-discount-value">-${Math.round(discount)} ج.م</td>
+            <td><button class="btn-action btn-view" type="button" title="عرض تفاصيل الطلب" onclick="viewOrderDetails('${escOffer(order.dbId)}')"><i class="fas fa-eye"></i></button></td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:28px;color:#94a3b8">لا توجد طلبات استفادت من خصم حتى الآن.</td></tr>';
+    };
     const renderOffers = () => {
         const table=document.getElementById('offersTableBody'); if(!table || typeof allProducts==='undefined')return;
         table.innerHTML=(allProducts||[]).map(p=>`<tr><td><b>${escOffer(p.name)}</b></td><td>${Number(p.price||0)} ج.م</td><td><input class="offer-price-input" id="offer-price-${p.id}" type="number" min="0" value="${Number(p.discountPrice||0)}"></td><td><div class="offer-duration-row"><input id="offer-duration-${p.id}" type="number" min="1" value="${p.offerDuration||''}" placeholder="المدة"><select id="offer-unit-${p.id}"><option value="hours" ${p.offerUnit==='hours'?'selected':''}>ساعات</option><option value="days" ${p.offerUnit==='days'?'selected':''}>أيام</option><option value="minutes" ${p.offerUnit==='minutes'?'selected':''}>دقائق</option></select></div></td><td>${p.offerEndAt?escOffer(typeof formatDateTime==='function'?formatDateTime(p.offerEndAt):new Date(p.offerEndAt).toLocaleString('ar-EG')):'غير محدد'}</td><td><button class="btn-action btn-edit" title="حفظ العرض" onclick="saveOffer('${escOffer(p.id)}')"><i class="fas fa-save"></i></button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:25px">لا توجد منتجات بعد.</td></tr>';
+        renderPreviousOffers();
     };
     window.saveOffer = async id => {
         if(typeof window.hasDashboardPermission==='function'&&!window.hasDashboardPermission('products','edit'))return;
         const price=Number(document.getElementById(`offer-price-${id}`)?.value||0), duration=Number(document.getElementById(`offer-duration-${id}`)?.value||0), unit=document.getElementById(`offer-unit-${id}`)?.value||'hours';
+        const product = (typeof allProducts !== 'undefined' ? allProducts : []).find(p => p.id === id);
+        if (price > 0 && (!product || price >= Number(product.price || 0))) return showAlert('سعر العرض يجب أن يكون أقل من السعر الأساسي.','warning');
+        if (price > 0 && duration <= 0) return showAlert('حدد مدة العرض أولاً.','warning');
         const end=price>0&&duration>0?Date.now()+duration*(unit==='days'?86400000:unit==='minutes'?60000:3600000):null;
-        await update(ref(db,`products/${id}`),{discountPrice:price||0,offerDuration:duration||0,offerUnit:unit,offerEndAt:end||0});
+        await update(ref(db,`products/${id}`),{discountPrice:price||0,offerDuration:duration||0,offerUnit:unit,offerStartedAt:price>0?Date.now():0,offerEndAt:end||0});
         showAlert('تم حفظ العرض بنجاح','success'); renderOffers();
+    };
+    window.switchOffersTab = (tab, button) => {
+        currentOffersTab = tab;
+        document.querySelectorAll('#offers-view .offers-tabs .custom-tab-btn').forEach(btn => btn.classList.toggle('active', btn === button));
+        document.getElementById('currentOffersPanel').style.display = tab === 'current' ? 'block' : 'none';
+        document.getElementById('previousOffersPanel').style.display = tab === 'previous' ? 'block' : 'none';
+        if (tab === 'previous') renderPreviousOffers();
     };
     window.renderOffers=renderOffers;
     onValue(ref(db,'products'),()=>setTimeout(renderOffers,0));
+    onValue(ref(db,'orders'),()=>setTimeout(renderPreviousOffers,0));
 })();
 
 (() => {
@@ -3316,9 +3352,16 @@ if (myProfileBtn && myProfileMenu) {
             const deleteButton = row.querySelector('.btn-delete');
             if (!deleteButton) return;
             const id = deleteButton.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-            if (!id || row.querySelector('.btn-view')) return;
-            const button = document.createElement('button'); button.className='btn-action btn-view'; button.title='عرض التفاصيل'; button.innerHTML='<i class="fas fa-search"></i>'; button.onclick=()=>window.viewFinanceDetails(id);
-            deleteButton.parentElement?.insertBefore(button, deleteButton);
+            if (!id) return;
+            const cell = deleteButton.closest('td');
+            if (!cell || cell.querySelector('.finance-actions')) return;
+            const actions = document.createElement('div');
+            actions.className = 'actions finance-actions';
+            const viewButton = document.createElement('button'); viewButton.className='btn-action btn-view'; viewButton.title='عرض التفاصيل'; viewButton.innerHTML='<i class="fas fa-eye"></i>'; viewButton.onclick=()=>window.viewFinanceDetails(id);
+            const editButton = document.createElement('button'); editButton.className='btn-action btn-edit'; editButton.title='تعديل'; editButton.innerHTML='<i class="fas fa-pen"></i>'; editButton.onclick=()=>window.editFinance(id);
+            cell.innerHTML = '';
+            actions.append(viewButton, editButton, deleteButton);
+            cell.appendChild(actions);
         });
     };
 })();
@@ -4207,12 +4250,15 @@ if (myProfileBtn && myProfileMenu) {
     const oldSaveSettingsV3 = window.saveSettings;
     window.saveSettings = async () => {
         if(window.currentUserRole!=='Admin') return window.showAlert('الإعدادات متاحة للمدير فقط!','error');
-        const before = await get(ref(db,'storeSettings')).catch(()=>null);
-        if(typeof oldSaveSettingsV3==='function') await oldSaveSettingsV3();
+        const paymobEnabled = !!document.getElementById('setPaymobEnabled')?.checked || !!document.getElementById('setPayPaymob')?.checked;
+        if (document.getElementById('setPaymobEnabled')) document.getElementById('setPaymobEnabled').checked = paymobEnabled;
+        if (document.getElementById('setPayPaymob')) document.getElementById('setPayPaymob').checked = paymobEnabled;
+        // Capture every value before the first Firebase write. The realtime
+        // listener may refresh the controls while that write is in progress.
         const patch = {
             orderApiBaseUrl: document.getElementById('setOrderApiBaseUrl')?.value.trim().replace(/\/+$/, '') || '',
             paymob: {
-                enabled: !!document.getElementById('setPaymobEnabled')?.checked,
+                enabled: paymobEnabled,
                 publicKey: document.getElementById('setPaymobPublicKey')?.value.trim() || '',
                 integrationId: document.getElementById('setPaymobIntegrationId')?.value.trim() || '',
                 backendEndpoint: document.getElementById('setPaymobBackendEndpoint')?.value.trim() || '',
@@ -4222,6 +4268,7 @@ if (myProfileBtn && myProfileMenu) {
                 vapidKey: document.getElementById('setFcmVapidKey')?.value.trim() || ''
             }
         };
+        if(typeof oldSaveSettingsV3==='function') await oldSaveSettingsV3();
         await update(ref(db,'storeSettings'),patch);
         logAction('إعدادات الدفع والإشعارات','تحديث إعدادات Paymob وإشعارات الموبايل');
         window.showAlert('تم حفظ إعدادات Paymob والإشعارات.', 'success');
@@ -4233,7 +4280,9 @@ if (myProfileBtn && myProfileMenu) {
         const push=d.push||{};
         const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val??'';};
         const check=(id,val)=>{const e=document.getElementById(id);if(e)e.checked=!!val;};
-        check('setPaymobEnabled',p.enabled);
+        const paymobEnabled = p.enabled === true || d.paymentMethods?.paymob === true;
+        check('setPaymobEnabled',paymobEnabled);
+        check('setPayPaymob',paymobEnabled);
         set('setOrderApiBaseUrl',d.orderApiBaseUrl);
         set('setPaymobPublicKey',p.publicKey);
         set('setPaymobIntegrationId',p.integrationId);
@@ -4381,26 +4430,29 @@ if (myProfileBtn && myProfileMenu) {
         const before = { status: order.status, processedAt: order.processedAt, shippedAt: order.shippedAt, deliveredAt: order.deliveredAt, customerConfirmation: order.customerConfirmation };
         const now = Date.now();
         const updates = { status: newStatus };
+        const shouldSendConfirmation = newStatus === 'جاري التجهيز'
+            && oldStatus !== 'جاري التجهيز'
+            && !['pending','confirmed'].includes(order.customerConfirmation?.status);
         if (newStatus === 'جاري التجهيز') updates.processedAt = now;
         if (newStatus === 'تم الشحن') updates.shippedAt = now;
         if (newStatus === 'تم تسليمه') updates.deliveredAt = now;
 
         // Optimistic update: the row moves tabs immediately.
         Object.assign(order, updates);
-        if (newStatus === 'جاري التجهيز' && oldStatus !== 'جاري التجهيز') {
+        if (shouldSendConfirmation) {
             order.customerConfirmation = { status: 'sending', requestedAt: now };
         }
         renderOrdersNow();
 
         try {
             await update(ref(db, `orders/${orderId}`), updates);
-            if (newStatus === 'جاري التجهيز' && oldStatus !== 'جاري التجهيز') {
+            if (shouldSendConfirmation) {
                 await window.sendOrderConfirmationWhatsApp?.(order);
             }
             const filter = document.getElementById('filterOrderStatus');
             if (filter && filter.value === oldStatus) filter.value = '';
             logAction('تحديث حالة طلب', `تغيير حالة الطلب #${displayId} لـ ${newStatus}`);
-            window.showAlert?.(newStatus === 'جاري التجهيز' ? 'تم تحديث الحالة وإرسال طلب تأكيد العميل.' : 'تم تحديث الحالة بنجاح', 'success');
+            window.showAlert?.(shouldSendConfirmation ? 'تم تحديث الحالة وإرسال طلب تأكيد العميل.' : 'تم تحديث الحالة بنجاح', 'success');
             renderOrdersNow();
         } catch (e) {
             console.error('Realtime status update failed', e);
@@ -4528,10 +4580,7 @@ if (myProfileBtn && myProfileMenu) {
         if (!id && typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('reviews','add')) return window.showAlert?.('ليس لديك صلاحية إضافة آراء العملاء.','error');
         editingReviewId = id;
         const r = id ? allStoreReviews.find(x=>x.id===id) : null;
-        document.getElementById('reviewModalTitle').innerText = r ? 'تعديل رأي عميل' : 'إضافة رأي عميل';
-        document.getElementById('reviewCustomerName').value = r?.customerName || '';
-        document.getElementById('reviewRating').value = String(r?.rating || 5);
-        document.getElementById('reviewText').value = r?.text || '';
+        document.getElementById('reviewModalTitle').innerText = r ? 'تعديل صورة العميل' : 'إضافة صورة عميل';
         document.getElementById('reviewImageUrl').value = r?.imageUrl || '';
         document.getElementById('reviewIsActive').checked = r?.isActive !== false;
         const preview = document.getElementById('reviewImagePreview'); if (preview) preview.innerHTML = r?.imageUrl ? `<img src="${escFinal(r.imageUrl)}" alt="preview">` : '';
@@ -4546,13 +4595,9 @@ if (myProfileBtn && myProfileMenu) {
         if (f) { const url = URL.createObjectURL(f); box.innerHTML = `<img src="${url}" alt="preview">`; }
     });
     window.saveReview = async () => {
-        const name = document.getElementById('reviewCustomerName')?.value.trim() || 'عميل ModyStore';
-        const text = document.getElementById('reviewText')?.value.trim() || '';
-        const rating = Math.min(5, Math.max(1, Number(document.getElementById('reviewRating')?.value || 5)));
         const active = !!document.getElementById('reviewIsActive')?.checked;
         const file = document.getElementById('reviewImageFile')?.files?.[0];
         let imageUrl = document.getElementById('reviewImageUrl')?.value.trim() || '';
-        if (!text) return window.showAlert?.('اكتب نص رأي العميل أولاً.','warning');
         if (editingReviewId ? !window.hasDashboardPermission?.('reviews','edit') : !window.hasDashboardPermission?.('reviews','add')) return window.showAlert?.('ليس لديك صلاحية حفظ آراء العملاء.','error');
         try {
             if (file) {
@@ -4562,20 +4607,21 @@ if (myProfileBtn && myProfileMenu) {
                 await uploadBytes(sref, file);
                 imageUrl = await getDownloadURL(sref);
             }
-            const data = cleanData({ customerName:name, text, rating, imageUrl:imageUrl||null, isActive:active, updatedAt:Date.now() });
+            if (!imageUrl) return window.showAlert?.('اختر صورة أو أضف رابط صورة مباشر أولاً.','warning');
+            const data = cleanData({ imageUrl, isActive:active, updatedAt:Date.now() });
             if (editingReviewId) {
                 await update(ref(db,`storeReviews/${editingReviewId}`), data);
-                logAction('تعديل رأي عميل', `تعديل رأي ${name}`);
+                logAction('تعديل صورة عميل', 'تعديل صورة في معرض العملاء');
             } else {
                 data.createdAt=Date.now(); data.createdBy=currentUser;
                 const newRef=push(ref(db,'storeReviews')); await set(newRef,data);
-                logAction('إضافة رأي عميل', `إضافة رأي ${name}`);
+                logAction('إضافة صورة عميل', 'إضافة صورة إلى معرض العملاء');
             }
             closeModal('reviewModal');
-            window.showAlert?.('تم حفظ رأي العميل بنجاح.', 'success');
+            window.showAlert?.('تم حفظ صورة العميل بنجاح.', 'success');
         } catch(e) {
             console.error('saveReview', e);
-            window.showAlert?.('تعذر حفظ الرأي أو رفع الصورة: ' + (e.message || e), 'error');
+            window.showAlert?.('تعذر حفظ أو رفع الصورة: ' + (e.message || e), 'error');
         }
     };
     window.toggleReview = async (id, active) => {
@@ -4588,44 +4634,25 @@ if (myProfileBtn && myProfileMenu) {
     };
     window.renderReviews = () => {
         const grid = document.getElementById('reviewsGrid'); if (!grid) return;
-        const term = (document.getElementById('searchReviews')?.value || '').toLowerCase();
         const status = document.getElementById('reviewStatusFilter')?.value || '';
         const list = allStoreReviews.filter(r => {
-            const text = `${r.customerName||''} ${r.text||''}`.toLowerCase();
             const st = r.isActive === false ? 'inactive':'active';
-            return text.includes(term) && (!status || status === st);
+            return r.imageUrl && (!status || status === st);
         }).sort((a,b)=>numFinal(b.createdAt)-numFinal(a.createdAt));
         grid.innerHTML = list.map(r => {
-            const stars = '★'.repeat(Math.min(5,Math.max(1,numFinal(r.rating||5)))) + '☆'.repeat(5-Math.min(5,Math.max(1,numFinal(r.rating||5))));
-            const image = r.imageUrl ? `<img src="${escFinal(r.imageUrl)}" alt="${escFinal(r.customerName||'Customer')}">` : `<div class="review-placeholder"><i class="fas fa-user"></i></div>`;
-            return `<article class="review-admin-card ${r.isActive===false?'is-hidden':''}">\n                <div class="review-admin-image">${image}<span class="review-state-badge ${r.isActive===false?'hidden':'published'}">${r.isActive===false?'مخفي':'منشور'}</span></div>\n                <div class="review-admin-body"><div class="review-rating-stars">${stars}</div><h3>${escFinal(r.customerName||'عميل')}</h3><p>${escFinal(r.text||'')}</p><div class="review-admin-actions"><button class="btn-action btn-edit" onclick="openReviewModal('${escFinal(r.id)}')"><i class="fas fa-pen"></i></button><button class="btn-action btn-hide" onclick="toggleReview('${escFinal(r.id)}',${r.isActive!==false})"><i class="fas ${r.isActive===false?'fa-eye':'fa-eye-slash'}"></i></button><button class="btn-action btn-delete" onclick="deleteReview('${escFinal(r.id)}')"><i class="fas fa-trash"></i></button></div></div>\n            </article>`;
-        }).join('') || '<div class="reviews-empty"><i class="fas fa-star"></i><h3>لا توجد آراء حتى الآن</h3><p>أضف أول رأي عميل لعرضه داخل المتجر.</p></div>';
-        const published = allStoreReviews.filter(r=>r.isActive!==false);
-        const named = published.filter(r=>String(r.customerName||'').trim());
-        const avg = published.length ? published.reduce((s,r)=>s+numFinal(r.rating||0),0)/published.length : 0;
-        const a=document.getElementById('reviewsAverageRating'); if(a)a.innerText=`${avg.toFixed(1)} / 5`;
+            const image = `<img src="${escFinal(r.imageUrl)}" alt="صورة عميل">`;
+            return `<article class="review-admin-card ${r.isActive===false?'is-hidden':''}">\n                <div class="review-admin-image">${image}<span class="review-state-badge ${r.isActive===false?'hidden':'published'}">${r.isActive===false?'مخفي':'منشور'}</span></div>\n                <div class="review-admin-body"><div class="review-admin-actions"><span class="review-photo-meta">صورة عميل</span><button class="btn-action btn-edit" title="تعديل" onclick="openReviewModal('${escFinal(r.id)}')"><i class="fas fa-pen"></i></button><button class="btn-action btn-hide" title="${r.isActive===false?'نشر':'إخفاء'}" onclick="toggleReview('${escFinal(r.id)}',${r.isActive!==false})"><i class="fas ${r.isActive===false?'fa-eye':'fa-eye-slash'}"></i></button><button class="btn-action btn-delete" title="حذف" onclick="deleteReview('${escFinal(r.id)}')"><i class="fas fa-trash"></i></button></div></div>\n            </article>`;
+        }).join('') || '<div class="reviews-empty"><i class="fas fa-camera"></i><h3>لا توجد صور حتى الآن</h3><p>أضف أول صورة لتظهر في معرض العملاء داخل المتجر.</p></div>';
+        const photos = allStoreReviews.filter(r=>r.imageUrl);
+        const published = photos.filter(r=>r.isActive!==false);
+        const hidden = photos.filter(r=>r.isActive===false);
+        const total=document.getElementById('reviewsTotalCount'); if(total)total.innerText=photos.length;
         const pc=document.getElementById('reviewsPublishedCount'); if(pc)pc.innerText=published.length;
-        const nc=document.getElementById('reviewsNamedCount'); if(nc)nc.innerText=named.length;
+        const hc=document.getElementById('reviewsHiddenCount'); if(hc)hc.innerText=hidden.length;
     };
     onValue(ref(db,'storeReviews'), snap => {
         allStoreReviews=[];
         if (snap.exists()) snap.forEach(c=>allStoreReviews.push({id:c.key,...c.val()}));
-        renderReviews();
-    });
-
-    // ---------------------------------------------------------------
-    // Product rating aggregation data.
-    // ---------------------------------------------------------------
-    let productRatings = {};
-    onValue(ref(db,'productRatings'), snap => {
-        productRatings = {};
-        if (snap.exists()) snap.forEach(c => {
-            const rows=[]; c.forEach(r=>rows.push(r.val()));
-            const avg = rows.length ? rows.reduce((s,r)=>s+numFinal(r.rating),0)/rows.length : 0;
-            productRatings[c.key] = { average: avg, count: rows.length };
-            // Keep aggregate on the product itself so the storefront can read it directly.
-            update(ref(db,`products/${c.key}`),{ratingAverage:Number(avg.toFixed(2)),ratingCount:rows.length}).catch(()=>{});
-        });
         renderReviews();
     });
 
@@ -4702,12 +4729,12 @@ if (myProfileBtn && myProfileMenu) {
     const oldSaveSettingsFinal = window.saveSettings;
     window.saveSettings = async () => {
         if (window.currentUserRole !== 'Admin') return window.showAlert?.('الإعدادات متاحة للمدير فقط!','error');
-        const result = await oldSaveSettingsFinal?.();
         const w = {
             enabled: !!document.getElementById('setWhatsappConfirmationEnabled')?.checked,
             endpoint: document.getElementById('setWhatsappConfirmationEndpoint')?.value.trim() || '',
             from: document.getElementById('setWhatsappConfirmationFrom')?.value.trim() || ''
         };
+        const result = await oldSaveSettingsFinal?.();
         await update(ref(db,'storeSettings'),{whatsappConfirmation:w});
         whatsappConfirmationSettings = w;
         return result;
@@ -4770,7 +4797,7 @@ if (myProfileBtn && myProfileMenu) {
         const table = document.getElementById('ordersTableBody');
         if (!table) return baseRenderOrdersFinal?.();
         const allowed = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','view') : true;
-        if (!allowed) { table.innerHTML='<tr><td colspan="8" style="text-align:center;padding:25px">لا تملك صلاحية عرض الطلبات.</td></tr>'; return; }
+        if (!allowed) { table.innerHTML='<tr><td colspan="7" style="text-align:center;padding:25px">لا تملك صلاحية عرض الطلبات.</td></tr>'; return; }
         const currentTab = typeof currentOrderTab !== 'undefined' ? currentOrderTab : 'active';
         const search = (document.getElementById('searchOrders')?.value||'').toLowerCase();
         const dateFilter = document.getElementById('filterOrderDate')?.value||'';
@@ -4785,9 +4812,8 @@ if (myProfileBtn && myProfileMenu) {
             return tabMatch && searchMatch && dateMatch && payMatch && statusMatch;
         });
         const count = document.getElementById('filteredOrdersCount'); if(count) count.innerText=orders.length;
-        if(!orders.length){table.innerHTML='<tr><td colspan="8" style="text-align:center;padding:25px">لا توجد طلبات مطابقة للبحث.</td></tr>'; return;}
+        if(!orders.length){table.innerHTML='<tr><td colspan="7" style="text-align:center;padding:25px">لا توجد طلبات مطابقة للبحث.</td></tr>'; return;}
         const canChange = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','changeStatus') : true;
-        const canDetails = typeof window.hasDashboardPermission === 'function' ? window.hasDashboardPermission('orders','details') : true;
         table.innerHTML = orders.map(order => {
             const statuses = ['قيد المراجعة','جاري التجهيز','تم الشحن','تم تسليمه','ملغي'];
             const options = statuses.map(st=>`<option value="${escFinal(st)}" ${order.status===st?'selected':''}>${st}</option>`).join('');
@@ -4802,7 +4828,7 @@ if (myProfileBtn && myProfileMenu) {
                 else if (st === 'manual') confirmHtml=`<span class="order-confirmation-badge manual"><i class="fab fa-whatsapp"></i> إرسال يدوي</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
                 else confirmHtml='<span class="order-confirmation-badge pending"><i class="fas fa-clock"></i> في انتظار العميل</span>';
             }
-            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td><td>${canDetails?`<button class="btn-action btn-view" onclick="viewOrderDetails('${escFinal(order.dbId)}')"><i class="fas fa-eye"></i></button>`:'—'}</td></tr>`;
+            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td></tr>`;
         }).join('');
     };
 
@@ -4833,6 +4859,7 @@ if (myProfileBtn && myProfileMenu) {
 
 // Download build enhancements: finance attachments and clear order identifiers.
 (() => {
+    const escFinance = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const uploadAttachment = async inputId => {
         return document.getElementById(inputId)?.value.trim() || null;
     };
@@ -4861,7 +4888,40 @@ if (myProfileBtn && myProfileMenu) {
     window.viewFinanceDetails = id => {
         const item = (typeof allFinance !== 'undefined' ? allFinance : []).find(x => x.id === id); if (!item) return;
         const content = document.getElementById('viewFinanceContent'); if (!content) return;
-        content.innerHTML = `<div class="finance-detail"><strong>${item.type==='purchase'?'فاتورة مشتريات':'مصروف خارجي'}</strong><p>${String(item.title||'-')}</p><p>القيمة: ${Math.round(item.amount||0)} ج.م</p>${item.supplier?`<p>المورد: ${String(item.supplier)}</p>`:''}${item.imageUrl?`<a href="${item.imageUrl}" target="_blank" rel="noopener"><img src="${item.imageUrl}" alt="المرفق" class="finance-attachment"></a>`:'<p>لا توجد صورة مرفقة.</p>'}</div>`;
+        content.innerHTML = `<div class="finance-detail"><strong>${item.type==='purchase'?'فاتورة مشتريات':'مصروف خارجي'}</strong><p>${escFinance(item.title||'-')}</p><p>القيمة: ${Math.round(item.amount||0)} ج.م</p>${item.invoiceNo?`<p>رقم الفاتورة: ${escFinance(item.invoiceNo)}</p>`:''}${item.supplier?`<p>المورد: ${escFinance(item.supplier)}</p>`:''}${item.notes?`<p>ملاحظات: ${escFinance(item.notes)}</p>`:''}${item.imageUrl?`<a href="${escFinance(item.imageUrl)}" target="_blank" rel="noopener"><img src="${escFinance(item.imageUrl)}" alt="المرفق" class="finance-attachment"></a>`:'<p>لا توجد صورة مرفقة.</p>'}</div>`;
         document.getElementById('viewFinanceModal').style.display='flex';
+    };
+    window.editFinance = id => {
+        if (window.currentUserRole !== 'Admin') return window.showAlert?.('التعديل متاح للمدير فقط.','error');
+        const item = (typeof allFinance !== 'undefined' ? allFinance : []).find(x => x.id === id);
+        if (!item) return window.showAlert?.('لم يتم العثور على العملية المالية.','error');
+        document.getElementById('editFinanceId').value = id;
+        document.getElementById('editFinanceTitle').value = item.title || '';
+        document.getElementById('editFinanceInvoiceNo').value = item.invoiceNo || '';
+        document.getElementById('editFinanceSupplier').value = item.supplier || '';
+        document.getElementById('editFinanceAmount').value = Number(item.amount || 0);
+        document.getElementById('editFinanceNotes').value = item.notes || '';
+        document.getElementById('editFinanceImageUrl').value = item.imageUrl || '';
+        document.getElementById('editFinanceModal').style.display = 'flex';
+    };
+    window.saveFinanceEdit = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showAlert?.('التعديل متاح للمدير فقط.','error');
+        const id = document.getElementById('editFinanceId')?.value;
+        const title = document.getElementById('editFinanceTitle')?.value.trim();
+        const amount = Number(document.getElementById('editFinanceAmount')?.value || 0);
+        if (!id || !title || amount < 0) return window.showAlert?.('راجع البيان والقيمة قبل الحفظ.','warning');
+        await update(ref(db,`finance/${id}`), cleanData({
+            title,
+            invoiceNo: document.getElementById('editFinanceInvoiceNo')?.value.trim() || null,
+            supplier: document.getElementById('editFinanceSupplier')?.value.trim() || null,
+            amount,
+            notes: document.getElementById('editFinanceNotes')?.value.trim() || null,
+            imageUrl: document.getElementById('editFinanceImageUrl')?.value.trim() || null,
+            updatedAt: Date.now(),
+            updatedBy: currentUser || 'مدير'
+        }));
+        logAction('تعديل عملية مالية', `تعديل ${title}`);
+        closeModal('editFinanceModal');
+        window.showAlert?.('تم حفظ التعديل.','success');
     };
 })();
