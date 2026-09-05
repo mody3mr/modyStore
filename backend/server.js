@@ -145,6 +145,7 @@ async function calculateOrder(body) {
 
     const items = [];
     let subtotal = 0;
+    let offerDiscount = 0;
     for (const raw of itemsInput) {
         const id = clean(raw.id);
         const qty = Math.max(1, Math.floor(Number(raw.qty) || 0));
@@ -157,10 +158,13 @@ async function calculateOrder(body) {
         const discountPrice = Number(product.discountPrice || 0);
         const offerEndAt = Number(product.offerEndAt || 0);
         const hasActiveOffer = discountPrice > 0 && (!offerEndAt || offerEndAt > Date.now());
-        const price = hasActiveOffer ? discountPrice : Number(product.price || 0);
+        const originalPrice = Number(product.price || 0);
+        const price = hasActiveOffer ? discountPrice : originalPrice;
         if (price < 0) throw new Error('سعر منتج غير صالح.');
-        items.push({ id, name: clean(product.name, 'منتج'), price, qty, imageUrl: product.imageUrl || '' });
+        const itemOfferDiscount = Math.max(0, originalPrice - price) * qty;
+        items.push({ id, name: clean(product.name, 'منتج'), price, originalPrice, offerDiscount: itemOfferDiscount, qty, imageUrl: product.imageUrl || '' });
         subtotal += price * qty;
+        offerDiscount += itemOfferDiscount;
     }
 
     const customer = body.customer || {};
@@ -183,7 +187,7 @@ async function calculateOrder(body) {
     }
 
     const total = Math.max(0, subtotal + shippingCost - discount);
-    return { items, subtotal, shippingCost, discount, total, voucher };
+    return { items, subtotal, shippingCost, discount, offerDiscount, total, voucher };
 }
 
 async function decrementStock(items) {
@@ -268,7 +272,7 @@ app.post('/api/orders', async (req, res) => {
                     : paymentMethod === 'محفظة إلكترونية' ? methods.wallet === true
                     : paymentMethod === 'إنستا باي' ? methods.instapay === true
                     : paymentMethod === 'فيزا' ? methods.visa === true && paymobEnabled
-                    : methods.paymob === true && paymobEnabled;
+                    : (methods.paymob === true || paymobEnabled);
                 if (!allowed) return res.status(400).json({ message: 'طريقة الدفع غير متاحة حالياً.' });
             }
         }
@@ -294,6 +298,7 @@ app.post('/api/orders', async (req, res) => {
             subtotal: calculated.subtotal,
             shippingCost: calculated.shippingCost,
             discount: calculated.discount,
+            offerDiscount: calculated.offerDiscount,
             total: calculated.total,
             status: 'قيد المراجعة',
             voucher: calculated.voucher ? { id: calculated.voucher.id, code: calculated.voucher.code } : null,
@@ -309,7 +314,15 @@ app.post('/api/orders', async (req, res) => {
             await db.ref(`orders/${orderId}`).update({ stockDeducted: true, paymentStatus: order.paymentStatus });
             await addVoucherUsage(calculated.voucher, order.customer, orderId).catch(error => console.error('Voucher usage log failed:', error.message));
             await sendTelegram(telegramOrderMessage(order)).catch(error => console.error('Telegram notification failed:', error.message));
-            return res.json({ ok: true, orderId, paymentRequired: false });
+            return res.json({
+                ok: true,
+                orderId,
+                paymentRequired: false,
+                subtotal: calculated.subtotal,
+                shippingCost: calculated.shippingCost,
+                discount: calculated.discount,
+                total: calculated.total
+            });
         }
 
         if (!PAYMOB_SECRET_KEY || !PAYMOB_PUBLIC_KEY || !PAYMOB_INTEGRATION_IDS.length) {
@@ -366,7 +379,16 @@ app.post('/api/orders', async (req, res) => {
             paymentStatus: 'pending',
             paymob: { intentionId: paymobData.id || null, clientSecret: paymobData.client_secret, amountCents, checkoutUrl }
         });
-        return res.json({ ok: true, orderId, paymentRequired: true, checkoutUrl });
+        return res.json({
+            ok: true,
+            orderId,
+            paymentRequired: true,
+            checkoutUrl,
+            subtotal: calculated.subtotal,
+            shippingCost: calculated.shippingCost,
+            discount: calculated.discount,
+            total: calculated.total
+        });
     } catch (error) {
         console.error('Create order error:', error);
         return res.status(500).json({ message: error.message || 'حدث خطأ أثناء إنشاء الطلب.' });
@@ -491,7 +513,16 @@ app.get('/api/orders/status/:orderId', async (req, res) => {
         const snap = await db.ref(`orders/${orderId}`).once('value');
         if (!snap.exists()) return res.status(404).json({ message: 'الطلب غير موجود.' });
         const order = snap.val();
-        return res.json({ orderId, status: order.status, paymentStatus: order.paymentStatus || null, total: order.total });
+        return res.json({
+            orderId,
+            secretCode: order.secretCode || orderId,
+            status: order.status,
+            paymentStatus: order.paymentStatus || null,
+            subtotal: order.subtotal || 0,
+            shippingCost: order.shippingCost || 0,
+            discount: order.discount || 0,
+            total: order.total || 0
+        });
     } catch (error) {
         return res.status(500).json({ message: 'تعذر قراءة حالة الطلب.' });
     }
