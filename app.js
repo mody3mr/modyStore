@@ -12,11 +12,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// For GitHub Pages, set storeSettings.orderApiBaseUrl from the dashboard to
+// the deployed backend. Same-origin deployments may leave it empty.
 const STORE_API_BASE_URL = "";
 
 function apiUrl(path) {
-    const base = STORE_API_BASE_URL.replace(/\/$/, "");
-    return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+    const configured = String(storeSettings.orderApiBaseUrl || STORE_API_BASE_URL || '').trim();
+    const base = configured.replace(/\/$/, "");
+    const requestPath = path.startsWith("/") ? path : `/${path}`;
+    // Accept both `https://host` and `https://host/api` in the dashboard.
+    if (/\/api$/i.test(base) && /^\/api\//i.test(requestPath)) {
+        return `${base}${requestPath.slice(4)}`;
+    }
+    return `${base}${requestPath}`;
 }
 
 // Keep storefront pricing aligned with the dashboard's timed offers.
@@ -99,15 +107,20 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         const pmSelect = document.getElementById("paymentMethod");
         if (pmSelect) {
             pmSelect.innerHTML = "";
-            const methods = storeSettings.paymentMethods || {};
-            if (methods.cod) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
-            if (storeSettings.paymob && storeSettings.paymob.enabled) {
+            // Older stores may not have paymentMethods yet; keep cash as the
+            // backwards-compatible default until the admin configures them.
+            const configured = storeSettings.paymentMethods;
+            const methods = configured && typeof configured === 'object'
+                ? configured
+                : { cod: true, paymob: false, wallet: false, instapay: false, visa: false };
+            if (methods.cod === true) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
+            if (methods.paymob === true && storeSettings.paymob?.enabled === true) {
                 pmSelect.innerHTML += '<option value="Paymob">💳 الدفع الإلكتروني - Paymob</option>';
             }
-            // الحفاظ على طرق الدفع القديمة إن كانت مفعلة من لوحة التحكم.
-            if (methods.wallet) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
-            if (methods.instapay) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
-            if (methods.visa && !(storeSettings.paymob && storeSettings.paymob.enabled)) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
+            if (methods.wallet === true) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
+            if (methods.instapay === true) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
+            if (methods.visa === true) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
+            if (!pmSelect.options.length) pmSelect.innerHTML = '<option value="" disabled selected>لا توجد طريقة دفع متاحة حالياً</option>';
         }
 
         // بيانات الفوتر
@@ -597,14 +610,22 @@ window.sendOrder = async () => {
     };
 
     try {
-        const response = await fetch(apiUrl('/api/orders'), {
+        const endpoint = apiUrl('/api/orders');
+        const isGithubPages = /.github.io$/i.test(window.location.hostname);
+        if (isGithubPages && endpoint === '/api/orders') {
+            throw new Error('لم يتم ضبط رابط خادم الطلبات. افتح الداشبورد > الإعدادات > Orders API Base URL واحفظ رابط الـ Backend.');
+        }
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.message || 'تعذر إنشاء الطلب.');
+        if (!response.ok) {
+            if (response.status === 404) throw new Error('خادم الطلبات غير متصل أو المسار غير صحيح. راجع Orders API Base URL من الداشبورد.');
+            throw new Error(result.message || 'تعذر إنشاء الطلب.');
+        }
 
         if (result.paymentRequired && result.checkoutUrl) {
             sessionStorage.setItem('pendingPaymobOrderId', result.orderId);
@@ -629,7 +650,10 @@ window.sendOrder = async () => {
         });
     } catch (error) {
         console.error('Order submission error:', error);
-        Swal.fire({icon: 'error', title: 'تعذر إرسال الطلب', text: error.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.', confirmButtonColor: 'var(--title-color)'});
+        const message = error?.name === 'TypeError'
+            ? 'تعذر الاتصال بخادم الطلبات. تأكد من تشغيل الـ Backend وضبط Orders API Base URL من الداشبورد.'
+            : (error.message || 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.');
+        Swal.fire({icon: 'error', title: 'تعذر إرسال الطلب', text: message, confirmButtonColor: 'var(--title-color)'});
     } finally {
         btn.innerHTML = `تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i>`;
         btn.disabled = false;
@@ -788,6 +812,17 @@ window.trackOrder = () => {
     });
 };
 
+async function requestOrderCancellation(dbId, phone, reason) {
+    const response = await fetch(apiUrl(`/api/orders/${encodeURIComponent(dbId)}/cancel`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, reason })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'تعذر إلغاء الطلب.');
+    return data;
+}
+
 window.cancelCustomerOrder = (dbId) => {
     Swal.fire({
         title: 'إلغاء الطلب؟',
@@ -800,13 +835,13 @@ window.cancelCustomerOrder = (dbId) => {
         cancelButtonText: 'تراجع'
     }).then((result) => {
         if (result.isConfirmed) {
-            update(ref(db, `orders/${dbId}`), { 
-                status: 'ملغي', 
-                cancelledAt: Date.now() 
-            }).then(() => {
+            const trackedPhone = document.getElementById('trackPhone').value.trim();
+            requestOrderCancellation(dbId, trackedPhone, 'تم الإلغاء بواسطة العميل').then(() => {
                 Swal.fire({icon: 'success', title: 'تم', text: 'تم إلغاء الطلب بنجاح.', confirmButtonColor: 'var(--title-color)'});
                 document.getElementById('trackingModal').style.display = 'none';
                 document.getElementById('overlay').classList.remove('show');
+            }).catch(error => {
+                Swal.fire({icon: 'error', title: 'تعذر الإلغاء', text: error.message, confirmButtonColor: 'var(--title-color)'});
             });
         }
     });
@@ -858,15 +893,13 @@ window.editCustomerOrder = (dbId) => {
                         }
                     }
                     
-                    update(ref(db, `orders/${dbId}`), { 
-                        status: 'ملغي', 
-                        cancelledAt: Date.now(),
-                        editNote: 'تم الإلغاء بواسطة العميل بغرض التعديل'
-                    }).then(() => {
+                    requestOrderCancellation(dbId, orderData.customer?.phone || '', 'تم الإلغاء بواسطة العميل بغرض التعديل').then(() => {
                         updateCartUI();
                         document.getElementById('trackingModal').style.display = 'none';
                         document.getElementById('cartSidebar').classList.add('open');
                         Toast.fire({icon: 'success', title: 'تم تجهيز السلة للتعديل'});
+                    }).catch(error => {
+                        Swal.fire({icon: 'error', title: 'تعذر تجهيز الطلب للتعديل', text: error.message, confirmButtonColor: 'var(--title-color)'});
                     });
                 }
             });
