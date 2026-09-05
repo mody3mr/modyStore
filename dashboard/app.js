@@ -798,7 +798,7 @@ window.renderOrdersTable = () => {
         sHtml += `</select>`;
         table.innerHTML += `
             <tr>
-                <td style="font-weight:900; color:var(--primary);">#${order.displayId || order.orderId}</td>
+                <td style="font-weight:900; color:var(--primary);">${order.displayId || order.orderId}</td>
                 <td>
                     <b>${order.customer ? order.customer.name : 'بدون اسم'}</b><br>
                     <span class="meta-info">${order.paymentMethod || "الدفع عند الاستلام"}</span>
@@ -907,7 +907,7 @@ window.viewOrderDetails = (orderId) => {
     if (!order) return window.showAlert('لم يتم العثور على الطلب!', 'error');
 
     // تعبئة البيانات في المودال
-    document.getElementById('orderModalTitle').innerText = `تفاصيل الطلب #${order.displayId || order.orderId}`;
+    document.getElementById('orderModalTitle').innerText = `تفاصيل الطلب ${order.displayId || order.orderId}`;
     document.getElementById('oName').innerText = order.customer ? order.customer.name : '-';
     document.getElementById('oPhone').innerText = order.customer ? order.customer.phone : '-';
     document.getElementById('oAddress').innerText = order.customer ? order.customer.address : '-';
@@ -989,7 +989,7 @@ window.viewOrderDetails = (orderId) => {
     document.getElementById('invCustName').innerText = order.customer ? order.customer.name : '-';
     document.getElementById('invCustPhone').innerText = order.customer ? order.customer.phone : '-';
     document.getElementById('invCustAddress').innerText = `${order.customer ? order.customer.city : ''} - ${order.customer ? order.customer.address : ''}`;
-    document.getElementById('invOrderId').innerText = `#${order.displayId || order.orderId}`;
+    document.getElementById('invOrderId').innerText = `${order.displayId || order.orderId}`;
     document.getElementById('invDate').innerText = formatDateOnly(order.createdAt);
     
     const invItemsList = document.getElementById('invItemsList');
@@ -1107,8 +1107,8 @@ onValue(ref(db, 'orders'), (snapshot) => {
                 o.dbId = child.key; 
                 allOrders.push(o);
                 
+                ordersCount++;
                 if (o.status !== 'ملغي' && o.status !== 'مرتجع') {
-                    ordersCount++;
                     totalRev += (o.total || 0);
                 }
                 if (o.status === 'قيد المراجعة') {
@@ -2000,10 +2000,10 @@ window.filterCategories = () => {
     const select1 = document.getElementById("prodCategory");
     const select2 = document.getElementById("filterProductCat");
     
-    if (!table) return;
-    table.innerHTML = ""; 
     if (select1) select1.innerHTML = "";
     if (select2) select2.innerHTML = "<option value=''>كل الأقسام</option>";
+    if (!table) return;
+    table.innerHTML = ""; 
     
     let filtered = allCategories.filter(c => (c.name || "").toLowerCase().includes(term));
 
@@ -3250,6 +3250,106 @@ if (myProfileBtn && myProfileMenu) {
     setTimeout(()=>{sanitizeInputs();if(window.__dashboardAuthReady)window.applyDashboardPermissions();updateStatusSummary();if(window.__dashboardAuthReady)renderInventoryTable();},1200);
 })();
 
+// Dashboard polish: unified analytics metrics, order exports and robust mobile UI.
+(() => {
+    const safeNumber = value => Number(value || 0);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const currentOrders = () => typeof allOrders !== 'undefined' ? allOrders : [];
+    const visibleOrders = () => currentOrders().filter(o => {
+        const tab = typeof currentOrderTab !== 'undefined' ? currentOrderTab : 'active';
+        const active = ['قيد المراجعة','جاري التجهيز','تم الشحن'].includes(o.status);
+        return tab === 'active' ? active : !active;
+    });
+
+    window.exportOrdersToExcel = () => {
+        if (typeof XLSX === 'undefined') return window.showAlert('مكتبة Excel غير متاحة حالياً.', 'error');
+        if (typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('orders', 'view')) return;
+        const rows = visibleOrders().map(o => ({
+            'رقم الطلب': o.displayId || o.orderId || '-',
+            'العميل': o.customer?.name || '-',
+            'الهاتف': o.customer?.phone || '-',
+            'الحالة': o.status || '-',
+            'طريقة الدفع': o.paymentMethod || '-',
+            'المصدر': o.source || 'الموقع الإلكتروني',
+            'الإجمالي': safeNumber(o.total),
+            'التاريخ': typeof formatDateTime === 'function' ? formatDateTime(o.createdAt) : new Date(o.createdAt).toLocaleString('ar-EG')
+        }));
+        if (!rows.length) return window.showAlert('لا توجد طلبات مطابقة للتصدير.', 'warning');
+        const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+        XLSX.writeFile(wb, `Orders_Report_${Date.now()}.xlsx`);
+        if (typeof logAction === 'function') logAction('تصدير الطلبات', 'تم تصدير تقرير الطلبات إلى Excel');
+    };
+
+    window.exportOrdersToPDF = () => {
+        if (typeof window.hasDashboardPermission === 'function' && !window.hasDashboardPermission('orders', 'view')) return;
+        const rows = visibleOrders().map(o => `<tr><td>${escapeHtml(o.displayId || o.orderId || '-')}</td><td>${escapeHtml(o.customer?.name || '-')}</td><td>${escapeHtml(o.customer?.phone || '-')}</td><td>${escapeHtml(o.status || '-')}</td><td>${escapeHtml(o.paymentMethod || '-')}</td><td>${Math.round(safeNumber(o.total))} ج.م</td><td>${escapeHtml(typeof formatDateTime === 'function' ? formatDateTime(o.createdAt) : '')}</td></tr>`).join('');
+        if (!rows) return window.showAlert('لا توجد طلبات مطابقة للتصدير.', 'warning');
+        const root = document.getElementById('printRoot');
+        if (!root) return;
+        root.innerHTML = `<div dir="rtl" style="font-family:Cairo;padding:18px;color:#111"><h1 style="text-align:center">تقرير الطلبات</h1><p>تاريخ الاستخراج: ${new Date().toLocaleString('ar-EG')}</p><table style="width:100%;border-collapse:collapse;text-align:center"><thead><tr>${['رقم الطلب','العميل','الهاتف','الحالة','الدفع','الإجمالي','التاريخ'].map(h => `<th style="border:1px solid #111;padding:7px">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        document.body.classList.add('dashboard-printing');
+        window.print();
+        setTimeout(() => { document.body.classList.remove('dashboard-printing'); root.innerHTML = ''; }, 700);
+        if (typeof logAction === 'function') logAction('تصدير الطلبات', 'تم تصدير تقرير الطلبات إلى PDF');
+    };
+
+    const setMetric = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value; };
+    const metricFromSnapshot = snap => {
+        if (!snap?.exists()) return 0;
+        const data = snap.val();
+        if (typeof data === 'number') return data;
+        if (Array.isArray(data)) return data.length;
+        return data && typeof data === 'object' ? Object.keys(data).length : 0;
+    };
+
+    const refreshDashboardMetrics = async () => {
+        const orders = currentOrders();
+        const valid = orders.filter(o => !['ملغي','مرتجع'].includes(o.status));
+        const revenue = valid.reduce((sum, o) => sum + safeNumber(o.total), 0);
+        const costs = (typeof allFinance !== 'undefined' ? allFinance : []).reduce((sum, f) => sum + safeNumber(f.amount), 0);
+        setMetric('statNetProfit', `${Math.round(revenue - costs)} ج.م`);
+        setMetric('statTotalOrders', orders.length);
+        setMetric('statTotalRevenue', `${Math.round(revenue)} ج.م`);
+
+        const candidates = await Promise.all(['visits','analytics/visits','siteVisits'].map(path => get(ref(db, path)).catch(() => null)));
+        const visits = Math.max(...candidates.map(metricFromSnapshot), 0);
+        setMetric('statVisits', visits);
+        const cartCandidates = await Promise.all(['cartEvents','analytics/cartAdds','cartAdds'].map(path => get(ref(db, path)).catch(() => null)));
+        const cartAdds = Math.max(...cartCandidates.map(metricFromSnapshot), 0);
+        const completed = orders.filter(o => o.items?.length).length;
+        setMetric('statCartAdds', cartAdds);
+        setMetric('statCartCompleted', completed);
+        setMetric('statCartAbandoned', Math.max(0, cartAdds - completed));
+    };
+    window.refreshDashboardMetrics = refreshDashboardMetrics;
+    onValue(ref(db, 'orders'), () => setTimeout(refreshDashboardMetrics, 0));
+    onValue(ref(db, 'finance'), () => setTimeout(refreshDashboardMetrics, 0));
+    // Visits/cart paths are optional and are read when the order/finance data changes.
+
+    const notifDropdown = document.getElementById('notifDropdown');
+    if (notifDropdown) notifDropdown.style.right = '0';
+
+    const darkToggle = document.getElementById('darkModeToggle');
+    const setDarkMode = enabled => {
+        document.body.classList.toggle('dark-mode', enabled);
+        if (darkToggle) darkToggle.innerHTML = `<i class="fas fa-${enabled ? 'sun' : 'moon'}"></i>`;
+        try { localStorage.setItem('modyStoreDarkMode', enabled ? '1' : '0'); } catch (e) {}
+    };
+    let darkEnabled = false;
+    try { darkEnabled = localStorage.getItem('modyStoreDarkMode') === '1'; } catch (e) {}
+    setDarkMode(darkEnabled);
+    if (darkToggle) darkToggle.onclick = () => setDarkMode(!document.body.classList.contains('dark-mode'));
+
+    const sidebar = document.getElementById('sidebar'), toggle = document.getElementById('sidebarToggle');
+    if (sidebar && toggle) toggle.onclick = event => {
+        event.preventDefault();
+        const mobile = window.innerWidth <= 768;
+        sidebar.classList.toggle('collapsed', mobile ? !sidebar.classList.contains('collapsed') : !sidebar.classList.contains('collapsed'));
+        document.body.classList.toggle('sidebar-mobile-open', mobile && sidebar.classList.contains('collapsed'));
+    };
+})();
+
 // V2 corrective overrides (permissions, finance/shipping logs, inventory movements)
 (() => {
     const esc2 = (v='') => String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3880,7 +3980,7 @@ if (myProfileBtn && myProfileMenu) {
             const options=statuses.map(st=>`<option value="${st}" ${order.status===st?'selected':''}>${st}</option>`).join('');
             const statusHtml=canChange?`<select class="status-select" onchange="requestOrderStatusUpdate('${order.dbId}',this,'${order.status}','${escP(order.displayId||order.orderId)}')">${options}</select>`:`<span class="badge ${order.status==='تم الشحن'?'badge-active':'badge-inactive'}">${escP(order.status)}</span>`;
             table.innerHTML+=`<tr>
-                <td style="font-weight:900;color:var(--primary);">#${escP(order.displayId||order.orderId)}</td>
+                <td style="font-weight:900;color:var(--primary);">${escP(order.displayId||order.orderId)}</td>
                 <td><b>${escP(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escP(order.paymentMethod||'الدفع عند الاستلام')}</span></td>
                 <td><span class="source-chip">${escP(order.source||'الموقع الإلكتروني')}</span></td>
                 <td dir="ltr" class="meta-info">${escP(formatDateTime(order.createdAt))}</td>
@@ -4658,7 +4758,7 @@ if (myProfileBtn && myProfileMenu) {
                 else if (st === 'manual') confirmHtml=`<span class="order-confirmation-badge manual"><i class="fab fa-whatsapp"></i> إرسال يدوي</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
                 else confirmHtml='<span class="order-confirmation-badge pending"><i class="fas fa-clock"></i> في انتظار العميل</span>';
             }
-            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td><td>${canDetails?`<button class="btn-action btn-view" onclick="viewOrderDetails('${escFinal(order.dbId)}')"><i class="fas fa-eye"></i></button>`:'—'}</td></tr>`;
+            return `<tr><td style="font-weight:900;color:var(--primary);">${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td><td>${canDetails?`<button class="btn-action btn-view" onclick="viewOrderDetails('${escFinal(order.dbId)}')"><i class="fas fa-eye"></i></button>`:'—'}</td></tr>`;
         }).join('');
     };
 
