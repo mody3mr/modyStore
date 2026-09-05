@@ -3251,6 +3251,23 @@ if (myProfileBtn && myProfileMenu) {
 })();
 
 (() => {
+    const escOffer = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const renderOffers = () => {
+        const table=document.getElementById('offersTableBody'); if(!table || typeof allProducts==='undefined')return;
+        table.innerHTML=(allProducts||[]).map(p=>`<tr><td><b>${escOffer(p.name)}</b></td><td>${Number(p.price||0)} ج.م</td><td><input class="offer-price-input" id="offer-price-${p.id}" type="number" min="0" value="${Number(p.discountPrice||0)}"></td><td><div class="offer-duration-row"><input id="offer-duration-${p.id}" type="number" min="1" value="${p.offerDuration||''}" placeholder="المدة"><select id="offer-unit-${p.id}"><option value="hours" ${p.offerUnit==='hours'?'selected':''}>ساعات</option><option value="days" ${p.offerUnit==='days'?'selected':''}>أيام</option><option value="minutes" ${p.offerUnit==='minutes'?'selected':''}>دقائق</option></select></div></td><td>${p.offerEndAt?escOffer(typeof formatDateTime==='function'?formatDateTime(p.offerEndAt):new Date(p.offerEndAt).toLocaleString('ar-EG')):'غير محدد'}</td><td><button class="btn-action btn-edit" title="حفظ العرض" onclick="saveOffer('${escOffer(p.id)}')"><i class="fas fa-save"></i></button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:25px">لا توجد منتجات بعد.</td></tr>';
+    };
+    window.saveOffer = async id => {
+        if(typeof window.hasDashboardPermission==='function'&&!window.hasDashboardPermission('products','edit'))return;
+        const price=Number(document.getElementById(`offer-price-${id}`)?.value||0), duration=Number(document.getElementById(`offer-duration-${id}`)?.value||0), unit=document.getElementById(`offer-unit-${id}`)?.value||'hours';
+        const end=price>0&&duration>0?Date.now()+duration*(unit==='days'?86400000:unit==='minutes'?60000:3600000):null;
+        await update(ref(db,`products/${id}`),{discountPrice:price||0,offerDuration:duration||0,offerUnit:unit,offerEndAt:end||0});
+        showAlert('تم حفظ العرض بنجاح','success'); renderOffers();
+    };
+    window.renderOffers=renderOffers;
+    onValue(ref(db,'products'),()=>setTimeout(renderOffers,0));
+})();
+
+(() => {
     const baseFinanceRender = window.renderFinanceTable;
     window.renderFinanceTable = () => {
         baseFinanceRender?.();
@@ -3841,6 +3858,8 @@ if (myProfileBtn && myProfileMenu) {
         if(!window.hasDashboardPermission('orders','create')) return window.showAlert('ليس لديك صلاحية إنشاء طلبات يدوية!','error');
         manualOrderItems=[];
         ['manualCustName','manualCustPhone','manualCustPhone2','manualCustCity','manualCustRegion','manualCustAddress','manualOrderNotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+        const citySelect=document.getElementById('manualCustCity');
+        if(citySelect){citySelect.innerHTML='<option value="">اختر المحافظة...</option>';(allShipping||[]).filter(s=>s.isActive!==false).forEach(s=>citySelect.innerHTML+=`<option value="${escP(s.name)}" data-shipping-price="${numP(s.price)}">${escP(s.name)} — ${moneyP(s.price)}</option>`);}
         document.getElementById('manualShippingCost').value='0';
         document.getElementById('manualDiscount').value='0';
         document.getElementById('manualOrderSource').value='واتساب';
@@ -3851,6 +3870,10 @@ if (myProfileBtn && myProfileMenu) {
         renderManualItems();
         document.getElementById('manualOrderModal').style.display='flex';
     };
+    document.getElementById('manualCustCity')?.addEventListener('change', e => {
+        const price=Number(e.target.selectedOptions?.[0]?.dataset?.shippingPrice||0), input=document.getElementById('manualShippingCost');
+        if(input) input.value=price; window.updateManualOrderTotals?.();
+    });
     window.addManualOrderItem = () => {
         if(!window.hasDashboardPermission('orders','create')) return;
         const s=document.getElementById('manualProductSelect');
@@ -4752,13 +4775,8 @@ if (myProfileBtn && myProfileMenu) {
 
 // Download build enhancements: finance attachments and clear order identifiers.
 (() => {
-    const uploadAttachment = async (inputId, folder) => {
-        const file = document.getElementById(inputId)?.files?.[0];
-        if (!file) return null;
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const target = storageRef(storage, `${folder}/${Date.now()}-${safeName}`);
-        await uploadBytes(target, file);
-        return getDownloadURL(target);
+    const uploadAttachment = async inputId => {
+        return document.getElementById(inputId)?.value.trim() || null;
     };
     window.savePurchaseInvoice = async () => {
         const imageUrl = await uploadAttachment('purInvoiceImage', 'finance/invoices').catch(() => null);
