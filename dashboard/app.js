@@ -3250,6 +3250,25 @@ if (myProfileBtn && myProfileMenu) {
     setTimeout(()=>{sanitizeInputs();if(window.__dashboardAuthReady)window.applyDashboardPermissions();updateStatusSummary();if(window.__dashboardAuthReady)renderInventoryTable();},1200);
 })();
 
+// Correct category population and review image links for product forms.
+(() => {
+    const escLink = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const populateProductCategories = selected => {
+        const select=document.getElementById('prodCategory'); if(!select)return;
+        const current=selected ?? select.value;
+        select.innerHTML='<option value="">اختر القسم...</option>';
+        (typeof allCategories!=='undefined'?allCategories:[]).filter(c=>c.isActive!==false).forEach(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;o.selected=c.name===current;select.appendChild(o);});
+    };
+    window.syncProductCategories = populateProductCategories;
+    const oldOpen=window.openProductModal; window.openProductModal=()=>{oldOpen?.();populateProductCategories('');};
+    const oldEdit=window.editProduct; window.editProduct=id=>{oldEdit?.(id);const product=(typeof allProducts!=='undefined'?allProducts:[]).find(p=>p.id===id);populateProductCategories(product?.category||'');};
+    const oldCategoryRender=window.filterCategories; window.filterCategories=()=>{oldCategoryRender?.();populateProductCategories();};
+    onValue(ref(db,'categories'),()=>setTimeout(()=>populateProductCategories(),0));
+
+    const reviewUrl=document.getElementById('reviewImageUrl');
+    if(reviewUrl)reviewUrl.addEventListener('input',()=>{const preview=document.getElementById('reviewImagePreview');if(!preview)return;const url=reviewUrl.value.trim();preview.innerHTML=url?`<img src="${escLink(url)}" alt="معاينة الصورة" onerror="this.style.display='none'">`:'';});
+})();
+
 (() => {
     const escOffer = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const renderOffers = () => {
@@ -3280,6 +3299,19 @@ if (myProfileBtn && myProfileMenu) {
             deleteButton.parentElement?.insertBefore(button, deleteButton);
         });
     };
+})();
+
+// Final category sync after all product modal overrides have loaded.
+(() => {
+    const syncCategories = selected => {
+        const select=document.getElementById('prodCategory'); if(!select)return;
+        const value=selected ?? select.value;
+        select.innerHTML='<option value="">اختر القسم...</option>';
+        (typeof allCategories!=='undefined'?allCategories:[]).filter(c=>c.isActive!==false).forEach(c=>{const option=document.createElement('option');option.value=c.name;option.textContent=c.name;option.selected=c.name===value;select.appendChild(option);});
+    };
+    const open=window.openProductModal;window.openProductModal=()=>{open?.();syncCategories('');};
+    const edit=window.editProduct;window.editProduct=id=>{edit?.(id);const p=(typeof allProducts!=='undefined'?allProducts:[]).find(x=>x.id===id);syncCategories(p?.category||'');};
+    onValue(ref(db,'categories'),()=>setTimeout(()=>syncCategories(),0));
 })();
 
 // Final dashboard behavior layer for the downloadable build.
@@ -4079,6 +4111,7 @@ if (myProfileBtn && myProfileMenu) {
     const previousOpenProductModalV3 = window.openProductModal;
     window.openProductModal = () => {
         if(typeof previousOpenProductModalV3==='function') previousOpenProductModalV3();
+        window.syncProductCategories?.('');
         const d=document.getElementById('prodOfferDuration'); if(d)d.value='';
         const u=document.getElementById('prodOfferUnit'); if(u)u.value='hours';
         const days=document.getElementById('prodOfferDays'); if(days)days.value='';
@@ -4088,6 +4121,7 @@ if (myProfileBtn && myProfileMenu) {
         if(typeof previousEditProductV3==='function') previousEditProductV3(id);
         const p=(allProducts||[]).find(x=>x.id===id);
         if(!p)return;
+        window.syncProductCategories?.(p.category||'');
         const d=document.getElementById('prodOfferDuration'); if(d)d.value=p.offerDuration||'';
         const u=document.getElementById('prodOfferUnit'); if(u)u.value=p.offerUnit||'hours';
         const days=document.getElementById('prodOfferDays'); if(days)days.value=(p.offerUnit==='days'?p.offerDuration||'':'');
