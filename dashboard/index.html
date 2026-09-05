@@ -281,18 +281,9 @@
                         <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-bullseye"></i></div>
                         <div class="stat-info"><h3>أكثر مصدر للطلبات</h3><p id="statTopOrderSource">-</p><small id="statTopOrderSourceMeta">يتم الحساب من الطلبات الحقيقية</small></div>
                     </div>
-                    <div class="stat-card analytics-kpi-card">
-                        <div class="stat-icon" style="color:#06b6d4;background:#cffafe;"><i class="fas fa-users"></i></div>
-                        <div class="stat-info"><h3>عدد الزيارات</h3><p id="statVisits">0</p><small>من سجل الزيارات الحقيقي</small></div>
-                    </div>
-                    <div class="stat-card analytics-kpi-card">
-                        <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-cart-plus"></i></div>
-                        <div class="stat-info"><h3>مرات الإضافة للسلة</h3><p id="statCartAdds">0</p><small><span class="analytics-good">مكتملة: <b id="statCartCompleted">0</b></span> <span class="analytics-bad">غير مكتملة: <b id="statCartAbandoned">0</b></span></small></div>
-                    </div>
-                    <div class="stat-card analytics-kpi-card clickable-card" onclick="exportProfitReport()">
-                        <div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-chart-line"></i></div>
-                        <div class="stat-info"><h3>صافي الربح</h3><p id="statNetProfit">0 ج.م</p><small>اضغط لاستخراج التقرير</small></div>
-                    </div>
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#06b6d4;background:#cffafe;"><i class="fas fa-users"></i></div><div class="stat-info"><h3>عدد الزيارات</h3><p id="statVisits">0</p><small>من سجل الزيارات</small></div></div>
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-cart-plus"></i></div><div class="stat-info"><h3>مرات الإضافة للسلة</h3><p id="statCartAdds">0</p><small><span class="analytics-good">مكتملة: <b id="statCartCompleted">0</b></span> <span class="analytics-bad">غير مكتملة: <b id="statCartAbandoned">0</b></span></small></div></div>
+                    <div class="stat-card analytics-kpi-card clickable-card" onclick="exportProfitReport()"><div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3>صافي الربح</h3><p id="statNetProfit">0 ج.م</p><small>اضغط لاستخراج التقرير</small></div></div>
                 </div>
 
                 <div class="charts-container grid-2" style="margin-top: 30px;">
@@ -329,12 +320,8 @@
                         <button class="btn-save" id="btnCreateManualOrder" style="background-color: var(--success);" onclick="openManualOrderModal()">
                             <i class="fas fa-plus"></i> إنشاء أوردر يدوي
                         </button>
-                        <button class="btn-save" style="background-color: #10b981;" onclick="exportOrdersToExcel()">
-                            <i class="fas fa-file-excel"></i> تصدير Excel
-                        </button>
-                        <button class="btn-save" style="background-color: #ef4444;" onclick="exportOrdersToPDF()">
-                            <i class="fas fa-file-pdf"></i> تصدير PDF
-                        </button>
+                        <button class="btn-save" style="background:#10b981;" onclick="exportOrdersToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-save" style="background:#ef4444;" onclick="exportOrdersToPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
                     </div>
                 </div>
                 
@@ -361,9 +348,7 @@
                     <select id="filterOrderPayment" onchange="renderOrdersTable()">
                         <option value="">كل طرق الدفع</option>
                         <option value="كاش">كاش</option>
-                        <option value="محفظة إلكترونية">محافظ إلكترونية</option>
-                        <option value="إنستا">إنستا باي</option>
-                        <option value="فيزا">فيزا</option>
+                            <option value="باي موب">Paymob</option>
                     </select>
                 </div>
 
@@ -824,9 +809,7 @@
                         </div>
                         <div class="payment-settings-grid">
                             <label class="payment-setting"><input type="checkbox" id="setPayCod"><span class="payment-check"><i class="fas fa-money-bill-wave"></i></span><span><b>كاش</b><small>عند الاستلام</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayWallet"><span class="payment-check"><i class="fas fa-wallet"></i></span><span><b>محفظة إلكترونية</b><small>Vodafone / Orange / Etisalat</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayInsta"><span class="payment-check"><i class="fas fa-bolt"></i></span><span><b>إنستا باي</b><small>تحويل فوري</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayVisa"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>فيزا</b><small>بطاقة ائتمان</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayPaymob"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Paymob</b><small>دفع إلكتروني</small></span><em></em></label>
                         </div>
                     </section>
                 </div>
@@ -986,9 +969,6 @@
                             <div class="input-group"><label>طريقة الدفع *</label>
                                 <select id="manualPaymentMethod">
                                     <option value="كاش">الدفع عند الاستلام</option>
-                                    <option value="محفظة إلكترونية">محفظة إلكترونية</option>
-                                    <option value="إنستا باي">إنستا باي</option>
-                                    <option value="فيزا / بطاقة ائتمان">فيزا / بطاقة ائتمان</option>
                                     <option value="Paymob">Paymob</option>
                                 </select>
                             </div>
@@ -1147,6 +1127,7 @@
                     <div class="input-group" style="margin:0;"><label>مصاريف شحن/نقل البضاعة</label><input type="number" id="purShipping" value="0" onkeyup="calculatePurTotal()"></div>
                     <div style="text-align:left; font-size:18px; font-weight:900; color:var(--primary);">الإجمالي: <span id="purTotalAmount">0</span> ج.م</div>
                 </div>
+                <div class="input-group"><label>صورة الفاتورة</label><input type="file" id="purInvoiceImage" accept="image/*,.pdf"></div>
 
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('purchaseModal')">إلغاء</button>
@@ -1162,11 +1143,16 @@
                 <div class="input-group"><label>بيان المصروف (عشان إيه؟)</label><input type="text" id="expTitle" placeholder="مثال: كهرباء، أكياس تغليف..."></div>
                 <div class="input-group"><label>التكلفة (ج.م)</label><input type="number" id="expAmount" min="1"></div>
                 <div class="input-group"><label>ملاحظات إضافية</label><textarea id="expNotes" rows="2"></textarea></div>
+                <div class="input-group"><label>صورة المصروف</label><input type="file" id="expReceiptImage" accept="image/*,.pdf"></div>
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closeModal('expenseModal')">إلغاء</button>
                     <button class="btn-save" style="background:var(--danger);" onclick="saveExpense()">تسجيل المصروف</button>
                 </div>
             </div>
+        </div>
+
+        <div class="modal-overlay" id="viewFinanceModal">
+            <div class="modal finance-detail-modal"><h3>تفاصيل العملية المالية</h3><div id="viewFinanceContent"></div><div class="modal-actions"><button class="btn-cancel" onclick="closeModal('viewFinanceModal')">إغلاق</button></div></div>
         </div>
 
         <!-- إنشاء مرتجع جديد -->
