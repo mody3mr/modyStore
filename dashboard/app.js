@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getDatabase, ref, get, child, remove, update, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+import { getDatabase, ref, get, child, remove, update, onValue, push, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-messaging.js";
@@ -815,6 +815,38 @@ window.renderOrdersTable = () => {
     });
 };
 
+async function cancelOrderAndRestoreStock(orderId, displayId, reason) {
+    const orderSnap = await get(ref(db, `orders/${orderId}`));
+    if (!orderSnap.exists()) throw new Error('لم يتم العثور على الطلب.');
+    const order = { dbId: orderId, ...orderSnap.val() };
+    if (order.status === 'ملغي') return order;
+    const updates = {
+        [`orders/${orderId}/status`]: 'ملغي',
+        [`orders/${orderId}/cancelledAt`]: Date.now(),
+        [`orders/${orderId}/cancelReason`]: reason,
+        [`orders/${orderId}/customerNotice`]: `تم إلغاء طلبك #${displayId} - السبب: ${reason}`
+    };
+    let restoreClaimed = false;
+    try {
+      if (order.stockDeducted === true && order.stockRestored !== true && order.stockRestoreInProgress !== true) {
+        const claim = await runTransaction(ref(db, `orders/${orderId}/stockRestoreInProgress`), current => current === true ? undefined : true);
+        if (!claim.committed) return { ...order, stockRestored: true };
+        restoreClaimed = true;
+        for (const item of order.items || []) {
+            await runTransaction(ref(db, `products/${item.id}/stock`), current => (Number(current) || 0) + Number(item.qty || 0));
+        }
+        updates[`orders/${orderId}/stockRestored`] = true;
+        updates[`orders/${orderId}/stockRestoredAt`] = Date.now();
+        updates[`orders/${orderId}/stockRestoreInProgress`] = null;
+      }
+      await update(ref(db), updates);
+      return order;
+    } catch (error) {
+      if (restoreClaimed) await update(ref(db, `orders/${orderId}`), { stockRestoreInProgress: null }).catch(() => {});
+      throw error;
+    }
+}
+
 window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId) => {
     const newStatus = selectElement.value;
     
@@ -831,29 +863,18 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId)
                 inputValidator: (value) => {
                     if (!value) return 'يجب كتابة سبب للإلغاء!';
                 }
-            }).then((result) => {
+            }).then(async (result) => {
                 if (result.isConfirmed) {
-                    const order = allOrders.find(o => o.dbId === orderId);
-                    if(order && order.items) {
-                        order.items.forEach(item => {
-                            let pRef = ref(db, `products/${item.id}`);
-                            get(pRef).then(snap => {
-                                if(snap.exists()) {
-                                    update(pRef, { stock: (snap.val().stock || 0) + item.qty });
-                                }
-                            });
-                        });
-                    }
-                    update(ref(db, `orders/${orderId}`), { 
-                        status: newStatus, 
-                        cancelledAt: Date.now(),
-                        cancelReason: result.value,
-                        customerNotice: `تم إلغاء طلبك #${displayId} - السبب: ${result.value}`
-                    }).then(() => {
+                    try {
+                        const order = await cancelOrderAndRestoreStock(orderId, displayId, result.value);
                         window.notifyCustomer(order, 'تم إلغاء طلبك', `تم إلغاء الطلب #${displayId} - السبب: ${result.value}`);
                         logAction("تحديث حالة طلب", `تغيير حالة الطلب #${displayId} لـ ملغي واسترداد المخزون بسبب: ${result.value}`);
                         window.showAlert("تم الإلغاء واسترداد المخزون وإشعار العميل", "success");
-                    });
+                    } catch (error) {
+                        console.error(error);
+                        selectElement.value = oldStatus;
+                        window.showAlert(error.message || 'تعذر إلغاء الطلب', 'error');
+                    }
                 } else {
                     selectElement.value = oldStatus; 
                 }
@@ -861,20 +882,14 @@ window.requestOrderStatusUpdate = (orderId, selectElement, oldStatus, displayId)
         } else {
             let reason = prompt("اكتب سبب الإلغاء لـ تحديث المخزون وإلغاء الطلب:");
             if (reason) {
-                const order = allOrders.find(o => o.dbId === orderId);
-                if(order && order.items) {
-                    order.items.forEach(item => {
-                        let pRef = ref(db, `products/${item.id}`);
-                        get(pRef).then(snap => {
-                            if(snap.exists()) {
-                                update(pRef, { stock: (snap.val().stock || 0) + item.qty });
-                            }
-                        });
-                    });
-                }
-                update(ref(db, `orders/${orderId}`), { status: newStatus, cancelledAt: Date.now(), cancelReason: reason, customerNotice: `تم إلغاء طلبك #${displayId} - السبب: ${reason}` });
-                window.notifyCustomer(order, 'تم إلغاء طلبك', `تم إلغاء الطلب #${displayId} - السبب: ${reason}`);
-                logAction("تحديث حالة طلب", `إلغاء طلب #${displayId} واسترداد المخزون بسبب: ${reason}`);
+                cancelOrderAndRestoreStock(orderId, displayId, reason).then(order => {
+                    window.notifyCustomer(order, 'تم إلغاء طلبك', `تم إلغاء الطلب #${displayId} - السبب: ${reason}`);
+                    logAction("تحديث حالة طلب", `إلغاء طلب #${displayId} واسترداد المخزون بسبب: ${reason}`);
+                }).catch(error => {
+                    console.error(error);
+                    selectElement.value = oldStatus;
+                    window.showAlert(error.message || 'تعذر إلغاء الطلب', 'error');
+                });
             } else {
                 selectElement.value = oldStatus;
             }
@@ -2819,6 +2834,7 @@ window.saveSettings = () => {
         },
         paymentMethods: {
             cod: document.getElementById("setPayCod") ? document.getElementById("setPayCod").checked : true,
+            paymob: document.getElementById("setPayPaymob") ? document.getElementById("setPayPaymob").checked : false,
             wallet: document.getElementById("setPayWallet") ? document.getElementById("setPayWallet").checked : false,
             instapay: document.getElementById("setPayInsta") ? document.getElementById("setPayInsta").checked : false,
             visa: document.getElementById("setPayVisa") ? document.getElementById("setPayVisa").checked : false
@@ -2859,6 +2875,7 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
 
             if (d.paymentMethods) {
                 if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
+                if (document.getElementById("setPayPaymob")) document.getElementById("setPayPaymob").checked = d.paymentMethods.paymob ?? d.paymob?.enabled ?? false;
                 if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
                 if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
                 if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
@@ -4188,6 +4205,7 @@ if (myProfileBtn && myProfileMenu) {
         const before = await get(ref(db,'storeSettings')).catch(()=>null);
         if(typeof oldSaveSettingsV3==='function') await oldSaveSettingsV3();
         const patch = {
+            orderApiBaseUrl: document.getElementById('setOrderApiBaseUrl')?.value.trim().replace(/\/+$/, '') || '',
             paymob: {
                 enabled: !!document.getElementById('setPaymobEnabled')?.checked,
                 publicKey: document.getElementById('setPaymobPublicKey')?.value.trim() || '',
@@ -4211,6 +4229,7 @@ if (myProfileBtn && myProfileMenu) {
         const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val??'';};
         const check=(id,val)=>{const e=document.getElementById(id);if(e)e.checked=!!val;};
         check('setPaymobEnabled',p.enabled);
+        set('setOrderApiBaseUrl',d.orderApiBaseUrl);
         set('setPaymobPublicKey',p.publicKey);
         set('setPaymobIntegrationId',p.integrationId);
         set('setPaymobBackendEndpoint',p.backendEndpoint);
