@@ -7,7 +7,7 @@
     <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260905-1">
+    <link rel="stylesheet" href="style.css?v=20260905-4">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e293b'/%3E%3Cpath d='M34 8 17 36h12l-2 20 20-30H35z' fill='%23f59e0b'/%3E%3C/svg%3E">
     
     <!-- مكتبات التفاعل والأنيميشن -->
@@ -169,7 +169,7 @@
                 <i class="fas fa-history"></i> <span class="nav-text">سجل النشاطات</span>
             </li>
             <li class="nav-item" data-target="reviews-view">
-                <i class="fas fa-star"></i> <span class="nav-text">آراء العملاء</span>
+                <i class="fas fa-images"></i> <span class="nav-text">صور العملاء</span>
             </li>
             <li class="nav-item" data-target="settings-view">
                 <i class="fas fa-cog"></i> <span class="nav-text">الإعدادات</span>
@@ -735,7 +735,7 @@
 
                 <div class="stat-cards reviews-stats">
                     <div class="stat-card"><div class="stat-icon" style="color:#8b5cf6;background:#f3e8ff;"><i class="fas fa-images"></i></div><div class="stat-info"><h3>إجمالي الصور</h3><p id="reviewsTotalCount">0</p></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="color:#3b82f6;background:#eff6ff;"><i class="fas fa-images"></i></div><div class="stat-info"><h3>آراء منشورة</h3><p id="reviewsPublishedCount">0</p></div></div>
+                    <div class="stat-card"><div class="stat-icon" style="color:#3b82f6;background:#eff6ff;"><i class="fas fa-images"></i></div><div class="stat-info"><h3>صور منشورة</h3><p id="reviewsPublishedCount">0</p></div></div>
                     <div class="stat-card"><div class="stat-icon" style="color:#64748b;background:#f1f5f9;"><i class="fas fa-eye-slash"></i></div><div class="stat-info"><h3>صور مخفية</h3><p id="reviewsHiddenCount">0</p></div></div>
                 </div>
 
@@ -1090,7 +1090,7 @@
         <!-- ================= النوافذ المنبثقة (Modals) التي سقطت سهواً ================= -->
         
         <!-- فاتورة مشتريات جديدة -->
-        <!-- ================= إضافة / تعديل رأي عميل ================= -->
+        <!-- ================= إضافة / تعديل صورة عميل ================= -->
         <div class="modal-overlay" id="reviewModal">
             <div class="modal animate__animated animate__zoomIn" style="width:720px;max-width:96%;">
                 <div class="review-modal-head"><div><span class="section-kicker">CUSTOMER PHOTOS</span><h3 id="reviewModalTitle">إضافة صورة عميل</h3></div><button class="icon-close-btn" type="button" onclick="closeModal('reviewModal')"><i class="fas fa-times"></i></button></div>
@@ -1238,6 +1238,17 @@
                         <div id="addStockDiv" style="display:none; margin-top:5px;"><label style="color:var(--success); font-size:12px;">كمية الإضافة (+):</label><input type="number" id="prodAddStockOnly" placeholder="رقم بالموجب فقط" min="1"></div>
                     </div>
                 </div>
+                <div class="input-group">
+                    <label>مدة العرض (اختياري)</label>
+                    <div class="offer-duration-row">
+                        <input type="number" id="prodOfferDuration" min="1" placeholder="المدة">
+                        <select id="prodOfferUnit">
+                            <option value="hours">ساعات</option>
+                            <option value="days">أيام</option>
+                            <option value="minutes">دقائق</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="input-group"><label>القسم</label><select id="prodCategory"></select></div>
                 <div class="input-group"><label>الوصف التفصيلي</label><textarea id="prodDesc" rows="4"></textarea></div>
                 <div class="input-group"><label>رابط الصورة</label><input type="text" id="prodImage"></div>
@@ -1290,13 +1301,14 @@
                         <div class="permission-row"><b>الموظفين</b><label><input type="checkbox" class="perm-view" data-module="employees"> دخول</label><label><input type="checkbox" data-perm="employees.add"> إضافة</label><label><input type="checkbox" data-perm="employees.edit"> تعديل</label><label><input type="checkbox" data-perm="employees.delete"> حذف</label></div>
                         <div class="permission-row"><b>سجل النشاطات</b><label><input type="checkbox" class="perm-view" data-module="logs"> عرض</label><label><input type="checkbox" class="perm-export" data-module="logs"> تصدير</label><label><input type="checkbox" data-perm="logs.archive"> أرشفة</label></div>
                         <div class="permission-row"><b>المخزون</b><label><input type="checkbox" class="perm-view" data-module="inventory"> عرض</label><label><input type="checkbox" data-perm="inventory.adjust"> تعديل المخزون</label><label><input type="checkbox" class="perm-export" data-module="inventory"> تصدير النواقص</label></div>
-                        <div class="permission-row"><b>آراء العملاء</b><label><input type="checkbox" class="perm-view" data-module="reviews"> عرض</label><label><input type="checkbox" data-perm="reviews.add"> إضافة</label><label><input type="checkbox" data-perm="reviews.edit"> تعديل</label><label><input type="checkbox" data-perm="reviews.toggle"> نشر/إخفاء</label><label><input type="checkbox" data-perm="reviews.delete"> حذف</label></div>
+                        <div class="permission-row"><b>صور العملاء</b><label><input type="checkbox" class="perm-view" data-module="reviews"> عرض</label><label><input type="checkbox" data-perm="reviews.add"> إضافة</label><label><input type="checkbox" data-perm="reviews.edit"> تعديل</label><label><input type="checkbox" data-perm="reviews.toggle"> نشر/إخفاء</label><label><input type="checkbox" data-perm="reviews.delete"> حذف</label></div>
                     </div>
                 </div>
                 <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('employeeModal')">إلغاء</button><button class="btn-save" onclick="saveEmployee()">حفظ</button></div>
             </div>
         </div>
 
+        </div>
     </main>
 
     <!-- !!! تم نقل حاويات الطباعة أسفل الصفحة لتجنب مشكلة الطباعة البيضاء !!! -->
@@ -1398,6 +1410,6 @@
     <div id="printRoot"></div>
 
     <!-- ربط ملف الجافاسكريبت -->
-    <script type="module" src="app.js?v=20260905-1"></script>
+    <script type="module" src="app.js?v=20260905-4"></script>
 </body>
 </html>
