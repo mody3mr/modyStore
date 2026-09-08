@@ -4,9 +4,9 @@ const path = require('path');
 const cors = require('cors');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
-let whatsappConfirmationRouter = null;
+let createWhatsAppRouter = null;
 try {
-    whatsappConfirmationRouter = require('../whatsapp-confirmation-route.example');
+    createWhatsAppRouter = require('../whatsapp-confirmation-route.example');
 } catch (error) {
     console.warn('WhatsApp confirmation route is unavailable; bridge disabled.', error.message);
 }
@@ -44,11 +44,13 @@ initFirebase();
 const db = admin.database();
 
 app.use(cors({ origin: true, methods: ['GET', 'POST', 'OPTIONS'], allowedHeaders: ['Content-Type'] }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+    limit: '1mb',
+    verify: (req, _res, buffer) => { req.rawBody = Buffer.from(buffer); }
+}));
 app.use(express.urlencoded({ extended: true }));
-// Optional WhatsApp confirmation bridge used by the dashboard settings.
-// It remains inert until META_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID are configured.
-if (whatsappConfirmationRouter) app.use('/whatsapp', whatsappConfirmationRouter);
+// WhatsApp bridge is mounted after parsers so its send endpoint and webhook receive JSON bodies.
+if (createWhatsAppRouter) app.use('/whatsapp', createWhatsAppRouter({ db }));
 
 function clean(value, fallback = '') {
     return String(value ?? fallback).trim();
