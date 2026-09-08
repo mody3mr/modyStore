@@ -50,7 +50,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 // WhatsApp bridge is mounted after parsers so its send endpoint and webhook receive JSON bodies.
-if (createWhatsAppRouter) app.use('/whatsapp', createWhatsAppRouter({ db }));
+if (createWhatsAppRouter) app.use('/whatsapp', createWhatsAppRouter({ db, express }));
 
 function clean(value, fallback = '') {
     return String(value ?? fallback).trim();
@@ -252,6 +252,30 @@ function telegramOrderMessage(order) {
 app.use(express.static(path.join(__dirname, '..')));
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'mody-store-backend', time: Date.now() }));
+
+// Storefront analytics are written through Admin SDK because public clients
+// should not need direct write access to the analytics tree.
+app.post('/api/analytics/session', async (req, res) => {
+    try {
+        const sessionId = clean(req.body?.sessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);
+        if (!sessionId) return res.status(400).json({ ok: false, error: 'Invalid session id.' });
+        const input = req.body?.fields && typeof req.body.fields === 'object' ? req.body.fields : {};
+        const fields = {
+            firstVisitAt: Number(input.firstVisitAt) || undefined,
+            lastSeenAt: Number(input.lastSeenAt) || Date.now(),
+            cartAddedAt: Number(input.cartAddedAt) || undefined,
+            completedAt: Number(input.completedAt) || undefined,
+            orderId: clean(input.orderId).slice(0, 80) || undefined,
+            path: clean(input.path).slice(0, 200) || undefined
+        };
+        Object.keys(fields).forEach(key => fields[key] === undefined && delete fields[key]);
+        await db.ref(`analytics/sessions/${sessionId}`).update(fields);
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error('Analytics session error:', error);
+        return res.status(500).json({ ok: false, error: 'Unable to record analytics session.' });
+    }
+});
 
 app.post('/api/orders', async (req, res) => {
     try {
