@@ -1860,6 +1860,7 @@ onValue(ref(db, 'products'), (snapshot) => {
         window.filterProducts();
         updateNotifications();
         if(typeof window.filterCategories !== 'undefined') window.filterCategories();
+        window.renderBannerSlidesEditor?.();
     } catch(err) {
         console.error(err);
     }
@@ -2815,6 +2816,18 @@ window.saveSettings = () => {
     const data = {
         newsTicker: document.getElementById("setNewsTicker") ? document.getElementById("setNewsTicker").value : "",
         isOpen: document.getElementById("setStoreStatus") ? document.getElementById("setStoreStatus").checked : true,
+        closedStore: {
+            title: document.getElementById("setClosedTitle")?.value.trim() || "نأخذ استراحة قصيرة ونعود قريباً",
+            message: document.getElementById("setClosedMessage")?.value.trim() || "يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً."
+        },
+        policies: {
+            shipping: document.getElementById("setShippingPolicy")?.value.trim() || "",
+            returns: document.getElementById("setReturnPolicy")?.value.trim() || ""
+        },
+        hero: {
+            enabled: document.getElementById("setHeroEnabled")?.checked !== false,
+            slides: window.getBannerSlidesDraft?.() || []
+        },
         phone: document.getElementById("setPhone") ? document.getElementById("setPhone").value : "",
         email: document.getElementById("setEmail") ? document.getElementById("setEmail").value : "",
         address: document.getElementById("setAddress") ? document.getElementById("setAddress").value : "",
@@ -2858,6 +2871,16 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             const d = snapshot.val();
             if (document.getElementById("setNewsTicker")) document.getElementById("setNewsTicker").value = d.newsTicker || "";
             if (document.getElementById("setStoreStatus")) document.getElementById("setStoreStatus").checked = d.isOpen !== undefined ? d.isOpen : true;
+            if (document.getElementById("settingsStatusText")) document.getElementById("settingsStatusText").innerText = d.isOpen === false ? "مغلق مؤقتاً" : "مفتوح لاستقبال الطلبات";
+            document.querySelector('.settings-status-card')?.classList.toggle('is-closed', d.isOpen === false);
+            if (document.getElementById("setClosedTitle")) document.getElementById("setClosedTitle").value = d.closedStore?.title || "نأخذ استراحة قصيرة ونعود قريباً";
+            if (document.getElementById("setClosedMessage")) document.getElementById("setClosedMessage").value = d.closedStore?.message || "يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.";
+            if (document.getElementById("setShippingPolicy")) document.getElementById("setShippingPolicy").value = d.policies?.shipping || "";
+            if (document.getElementById("setReturnPolicy")) document.getElementById("setReturnPolicy").value = d.policies?.returns || "";
+            if (document.getElementById("setHeroEnabled")) document.getElementById("setHeroEnabled").checked = d.hero?.enabled !== false;
+            const bannerValue = d.hero ? (Array.isArray(d.hero.slides) ? d.hero.slides : []) : null;
+            if (window.loadBannerSlides) window.loadBannerSlides(bannerValue);
+            else window.__pendingBannerSlides = bannerValue;
             if (document.getElementById("setPhone")) document.getElementById("setPhone").value = d.phone || "";
             if (document.getElementById("setEmail")) document.getElementById("setEmail").value = d.email || "";
             if (document.getElementById("setAddress")) document.getElementById("setAddress").value = d.address || "";
@@ -3039,7 +3062,6 @@ if (myProfileBtn && myProfileMenu) {
         const counts={delivered:0,shipped:0,processing:0,pending:0};
         (allOrders||[]).forEach(o=>{ if(o.status==='تم تسليمه')counts.delivered++; else if(o.status==='تم الشحن')counts.shipped++; else if(o.status==='جاري التجهيز')counts.processing++; else if(o.status==='قيد المراجعة')counts.pending++; });
         ['Delivered','Shipped','Processing','Pending'].forEach(k=>{const el=document.getElementById(`stat${k}Orders`);if(el)el.innerText=counts[k.toLowerCase()];});
-        const p2=document.getElementById('statPendingOrders2'); if(p2)p2.innerText=counts.pending;
     }
     const oldUpdateChartsData=window.updateChartsData;
     window.updateChartsData=function(){ if(typeof oldUpdateChartsData==='function') oldUpdateChartsData(); updateStatusSummary(); };
@@ -3274,6 +3296,105 @@ if (myProfileBtn && myProfileMenu) {
     setTimeout(()=>{sanitizeInputs();if(window.__dashboardAuthReady)window.applyDashboardPermissions();updateStatusSummary();if(window.__dashboardAuthReady)renderInventoryTable();},1200);
 })();
 
+// Storefront content manager: editable policies, closure copy and hero banners.
+(() => {
+    const defaultSlides = [
+        { title:'اختيارات مميزة لكل يوم', subtitle:'اكتشف أحدث المنتجات والعروض من مودي ستور', imageUrl:'', buttonEnabled:true, buttonLabel:'تسوق الآن', action:'catalog', target:'', isActive:true },
+        { title:'عروض تستحق المشاهدة', subtitle:'تابع التخفيضات المتاحة قبل انتهاء مدتها', imageUrl:'', buttonEnabled:true, buttonLabel:'شاهد العروض', action:'offers', target:'', isActive:true }
+    ];
+    let slides = [];
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const clone = value => JSON.parse(JSON.stringify(value));
+
+    window.getBannerSlidesDraft = () => clone(slides).map(slide => ({
+        title:String(slide.title || '').trim(),
+        subtitle:String(slide.subtitle || '').trim(),
+        imageUrl:String(slide.imageUrl || '').trim(),
+        buttonEnabled:slide.buttonEnabled !== false,
+        buttonLabel:String(slide.buttonLabel || '').trim(),
+        action:String(slide.action || 'none'),
+        target:String(slide.target || ''),
+        isActive:slide.isActive !== false
+    }));
+
+    window.loadBannerSlides = value => {
+        slides = clone(value === null ? defaultSlides : (Array.isArray(value) ? value : []));
+        window.renderBannerSlidesEditor();
+    };
+
+    window.updateBannerSlide = (index, field, value, rerender = false) => {
+        if (!slides[index]) return;
+        slides[index][field] = value;
+        if (rerender) window.renderBannerSlidesEditor();
+    };
+
+    window.addBannerSlide = () => {
+        slides.push({ title:'عنوان البانر', subtitle:'اكتب وصفاً مختصراً وواضحاً', imageUrl:'', buttonEnabled:true, buttonLabel:'اعرف المزيد', action:'catalog', target:'', isActive:true });
+        window.renderBannerSlidesEditor();
+    };
+
+    window.removeBannerSlide = index => {
+        slides.splice(index, 1);
+        window.renderBannerSlidesEditor();
+    };
+
+    window.uploadHeroBannerImage = async (index, input) => {
+        const file = input?.files?.[0];
+        if (!file || !slides[index]) return;
+        if (!file.type.startsWith('image/')) return window.showAlert?.('اختر ملف صورة صالحاً.','warning');
+        if (file.size > 5 * 1024 * 1024) return window.showAlert?.('حجم صورة البانر يجب ألا يتجاوز 5 ميجابايت.','warning');
+        try {
+            input.disabled = true;
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const targetRef = storageRef(storage, `heroBanners/${Date.now()}_${safeName}`);
+            await uploadBytes(targetRef, file);
+            slides[index].imageUrl = await getDownloadURL(targetRef);
+            window.renderBannerSlidesEditor();
+            window.showAlert?.('تم رفع صورة البانر. اضغط حفظ الإعدادات لاعتمادها.','success');
+        } catch (error) {
+            console.error(error);
+            input.disabled = false;
+            window.showAlert?.('تعذر رفع الصورة. تحقق من صلاحيات Firebase Storage.','error');
+        }
+    };
+
+    window.renderBannerSlidesEditor = () => {
+        const root = document.getElementById('bannerSlidesEditor');
+        if (!root) return;
+        if (!slides.length) {
+            root.innerHTML = '<div class="banner-editor-empty"><i class="fas fa-images"></i><strong>لا توجد شرائح</strong><span>أضف شريحة جديدة، أو عطّل البانر بالكامل من المفتاح بالأعلى.</span></div>';
+            return;
+        }
+        const productOptions = (typeof allProducts !== 'undefined' ? allProducts : []).filter(p => p.isActive !== false).map(p => `<option value="${esc(p.id)}">${esc(p.name || 'منتج')}</option>`).join('');
+        root.innerHTML = slides.map((slide, index) => {
+            const action = slide.action || 'none';
+            const productSelect = action === 'product' ? `<div class="settings-field banner-product-field"><label>المنتج المستهدف</label><select onchange="updateBannerSlide(${index},'target',this.value)"><option value="">اختر منتجاً...</option>${productOptions}</select></div>` : '';
+            return `<article class="banner-slide-editor">
+                <div class="banner-slide-toolbar"><div><span>الشريحة ${index + 1}</span><small>${slide.isActive === false ? 'مخفية من المتجر' : 'ظاهرة في المتجر'}</small></div><label class="mini-switch"><input type="checkbox" ${slide.isActive !== false ? 'checked' : ''} onchange="updateBannerSlide(${index},'isActive',this.checked,true)"><span></span></label><button type="button" class="banner-delete-btn" title="حذف الشريحة" onclick="removeBannerSlide(${index})"><i class="fas fa-trash"></i></button></div>
+                <div class="banner-editor-layout">
+                    <div class="banner-image-preview ${slide.imageUrl ? 'has-image' : ''}">${slide.imageUrl ? `<img src="${esc(slide.imageUrl)}" alt="معاينة البانر">` : '<i class="fas fa-image"></i><span>الصورة اختيارية</span>'}</div>
+                    <div class="banner-fields-grid">
+                        <div class="settings-field"><label>العنوان</label><input type="text" value="${esc(slide.title)}" oninput="updateBannerSlide(${index},'title',this.value)" placeholder="عنوان البانر"></div>
+                        <div class="settings-field"><label>النص المساعد</label><input type="text" value="${esc(slide.subtitle)}" oninput="updateBannerSlide(${index},'subtitle',this.value)" placeholder="وصف قصير"></div>
+                        <div class="settings-field banner-url-field"><label>رابط الصورة <span>أو ارفع صورة من جهازك</span></label><input type="url" dir="ltr" value="${esc(slide.imageUrl)}" oninput="updateBannerSlide(${index},'imageUrl',this.value)" placeholder="https://..."></div>
+                        <div class="settings-field banner-upload-field"><label>رفع صورة</label><input type="file" accept="image/*" onchange="uploadHeroBannerImage(${index},this)"></div>
+                        <div class="settings-field banner-button-toggle"><label>إظهار الزر</label><label class="mini-switch"><input type="checkbox" ${slide.buttonEnabled !== false ? 'checked' : ''} onchange="updateBannerSlide(${index},'buttonEnabled',this.checked,true)"><span></span></label></div>
+                        ${slide.buttonEnabled !== false ? `<div class="settings-field"><label>نص الزر</label><input type="text" value="${esc(slide.buttonLabel)}" oninput="updateBannerSlide(${index},'buttonLabel',this.value)" placeholder="مثال: شاهد العرض"></div><div class="settings-field"><label>عند الضغط</label><select onchange="updateBannerSlide(${index},'action',this.value,true)"><option value="catalog" ${action==='catalog'?'selected':''}>عرض المنتجات</option><option value="offers" ${action==='offers'?'selected':''}>الانتقال إلى العروض</option><option value="product" ${action==='product'?'selected':''}>فتح منتج محدد</option><option value="none" ${action==='none'?'selected':''}>بدون إجراء</option></select></div>${productSelect}` : ''}
+                    </div>
+                </div>
+            </article>`;
+        }).join('');
+        root.querySelectorAll('.banner-product-field select').forEach(select => {
+            const index = Number(select.closest('.banner-slide-editor')?.querySelector('.banner-slide-toolbar span')?.textContent.replace(/\D/g,'') || 1) - 1;
+            if (slides[index]?.target) select.value = slides[index].target;
+        });
+    };
+    if (Object.prototype.hasOwnProperty.call(window, '__pendingBannerSlides')) {
+        window.loadBannerSlides(window.__pendingBannerSlides);
+        delete window.__pendingBannerSlides;
+    }
+})();
+
 // Correct category population and review image links for product forms.
 (() => {
     const escLink = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3415,15 +3536,25 @@ if (myProfileBtn && myProfileMenu) {
         if(await excel()){const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Net Profit');XLSX.writeFile(wb,`Net_Profit_${Date.now()}.xlsx`);}else if(window.downloadExcelFallback)window.downloadExcelFallback(rows,`Net_Profit_${Date.now()}.xls`,'Net Profit');
     };
     const set=(id,value)=>{const e=document.getElementById(id);if(e)e.innerText=value;};
-    const countSnapshot=s=>{if(!s?.exists())return 0;const v=s.val();return typeof v==='number'?v:Array.isArray(v)?v.length:Object.keys(v||{}).length;};
     const refreshMetrics=async()=>{
         const list=orders(), valid=list.filter(o=>!['ملغي','مرتجع'].includes(o.status)), revenue=valid.reduce((s,o)=>s+number(o.total),0), costs=(typeof allFinance!=='undefined'?allFinance:[]).reduce((s,f)=>s+number(f.amount),0);
         set('statTotalOrders',list.length); set('statTotalRevenue',`${Math.round(revenue)} ج.م`); set('statNetProfit',`${Math.round(revenue-costs)} ج.م`);
-        const vs=await Promise.all(['visits','analytics/visits','siteVisits'].map(p=>get(ref(db,p)).catch(()=>null))); const cs=await Promise.all(['cartEvents','analytics/cartAdds','cartAdds'].map(p=>get(ref(db,p)).catch(()=>null)));
-        const visits=Math.max(0,...vs.map(countSnapshot)), adds=Math.max(0,...cs.map(countSnapshot)), complete=list.filter(o=>o.items?.length).length;
-        set('statVisits',visits);set('statCartAdds',adds);set('statCartCompleted',complete);set('statCartAbandoned',Math.max(0,adds-complete));
+        const sessionsSnapshot=await get(ref(db,'analytics/sessions')).catch(()=>null);
+        const sessions=sessionsSnapshot?.exists()?Object.values(sessionsSnapshot.val()||{}).filter(Boolean):[];
+        const visits=sessions.length;
+        const started=sessions.filter(session=>Number(session.cartAddedAt)>0);
+        const completed=started.filter(session=>Number(session.completedAt)>0);
+        const abandoned=started.filter(session=>!Number(session.completedAt)).length;
+        const conversion=started.length?(completed.length/started.length)*100:0;
+        set('statVisits',visits);
+        set('statCartAdds',started.length);
+        set('statCartCompleted',completed.length);
+        set('statCartAbandoned',abandoned);
+        set('statCartConversion',`${conversion.toFixed(conversion>=10?0:1)}%`);
     };
-    onValue(ref(db,'orders'),()=>setTimeout(refreshMetrics,0)); onValue(ref(db,'finance'),()=>setTimeout(refreshMetrics,0));
+    onValue(ref(db,'orders'),()=>setTimeout(refreshMetrics,0));
+    onValue(ref(db,'finance'),()=>setTimeout(refreshMetrics,0));
+    onValue(ref(db,'analytics/sessions'),()=>setTimeout(refreshMetrics,0));
     const dark=document.getElementById('darkModeToggle'); let enabled=false;try{enabled=localStorage.getItem('modyStoreDarkMode')==='1';}catch(e){}
     const setDark=on=>{document.body.classList.toggle('dark-mode',on);if(dark)dark.innerHTML=`<i class="fas fa-${on?'sun':'moon'}"></i>`;try{localStorage.setItem('modyStoreDarkMode',on?'1':'0');}catch(e){}};setDark(enabled);if(dark)dark.onclick=()=>setDark(!document.body.classList.contains('dark-mode'));
     const sidebar=document.getElementById('sidebar'), toggle=document.getElementById('sidebarToggle'); if(sidebar&&toggle)toggle.onclick=e=>{e.preventDefault();const open=!sidebar.classList.contains('collapsed');sidebar.classList.toggle('collapsed',open);document.body.classList.toggle('sidebar-mobile-open',open&&innerWidth<=768);};
@@ -4685,6 +4816,7 @@ if (myProfileBtn && myProfileMenu) {
             customer: order.customer || {},
             phone,
             total: numFinal(order.total),
+            shippingCost: numFinal(order.shippingCost),
             items: (order.items||[]).map(i=>({id:i.id,name:i.name,qty:i.qty,price:i.price})),
             message: buildWhatsAppMessage(order),
             confirmationButtons: [
