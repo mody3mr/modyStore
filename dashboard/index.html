@@ -7,7 +7,7 @@
     <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260905-4">
+    <link rel="stylesheet" href="style.css?v=20260908-1">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e293b'/%3E%3Cpath d='M34 8 17 36h12l-2 20 20-30H35z' fill='%23f59e0b'/%3E%3C/svg%3E">
     
     <!-- مكتبات التفاعل والأنيميشن -->
@@ -265,13 +265,15 @@
                     </div>
                 </div>
 
-                <div id="analyticsStatusCards" class="stat-cards analytics-status-cards" style="margin-top:20px;">
+                <div class="analytics-section-head"><div><span class="section-kicker">ORDER FLOW</span><h3>حركة الطلبات</h3></div><p>الحالات التشغيلية الحالية بدون تكرار.</p></div>
+                <div id="analyticsStatusCards" class="stat-cards analytics-status-cards">
+                    <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#10b981;background:#dcfce7;"><i class="fas fa-circle-check"></i></div><div class="stat-info"><h3>الطلبات التي تم تسليمها</h3><p id="statDeliveredOrders">0</p></div></div>
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#8b5cf6;background:#f3e8ff;"><i class="fas fa-truck"></i></div><div class="stat-info"><h3>إجمالي الطلبات التي تم شحنها</h3><p id="statShippedOrders">0</p></div></div>
                     <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#3b82f6;background:#eff6ff;"><i class="fas fa-box"></i></div><div class="stat-info"><h3>طلبات قيد التجهيز حالياً</h3><p id="statProcessingOrders">0</p></div></div>
-                    <div class="stat-card status-summary-card"><div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>طلبات قيد المراجعة</h3><p id="statPendingOrders2">0</p></div></div>
                 </div>
 
-                <div class="stat-cards analytics-extra-cards" style="margin-top:20px;">
+                <div class="analytics-section-head"><div><span class="section-kicker">BUSINESS KPIS</span><h3>مؤشرات الأداء</h3></div><p>أرقام تساعدك على اتخاذ قرار سريع.</p></div>
+                <div class="stat-cards analytics-extra-cards">
                     <div class="stat-card analytics-kpi-card">
                         <div class="stat-icon" style="color:#0ea5e9;background:#e0f2fe;"><i class="fas fa-receipt"></i></div>
                         <div class="stat-info"><h3>متوسط قيمة الطلب</h3><p id="statAverageOrder">0 ج.م</p><small>من الطلبات غير الملغاة والمرتجعة</small></div>
@@ -284,9 +286,16 @@
                         <div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-bullseye"></i></div>
                         <div class="stat-info"><h3>أكثر مصدر للطلبات</h3><p id="statTopOrderSource">-</p><small id="statTopOrderSourceMeta">يتم الحساب من الطلبات الحقيقية</small></div>
                     </div>
-                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#06b6d4;background:#cffafe;"><i class="fas fa-users"></i></div><div class="stat-info"><h3>عدد الزيارات</h3><p id="statVisits">0</p><small>من سجل الزيارات</small></div></div>
-                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#22c55e;background:#dcfce7;"><i class="fas fa-cart-plus"></i></div><div class="stat-info"><h3>مرات الإضافة للسلة</h3><p id="statCartAdds">0</p><small><span class="analytics-good">مكتملة: <b id="statCartCompleted">0</b></span> <span class="analytics-bad">غير مكتملة: <b id="statCartAbandoned">0</b></span></small></div></div>
                     <div class="stat-card analytics-kpi-card clickable-card" onclick="exportProfitReport()"><div class="stat-icon" style="color:#f59e0b;background:#fef3c7;"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3>صافي الربح</h3><p id="statNetProfit">0 ج.م</p><small>اضغط لاستخراج التقرير</small></div></div>
+                </div>
+
+                <div class="analytics-section-head"><div><span class="section-kicker">CUSTOMER JOURNEY</span><h3>رحلة العميل داخل المتجر</h3></div><p>يتم احتساب كل جلسة مرة واحدة.</p></div>
+                <div class="stat-cards analytics-funnel-cards">
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#06b6d4;background:#cffafe;"><i class="fas fa-users"></i></div><div class="stat-info"><h3>عدد الزيارات</h3><p id="statVisits">0</p><small>جلسات فعلية مسجلة</small></div></div>
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#2563eb;background:#dbeafe;"><i class="fas fa-cart-plus"></i></div><div class="stat-info"><h3>بدأوا سلة شراء</h3><p id="statCartAdds">0</p><small>جلسات أضافت منتجًا</small></div></div>
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#16a34a;background:#dcfce7;"><i class="fas fa-circle-check"></i></div><div class="stat-info"><h3>سلات مكتملة</h3><p id="statCartCompleted">0</p><small>تحولت إلى طلب ناجح</small></div></div>
+                    <div class="stat-card analytics-kpi-card"><div class="stat-icon" style="color:#dc2626;background:#fee2e2;"><i class="fas fa-cart-arrow-down"></i></div><div class="stat-info"><h3>سلات غير مكتملة</h3><p id="statCartAbandoned">0</p><small>بدأت ولم تتحول إلى طلب</small></div></div>
+                    <div class="stat-card analytics-kpi-card analytics-conversion-card"><div class="stat-icon" style="color:#7c3aed;background:#f3e8ff;"><i class="fas fa-percent"></i></div><div class="stat-info"><h3>معدل إتمام السلة</h3><p id="statCartConversion">0%</p><small>مكتملة من إجمالي السلات</small></div></div>
                 </div>
 
                 <div class="charts-container grid-2" style="margin-top: 30px;">
@@ -794,6 +803,14 @@
                             <label>شريط الأخبار <span>يظهر أعلى المتجر للعملاء</span></label>
                             <div class="settings-input-wrap"><i class="fas fa-bullhorn"></i><input type="text" id="setNewsTicker" placeholder="مثال: خصم 20% لفترة محدودة..."></div>
                         </div>
+                        <div class="settings-field">
+                            <label>عنوان إغلاق المتجر <span>يظهر عند إيقاف استقبال الطلبات</span></label>
+                            <div class="settings-input-wrap"><i class="fas fa-door-closed"></i><input type="text" id="setClosedTitle" placeholder="نأخذ استراحة قصيرة ونعود قريباً"></div>
+                        </div>
+                        <div class="settings-field">
+                            <label>رسالة إغلاق المتجر</label>
+                            <div class="settings-textarea-wrap"><textarea id="setClosedMessage" rows="3" placeholder="نجهز لك تجربة أفضل. تصفح المنتجات الآن وسنفتح استقبال الطلبات قريباً."></textarea></div>
+                        </div>
                     </section>
 
                     <section class="settings-card">
@@ -823,6 +840,35 @@
                     </section>
                 </div>
 
+                <div class="settings-section-title">
+                    <div><span class="section-kicker">CONTENT</span><h3>السياسات ومعلومات العملاء</h3></div>
+                    <p>تحكم في النصوص التي تظهر داخل صفحة تفاصيل كل منتج.</p>
+                </div>
+                <section class="settings-card settings-card-full policy-settings-card">
+                    <div class="settings-card-head">
+                        <div class="settings-card-icon orange"><i class="fas fa-file-contract"></i></div>
+                        <div><h3>سياسات المتجر</h3><p>اكتب شروطًا واضحة ومباشرة للعملاء.</p></div>
+                    </div>
+                    <div class="settings-grid policy-editor-grid">
+                        <div class="settings-field"><label>سياسة الشحن والتوصيل</label><div class="settings-textarea-wrap"><textarea id="setShippingPolicy" rows="6" placeholder="اكتب مدة ورسوم وشروط الشحن..."></textarea></div></div>
+                        <div class="settings-field"><label>سياسة الاستبدال والاسترجاع</label><div class="settings-textarea-wrap"><textarea id="setReturnPolicy" rows="6" placeholder="اكتب مدة وشروط الاستبدال والاسترجاع..."></textarea></div></div>
+                    </div>
+                </section>
+
+                <div class="settings-section-title">
+                    <div><span class="section-kicker">HERO BANNERS</span><h3>بانرات واجهة المتجر</h3></div>
+                    <p>أضف شرائح بصور أو بدون صور واربط الزر بالعروض أو بمنتج محدد.</p>
+                </div>
+                <section class="settings-card settings-card-full banner-settings-card">
+                    <div class="settings-card-head">
+                        <div class="settings-card-icon blue"><i class="fas fa-images"></i></div>
+                        <div><h3>إدارة البانر المتحرك</h3><p>يمكنك تعطيله بالكامل أو إدارة كل شريحة على حدة.</p></div>
+                        <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setHeroEnabled" checked><span></span></label>
+                    </div>
+                    <div id="bannerSlidesEditor" class="banner-slides-editor"></div>
+                    <button type="button" class="btn-add banner-add-btn" onclick="addBannerSlide()"><i class="fas fa-plus"></i> إضافة شريحة</button>
+                </section>
+
 
                 <div class="settings-section-title">
                     <div><span class="section-kicker">PAYMENTS</span><h3>بوابة الدفع Paymob</h3></div>
@@ -835,7 +881,7 @@
                         <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setPaymobEnabled"><span></span></label>
                     </div>
                     <div class="settings-grid paymob-grid">
-                        <div class="settings-field"><label>Orders API Base URL <span>عنوان السيرفر المسؤول عن إنشاء الطلبات</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setOrderApiBaseUrl" dir="ltr" placeholder="https://api.example.com"></div></div>
+                        <div class="settings-field"><label>Orders API Base URL <span>للطلبات وتسجيل الزيارات والسلات</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setOrderApiBaseUrl" dir="ltr" placeholder="https://api.example.com"></div></div>
                         <div class="settings-field"><label>Public Key <span>يمكن حفظه في الواجهة</span></label><div class="settings-input-wrap"><i class="fas fa-key"></i><input type="text" id="setPaymobPublicKey" dir="ltr" placeholder="pk_..."></div></div>
                         <div class="settings-field"><label>Integration ID <span>من Paymob Dashboard</span></label><div class="settings-input-wrap"><i class="fas fa-hashtag"></i><input type="text" id="setPaymobIntegrationId" dir="ltr" inputmode="numeric" placeholder="123456"></div></div>
                         <div class="settings-field"><label>Checkout Endpoint <span>رابط الـ Backend الآمن</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setPaymobBackendEndpoint" dir="ltr" placeholder="https://api.example.com/paymob/checkout"></div></div>
@@ -1410,6 +1456,6 @@
     <div id="printRoot"></div>
 
     <!-- ربط ملف الجافاسكريبت -->
-    <script type="module" src="app.js?v=20260905-4"></script>
+    <script type="module" src="app.js?v=20260908-1"></script>
 </body>
 </html>
