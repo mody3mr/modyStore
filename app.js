@@ -14,7 +14,9 @@ const db = getDatabase(app);
 
 // For GitHub Pages, set storeSettings.orderApiBaseUrl from the dashboard to
 // the deployed backend. Same-origin deployments may leave it empty.
-const STORE_API_BASE_URL = "";
+// Current public tunnel used by the deployed storefront. Override it from
+// dashboard > Settings > Orders API Base URL when the tunnel changes.
+const STORE_API_BASE_URL = "https://disperser-slideshow-daily.ngrok-free.dev";
 
 function apiUrl(path) {
     const configured = String(storeSettings.orderApiBaseUrl || STORE_API_BASE_URL || '').trim();
@@ -59,6 +61,129 @@ let appliedVoucher = null;
 let storeSettings = {}; 
 let currentShippingCost = 0; 
 let currentFilterType = 'الكل';
+
+const defaultHeroSlides = [
+    { title: 'اختيارات مميزة لكل يوم', subtitle: 'اكتشف أحدث المنتجات والعروض من مودي ستور', imageUrl: '', buttonEnabled: true, buttonLabel: 'تسوق الآن', action: 'catalog', target: '', isActive: true },
+    { title: 'عروض تستحق المشاهدة', subtitle: 'تابع التخفيضات المتاحة قبل انتهاء مدتها', imageUrl: '', buttonEnabled: true, buttonLabel: 'شاهد العروض', action: 'offers', target: '', isActive: true }
+];
+let heroSwiperInstance = null;
+
+function getAnalyticsSessionId() {
+    try {
+        let id = sessionStorage.getItem('modyAnalyticsSessionId');
+        if (!id) {
+            id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+            sessionStorage.setItem('modyAnalyticsSessionId', id);
+        }
+        return id;
+    } catch (_) {
+        return `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+}
+
+const analyticsSessionId = getAnalyticsSessionId();
+async function updateAnalyticsSession(fields) {
+    const configuredBase = String(storeSettings.orderApiBaseUrl || STORE_API_BASE_URL || '').trim();
+    try {
+        if (configuredBase) {
+            const response = await fetch(apiUrl('/api/analytics/session'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: analyticsSessionId, fields })
+            });
+            if (response.ok) return;
+        }
+        await update(ref(db, `analytics/sessions/${analyticsSessionId}`), fields);
+    } catch (error) {
+        console.warn('Analytics update skipped:', error);
+    }
+}
+
+async function recordStoreVisit() {
+    const sessionRef = ref(db, `analytics/sessions/${analyticsSessionId}`);
+    try {
+        const snapshot = await get(sessionRef);
+        const now = Date.now();
+        await updateAnalyticsSession({
+            ...(snapshot.exists() ? {} : { firstVisitAt: now }),
+            lastSeenAt: now,
+            path: window.location.pathname
+        });
+    } catch (error) {
+        const now = Date.now();
+        await updateAnalyticsSession({ firstVisitAt: now, lastSeenAt: now, path: window.location.pathname });
+    }
+}
+recordStoreVisit();
+
+function markCartStarted() {
+    try {
+        if (sessionStorage.getItem('modyCartStarted') === '1') return;
+        sessionStorage.setItem('modyCartStarted', '1');
+    } catch (_) {}
+    updateAnalyticsSession({ cartAddedAt: Date.now() });
+}
+
+function markCartCompleted(orderId) {
+    updateAnalyticsSession({ completedAt: Date.now(), orderId: String(orderId || '') });
+}
+
+function initHeroSwiper() {
+    const root = document.querySelector('.heroSwiper');
+    if (!root || root.hidden || typeof Swiper === 'undefined') return;
+    if (heroSwiperInstance) heroSwiperInstance.destroy(true, true);
+    const slideCount = root.querySelectorAll('.swiper-slide').length;
+    if (!slideCount) return;
+    heroSwiperInstance = new Swiper(root, {
+        loop: slideCount > 1,
+        autoplay: slideCount > 1 ? { delay: 4500, disableOnInteraction: false } : false,
+        pagination: { el: '.heroSwiper .swiper-pagination', clickable: true }
+    });
+}
+
+function renderHero(heroConfig) {
+    const root = document.querySelector('.heroSwiper');
+    const container = document.getElementById('heroSlidesContainer');
+    if (!root || !container) return;
+    const enabled = heroConfig?.enabled !== false;
+    root.hidden = !enabled;
+    if (!enabled) {
+        if (heroSwiperInstance) heroSwiperInstance.destroy(true, true);
+        heroSwiperInstance = null;
+        return;
+    }
+    const configuredSlides = heroConfig ? (Array.isArray(heroConfig.slides) ? heroConfig.slides : []) : null;
+    const slides = (configuredSlides === null ? defaultHeroSlides : configuredSlides).filter(slide => slide && slide.isActive !== false);
+    container.innerHTML = slides.map((slide, index) => {
+        const hasImage = Boolean(String(slide.imageUrl || '').trim());
+        const showButton = slide.buttonEnabled !== false && slide.action && slide.action !== 'none';
+        return `<div class="swiper-slide hero-slide ${hasImage ? 'has-image' : 'no-image'}" data-hero-image="${escapeHtml(slide.imageUrl || '')}">
+            <div class="hero-slide-overlay"></div>
+            <div class="hero-content">
+                <span class="hero-eyebrow">MODY STORE</span>
+                <h2>${escapeHtml(slide.title || '')}</h2>
+                <p>${escapeHtml(slide.subtitle || '')}</p>
+                ${showButton ? `<button type="button" class="hero-action" onclick="handleHeroAction('${jsArg(slide.action)}','${jsArg(slide.target || '')}')">${escapeHtml(slide.buttonLabel || 'اعرف المزيد')} <i class="fas fa-arrow-left"></i></button>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+    root.querySelectorAll('[data-hero-image]').forEach(slide => {
+        const imageUrl = slide.dataset.heroImage;
+        if (imageUrl) slide.style.backgroundImage = `url("${imageUrl.replace(/["\\]/g, '\\$&')}")`;
+    });
+    root.hidden = slides.length === 0;
+    requestAnimationFrame(initHeroSwiper);
+}
+
+window.handleHeroAction = (action, target) => {
+    if (action === 'product' && target) return window.openProductDetails(target);
+    const categories = document.getElementById('catBar');
+    if (action === 'offers') {
+        const offersButton = document.querySelector('.offers-btn');
+        if (offersButton) window.filterBy('عروض', offersButton);
+    }
+    categories?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 async function createFirebaseOrder(payload) {
     const [productsSnap, shippingSnap] = await Promise.all([
@@ -180,6 +305,20 @@ function updateThemeIcon(theme) {
 onValue(ref(db, 'storeSettings'), (snapshot) => {
     if (snapshot.exists()) {
         storeSettings = snapshot.val();
+        recordStoreVisit();
+
+        const closed = storeSettings.closedStore || {};
+        const closedBanner = document.getElementById('storeClosedBanner');
+        if (closedBanner) closedBanner.hidden = storeSettings.isOpen !== false;
+        const closedTitle = document.getElementById('storeClosedTitle');
+        const closedMessage = document.getElementById('storeClosedMessage');
+        if (closedTitle) closedTitle.textContent = closed.title || 'نأخذ استراحة قصيرة ونعود قريباً';
+        if (closedMessage) closedMessage.textContent = closed.message || 'يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.';
+        const shippingPolicy = document.getElementById('shippingPolicyText');
+        const returnPolicy = document.getElementById('returnPolicyText');
+        if (shippingPolicy && storeSettings.policies?.shipping) shippingPolicy.textContent = storeSettings.policies.shipping;
+        if (returnPolicy && storeSettings.policies?.returns) returnPolicy.textContent = storeSettings.policies.returns;
+        renderHero(storeSettings.hero || null);
         
         // الشريط الإخباري
         const ticker = document.getElementById("newsTicker");
@@ -269,11 +408,7 @@ onValue(ref(db, 'storeReviews'), (snapshot) => {
 
 // ==== تهيئة السلايدر (Swiper) ====
 document.addEventListener("DOMContentLoaded", () => {
-    new Swiper('.heroSwiper', {
-        loop: true,
-        autoplay: { delay: 3000, disableOnInteraction: false },
-        pagination: { el: '.swiper-pagination', clickable: true }
-    });
+    renderHero(storeSettings.hero || null);
 
     reviewsSwiperInstance = new Swiper('.reviewsSwiper', {
         slidesPerView: 1.25,
@@ -506,7 +641,7 @@ window.toggleCart = () => {
 
 window.addToCart = (id, name, price, img, stock) => {
     if (storeSettings.isOpen === false) {
-        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا استقبال طلبات جديدة.', confirmButtonColor: 'var(--title-color)'});
+        return Swal.fire({icon: 'info', title: storeSettings.closedStore?.title || 'نأخذ استراحة قصيرة', text: storeSettings.closedStore?.message || 'يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.', confirmButtonColor: 'var(--title-color)'});
     }
 
     const product = allActiveProducts.find(item => item.id === id);
@@ -528,6 +663,7 @@ window.addToCart = (id, name, price, img, stock) => {
     }
     
     Toast.fire({icon: 'success', title: 'تمت الإضافة للسلة'});
+    markCartStarted();
     updateCartUI();
     document.getElementById("cartSidebar").classList.add("open");
     document.getElementById("overlay").classList.add("show");
@@ -656,7 +792,7 @@ window.openCheckoutModal = () => {
         return;
     }
     if (storeSettings.isOpen === false) {
-        return Swal.fire({icon: 'error', title: 'المتجر مغلق', text: 'نعتذر، المتجر مغلق حالياً ولا يمكننا إتمام الطلب.', confirmButtonColor: 'var(--title-color)'});
+        return Swal.fire({icon: 'info', title: storeSettings.closedStore?.title || 'نأخذ استراحة قصيرة', text: storeSettings.closedStore?.message || 'يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.', confirmButtonColor: 'var(--title-color)'});
     }
     document.getElementById("checkoutModal").style.display = "block";
     document.getElementById("cartSidebar").classList.remove("open");
@@ -679,7 +815,7 @@ function getCurrentOrderSummary() {
     };
 }
 
-async function requestWhatsAppOrderConfirmation(orderId, customer, items, total) {
+async function requestWhatsAppOrderConfirmation(orderId, customer, items, total, shippingCost = 0) {
     const config = storeSettings.whatsappConfirmation || {};
     if (config.enabled !== true) return;
     const apiBase = String(storeSettings.orderApiBaseUrl || '').trim().replace(/\/+$/, '').replace(/\/api$/i, '');
@@ -703,6 +839,7 @@ async function requestWhatsAppOrderConfirmation(orderId, customer, items, total)
                 customer,
                 items,
                 total,
+                shippingCost,
                 requestedAt
             })
         });
@@ -839,7 +976,8 @@ window.sendOrder = async () => {
             result.orderId,
             payload.customer,
             cart.map(item => ({ id:item.id, name:item.name, qty:item.qty, price:item.price })),
-            completedOrder.total
+            completedOrder.total,
+            completedOrder.shippingCost
         );
         completeOrderSuccess(completedOrder);
         Swal.fire({
@@ -897,10 +1035,11 @@ async function handlePaymentReturn() {
             populateSuccessSummary({ orderId, ...summary });
             if (successText) successText.innerText = 'الرجاء الاحتفاظ بالرقم السري لمتابعة حالة طلبك.';
             if (pendingOrder?.customer) {
-                await requestWhatsAppOrderConfirmation(orderId, pendingOrder.customer, pendingOrder.items || [], summary.total);
+                await requestWhatsAppOrderConfirmation(orderId, pendingOrder.customer, pendingOrder.items || [], summary.total, summary.shippingCost);
             }
             sessionStorage.removeItem('pendingPaymobOrderId');
             sessionStorage.removeItem('pendingPaymobOrder');
+            markCartCompleted(orderId);
             cart = [];
             appliedVoucher = null;
             updateCartUI();
@@ -932,6 +1071,7 @@ function completeOrderSuccess(order) {
     document.getElementById("checkoutForm").style.display = "none";
     document.getElementById("successScreen").style.display = "block";
     populateSuccessSummary(order);
+    markCartCompleted(order.orderId);
     
     cart = [];
     appliedVoucher = null;
