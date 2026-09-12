@@ -3277,6 +3277,82 @@ if (myProfileBtn && myProfileMenu) {
     setTimeout(()=>{sanitizeInputs();if(window.__dashboardAuthReady)window.applyDashboardPermissions();updateStatusSummary();if(window.__dashboardAuthReady)renderInventoryTable();},1200);
 })();
 
+// ===== إصلاحات واجهة الإدارة وشركات الشحن =====
+(() => {
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const notify = (msg, type='info') => window.showAlert ? window.showAlert(msg, type) : window.alert(msg);
+
+    function hideLegacyProductFields() {
+        ['prodDiscountPrice','prodStock','prodOfferDuration','prodOfferUnit'].forEach(id => {
+            const el = document.getElementById(id);
+            const group = el?.closest('.input-group') || el?.parentElement;
+            if (group) group.style.display = 'none';
+        });
+        const table = document.getElementById('productsTableBody')?.closest('table');
+        if (table) {
+            const headers = [...table.querySelectorAll('thead th')];
+            const index = headers.findIndex(th => /المخزون/.test(th.textContent || ''));
+            if (index >= 0) { headers[index].style.display='none'; table.querySelectorAll('tbody tr').forEach(row => row.children[index] && (row.children[index].style.display='none')); }
+        }
+        const funnel = document.querySelector('.analytics-funnel-cards');
+        if (funnel) { funnel.previousElementSibling?.remove(); funnel.remove(); }
+    }
+    document.addEventListener('DOMContentLoaded', hideLegacyProductFields);
+    setInterval(hideLegacyProductFields, 1800);
+
+    function populateManualShippingSelect() {
+        const select = document.getElementById('manualCustCity');
+        if (!select) return;
+        const rows = (typeof allShipping !== 'undefined' ? allShipping : []).filter(x => x && x.isActive !== false);
+        const current = select.value;
+        select.innerHTML = '<option value="">اختر المحافظة...</option>' + rows.map(x => `<option value="${esc(x.name)}" data-shipping-price="${Number(x.price||0)}">${esc(x.name)} (شحن: ${Number(x.price||0)} ج.م)</option>`).join('');
+        if (current) select.value = current;
+        const cost = document.getElementById('manualShippingCost');
+        if (cost && select.selectedOptions[0]) cost.value = Number(select.selectedOptions[0].dataset.shippingPrice || 0);
+    }
+    const originalOpenManual = window.openManualOrderModal;
+    if (originalOpenManual) window.openManualOrderModal = (...args) => { const result=originalOpenManual(...args); setTimeout(populateManualShippingSelect,50); return result; };
+    setInterval(populateManualShippingSelect, 2500);
+
+    function syncPaymentSwitches() {
+        [['setPayWallet','setWalletEnabled'],['setPayInstapay','setInstapayEnabled']].forEach(([mainId,miniId]) => {
+            const main=document.getElementById(mainId), mini=document.getElementById(miniId);
+            if (!main || !mini || main.dataset.synced) return;
+            main.dataset.synced=mini.dataset.synced='1';
+            main.addEventListener('change',()=>mini.checked=main.checked);
+            mini.addEventListener('change',()=>main.checked=mini.checked);
+        });
+    }
+    setInterval(syncPaymentSwitches,700);
+    window.setOrderPaymentStatus = async (orderId, status) => {
+        const labels={paid:'تم الدفع',cod_pending:'الدفع عند الاستلام',manual_pending:'في انتظار التحويل',failed:'فشل الدفع'};
+        const patch={paymentStatus:status,paymentStatusLabel:labels[status]||status,paymentStatusUpdatedAt:Date.now()};
+        if (status==='paid') patch.paymentConfirmation={status:'confirmed',source:'dashboard',confirmedAt:Date.now()};
+        await update(ref(db,'orders/'+orderId),patch); notify('تم تحديث حالة الدفع','success');
+    };
+
+    let shippingCompanies=[]; let shippingShipments=[]; let editingShippingCompanyId=null;
+    const activeOrders=()=> (typeof allOrders!=='undefined'?allOrders:[]).filter(o=>o && o.status!=='ملغي' && o.status!=='مكتمل');
+    function renderShippingCompanies(){
+        const body=document.getElementById('shippingCompaniesTableBody'); if(!body)return;
+        body.innerHTML=shippingCompanies.length?shippingCompanies.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td dir="ltr">${esc(c.apiBaseUrl||'-')}</td><td>${esc(c.accountNumber||'-')}</td><td><span class="status-badge">${c.isActive===false?'غير مفعلة':'مفعلة'}</span></td><td><button class="btn-action" onclick="editShippingCompany('${esc(c.id)}')"><i class="fas fa-pen"></i></button><button class="btn-action" onclick="toggleShippingCompany('${esc(c.id)}')"><i class="fas fa-power-off"></i></button><button class="btn-action btn-delete" onclick="deleteShippingCompany('${esc(c.id)}')"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="5">لا توجد شركات مضافة</td></tr>';
+    }
+    function renderShippingShipments(){
+        const body=document.getElementById('shippingShipmentsTableBody'); if(!body)return;
+        body.innerHTML=shippingShipments.length?shippingShipments.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(s=>`<tr><td>#${esc(s.orderDisplayId||s.orderId)}</td><td>${esc(s.companyName||'-')}</td><td>${esc(s.customerName||'-')}</td><td><span class="status-badge">${esc(s.status||'pending_api')}</span></td><td dir="ltr">${esc(typeof formatDateTime==='function'?formatDateTime(s.createdAt):'')}</td><td><button class="btn-action btn-view" onclick="printShippingWaybill('${esc(s.id)}')"><i class="fas fa-print"></i></button></td></tr>`).join(''):'<tr><td colspan="6">لا توجد شحنات</td></tr>';
+    }
+    onValue(ref(db,'shippingCompanies'),snap=>{shippingCompanies=[];if(snap.exists())snap.forEach(ch=>shippingCompanies.push({id:ch.key,...(ch.val()||{})}));renderShippingCompanies();});
+    onValue(ref(db,'shippingShipments'),snap=>{shippingShipments=[];if(snap.exists())snap.forEach(ch=>shippingShipments.push({id:ch.key,...(ch.val()||{})}));renderShippingShipments();});
+    window.openShippingCompanyModal=id=>{editingShippingCompanyId=id||null;const c=shippingCompanies.find(x=>x.id===id)||{};document.getElementById('shippingCompanyModalTitle').textContent=id?'تعديل شركة شحن':'إضافة شركة شحن';[['shippingCompanyName',c.name],['shippingCompanyApiBaseUrl',c.apiBaseUrl],['shippingCompanyTrackingUrl',c.trackingUrlTemplate],['shippingCompanyAccount',c.accountNumber],['shippingCompanyApiKey',c.apiKey],['shippingCompanyApiSecret',c.apiSecret]].forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||''});const active=document.getElementById('shippingCompanyActive');if(active)active.checked=c.isActive!==false;document.getElementById('shippingCompanyModal').style.display='flex';};
+    window.editShippingCompany=id=>window.openShippingCompanyModal(id);
+    window.saveShippingCompany=async()=>{const name=document.getElementById('shippingCompanyName')?.value.trim();if(!name)return notify('اكتب اسم الشركة','error');const data={name,apiBaseUrl:document.getElementById('shippingCompanyApiBaseUrl')?.value.trim()||'',trackingUrlTemplate:document.getElementById('shippingCompanyTrackingUrl')?.value.trim()||'',accountNumber:document.getElementById('shippingCompanyAccount')?.value.trim()||'',apiKey:document.getElementById('shippingCompanyApiKey')?.value||'',apiSecret:document.getElementById('shippingCompanyApiSecret')?.value||'',isActive:Boolean(document.getElementById('shippingCompanyActive')?.checked),updatedAt:Date.now()};if(editingShippingCompanyId)await update(ref(db,'shippingCompanies/'+editingShippingCompanyId),data);else await push(ref(db,'shippingCompanies'),{...data,createdAt:Date.now()});closeModal('shippingCompanyModal');notify('تم حفظ شركة الشحن','success');};
+    window.toggleShippingCompany=async id=>{const c=shippingCompanies.find(x=>x.id===id);if(c)await update(ref(db,'shippingCompanies/'+id),{isActive:c.isActive===false,updatedAt:Date.now()});};
+    window.deleteShippingCompany=async id=>{if(confirm('حذف شركة الشحن؟'))await remove(ref(db,'shippingCompanies/'+id));};
+    window.openShippingShipmentModal=(orderId='')=>{const cs=document.getElementById('shipmentCompanySelect'),os=document.getElementById('shipmentOrderSelect');cs.innerHTML=shippingCompanies.filter(c=>c.isActive!==false).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');os.innerHTML=activeOrders().map(o=>`<option value="${esc(o.dbId)}" ${o.dbId===orderId?'selected':''}>#${esc(o.displayId||o.orderId)} — ${esc(o.customer?.name||'')}</option>`).join('');document.getElementById('shippingShipmentModal').style.display='flex';};
+    window.createShippingShipment=async()=>{const cid=document.getElementById('shipmentCompanySelect')?.value,oid=document.getElementById('shipmentOrderSelect')?.value,c=shippingCompanies.find(x=>x.id===cid),o=activeOrders().find(x=>x.dbId===oid);if(!c||!o)return notify('اختر الشركة والطلب','error');const confirmed=o.paymentConfirmation?.status==='confirmed'||o.status==='جاري التجهيز'||o.status==='تم الشحن'||o.paymentMethod==='الدفع عند الاستلام';if(!confirmed)return notify('أكد الطلب والدفع قبل إرساله لشركة الشحن','error');await push(ref(db,'shippingShipments'),{companyId:c.id,companyName:c.name,orderId:o.dbId,orderDisplayId:o.displayId||o.orderId,customerName:o.customer?.name||'',customer:o.customer||{},items:o.items||[],manualDetails:document.getElementById('shipmentManualDetails')?.value||'',status:'pending_api',createdAt:Date.now()});await update(ref(db,'orders/'+o.dbId),{shippingStatus:'جاهز للإرسال',shippingCompanyId:c.id,shippingCompanyName:c.name});closeModal('shippingShipmentModal');notify('تم تجهيز الشحنة للطباعة','success');};
+    window.printShippingWaybill=id=>{const s=shippingShipments.find(x=>x.id===id);if(!s)return;const w=window.open('','_blank');if(!w)return;const rows=(s.items||[]).map(i=>`<tr><td>${esc(i.name||'-')}</td><td>${Number(i.qty||1)}</td><td>${Number(i.price||0)}</td></tr>`).join('');w.document.write(`<html dir="rtl"><head><title>بوليصة شحن</title><style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style></head><body><h1>بوليصة شحن</h1><p>الطلب: #${esc(s.orderDisplayId)}</p><p>العميل: ${esc(s.customerName)}</p><p>الهاتف: ${esc(s.customer?.phone||'-')}</p><p>العنوان: ${esc(s.customer?.address||'-')}</p><table><tr><th>المنتج</th><th>الكمية</th><th>السعر</th></tr>${rows}</table><p>${esc(s.manualDetails||'')}</p><script>window.print()<\/script></body></html>`);w.document.close();};
+})();
+
 // Storefront content manager: editable policies, closure copy and hero banners.
 (() => {
     const defaultSlides = [
@@ -4957,7 +5033,8 @@ if (myProfileBtn && myProfileMenu) {
                 else if (st === 'manual') confirmHtml=`<span class="order-confirmation-badge manual"><i class="fab fa-whatsapp"></i> إرسال يدوي</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
                 else confirmHtml='<span class="order-confirmation-badge pending"><i class="fas fa-clock"></i> في انتظار العميل</span>';
             }
-            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">${paymentHtml}${confirmHtml}</div></td></tr>`;
+            const detailsHtml = `<button class="btn-action btn-view" title="تفاصيل الطلب" onclick="viewOrderDetails('${escFinal(order.dbId)}')"><i class="fas fa-eye"></i></button>`;
+            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">${detailsHtml}${paymentHtml}${confirmHtml}</div></td></tr>`;
         }).join('');
     };
 
@@ -4971,6 +5048,13 @@ if (myProfileBtn && myProfileMenu) {
             const c=order?.customerConfirmation||{};
             const state = c.status==='confirmed' ? '<span class="order-confirmation-badge confirmed">✅ تم تأكيد الطلب من العميل</span>' : c.status==='cancelled' ? '<span class="order-confirmation-badge cancelled">❌ العميل ألغى الطلب</span>' : c.status==='pending' ? '<span class="order-confirmation-badge pending">⏳ في انتظار تأكيد العميل</span>' : c.status==='error' ? '<span class="order-confirmation-badge error">⚠️ فشل إرسال رسالة التأكيد</span>' : '';
             box.style.display=state?'block':'none'; box.innerHTML=state ? `<div><strong>حالة تأكيد العميل:</strong>${state}</div>` : '';
+        }
+        const modal = document.getElementById('orderDetailsModal')?.querySelector('.modal');
+        if (modal && order) {
+            let paymentBox = document.getElementById('orderPaymentControlBox');
+            if (!paymentBox) { paymentBox=document.createElement('div'); paymentBox.id='orderPaymentControlBox'; paymentBox.style.cssText='margin-top:16px;padding:12px;border:1px solid var(--border);border-radius:10px;'; modal.appendChild(paymentBox); }
+            const current = order.paymentStatus || (order.paymentConfirmation?.status==='confirmed'?'paid':'manual_pending');
+            paymentBox.innerHTML = `<strong>حالة الدفع:</strong> <select onchange="setOrderPaymentStatus('${escFinal(order.dbId)}',this.value)"><option value="cod_pending" ${current==='cod_pending'?'selected':''}>الدفع عند الاستلام</option><option value="manual_pending" ${current==='manual_pending'?'selected':''}>في انتظار التحويل</option><option value="paid" ${current==='paid'?'selected':''}>تم الدفع</option><option value="failed" ${current==='failed'?'selected':''}>فشل الدفع</option></select>`;
         }
         return result;
     };
@@ -5109,8 +5193,8 @@ if (myProfileBtn && myProfileMenu) {
         const result = await oldSaveManual?.();
         const walletNumbers = (document.getElementById('setWalletNumbers')?.value || '').split(/\r?\n/).map(v => v.trim()).filter(Boolean);
         const manualPayment = {
-            walletEnabled: document.getElementById('setWalletEnabled')?.checked === true,
-            instapayEnabled: document.getElementById('setInstapayEnabled')?.checked === true,
+            walletEnabled: document.getElementById('setPayWallet')?.checked === true,
+            instapayEnabled: document.getElementById('setPayInstapay')?.checked === true,
             walletNumbers,
             instapayDetails: document.getElementById('setInstapayDetails')?.value.trim() || '',
             telegramUrl: document.getElementById('setPaymentTelegram')?.value.trim() || '',
