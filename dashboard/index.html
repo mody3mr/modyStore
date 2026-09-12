@@ -162,6 +162,9 @@
             <li class="nav-item" data-target="shipping-view">
                 <i class="fas fa-truck-fast"></i> <span class="nav-text">أسعار الشحن</span>
             </li>
+            <li class="nav-item" data-target="shipping-companies-view">
+                <i class="fas fa-truck-ramp-box"></i> <span class="nav-text">شركات الشحن</span>
+            </li>
             <li class="nav-item" data-target="employees-view">
                 <i class="fas fa-users"></i> <span class="nav-text">الموظفين</span>
             </li>
@@ -661,6 +664,19 @@
                         <tbody id="shippingTableBody"></tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- شركات الشحن والتوصيل -->
+            <div id="shipping-companies-view" class="view-section animate__animated animate__fadeIn">
+                <div class="page-header">
+                    <div><h2 class="page-title">شركات الشحن</h2><p>اربط أكثر من شركة، راجع الشحنات المرسلة، واطبع البوليصة.</p></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-add" onclick="openShippingShipmentModal()"><i class="fas fa-box"></i> تجهيز شحنة</button><button class="btn-add" onclick="openShippingCompanyModal()"><i class="fas fa-plus"></i> إضافة شركة شحن</button></div>
+                </div>
+                <div class="card shipping-companies-card" style="overflow-x:auto;">
+                    <table><thead><tr><th>الشركة</th><th>الرابط</th><th>الحساب</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody id="shippingCompaniesTableBody"><tr><td colspan="5">لا توجد شركات مضافة</td></tr></tbody></table>
+                </div>
+                <div class="page-header shipping-subheader"><div><h3 class="page-title" style="font-size:20px;">الشحنات المرسلة</h3><p>لا يتم إرسال الطلب إلا بعد تأكيده من لوحة التحكم.</p></div></div>
+                <div class="card" style="overflow-x:auto;"><table><thead><tr><th>الطلب</th><th>الشركة</th><th>العميل</th><th>الحالة</th><th>التاريخ</th><th>الإجراءات</th></tr></thead><tbody id="shippingShipmentsTableBody"><tr><td colspan="6">لا توجد شحنات</td></tr></tbody></table></div>
             </div>
 
             <!-- 6. شاشة الموظفين -->
@@ -1454,6 +1470,31 @@
     <!-- ================= حاوية الطباعة الفعلية (كل الطباعة تخرج من هنا) ================= -->
     <div id="printRoot"></div>
 
+    <div class="modal-overlay" id="shippingCompanyModal">
+        <div class="modal shipping-company-modal">
+            <h3 id="shippingCompanyModalTitle">إضافة شركة شحن</h3>
+            <div class="grid-2">
+                <div class="input-group"><label>اسم الشركة *</label><input id="shippingCompanyName" type="text" placeholder="مثال: Aramex"></div>
+                <div class="input-group"><label>الرابط الأساسي للـ API</label><input id="shippingCompanyApiBaseUrl" type="url" placeholder="https://api.example.com"></div>
+                <div class="input-group"><label>رابط التتبع</label><input id="shippingCompanyTrackingUrl" type="text" placeholder="https://.../{tracking}"></div>
+                <div class="input-group"><label>رقم الحساب</label><input id="shippingCompanyAccount" type="text"></div>
+                <div class="input-group"><label>مفتاح API</label><input id="shippingCompanyApiKey" type="password"></div>
+                <div class="input-group"><label>السر السري</label><input id="shippingCompanyApiSecret" type="password"></div>
+            </div>
+            <label class="switch-row"><input id="shippingCompanyActive" type="checkbox" checked><span>الشركة مفعلة</span></label>
+            <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('shippingCompanyModal')">إلغاء</button><button class="btn-save" onclick="saveShippingCompany()">حفظ الشركة</button></div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="shippingShipmentModal">
+        <div class="modal shipping-company-modal">
+            <h3>إرسال طلب لشركة شحن</h3>
+            <div class="input-group"><label>شركة الشحن *</label><select id="shipmentCompanySelect"></select></div>
+            <div class="input-group"><label>الطلب *</label><select id="shipmentOrderSelect"></select></div>
+            <div class="input-group"><label>بيانات إضافية للشركة</label><textarea id="shipmentManualDetails" rows="4" placeholder="أضف أي بيانات مطلوبة يدويًا"></textarea></div>
+            <p class="form-hint">سيتم حفظ طلب الشحن في النظام وتجهيز بيانات البوليصة. استدعاء API الفعلي يحتاج Endpoint آمن لكل شركة.</p>
+            <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('shippingShipmentModal')">إلغاء</button><button class="btn-save" onclick="createShippingShipment()">تجهيز الشحنة</button></div>
+        </div>
+    </div>
     <!-- ربط ملف الجافاسكريبت -->
     <script type="module" src="app.js?v=20260912-3"></script>
 </body>
