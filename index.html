@@ -13,7 +13,7 @@
     <!-- مكتبة Swiper للبانرات المتحركة -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
     
-    <link rel="stylesheet" href="style.css?v=20260905-1">
+    <link rel="stylesheet" href="style.css?v=20260912-3">
 </head>
 <body>
 
@@ -38,26 +38,14 @@
         <div id="newsTicker" class="news-ticker"></div>
     </header>
 
+    <section id="storeClosedBanner" class="store-closed-banner" hidden>
+        <div class="store-closed-icon"><i class="fas fa-clock"></i></div>
+        <div><strong id="storeClosedTitle">نأخذ استراحة قصيرة ونعود قريباً</strong><p id="storeClosedMessage">يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.</p></div>
+    </section>
+
     <!-- بانر العروض (Hero Slider) -->
     <div class="swiper heroSwiper">
-        <div class="swiper-wrapper">
-            <!-- الشريحة الأولى -->
-            <div class="swiper-slide hero-slide" style="background-image: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.95)), url('https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop');">
-                <div class="hero-content">
-                    <h1>تسوق أحدث المنتجات بأفضل الأسعار</h1>
-                    <p>جودة لا تقارن، وتوصيل سريع لباب بيتك</p>
-                    <button class="hero-btn" onclick="document.getElementById('catBar').scrollIntoView({behavior: 'smooth'})">تسوق الآن</button>
-                </div>
-            </div>
-            <!-- الشريحة الثانية -->
-            <div class="swiper-slide hero-slide" style="background-image: linear-gradient(135deg, rgba(37,99,235,0.85), rgba(15,23,42,0.95)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop');">
-                <div class="hero-content">
-                    <h1>عروض حصرية لا تفوتك</h1>
-                    <p>خصومات قوية على تشكيلة مختارة لفترة محدودة</p>
-                    <button class="hero-btn" onclick="document.getElementById('catBar').scrollIntoView({behavior: 'smooth'})">اكتشف العروض</button>
-                </div>
-            </div>
-        </div>
+        <div class="swiper-wrapper" id="heroSlidesContainer"></div>
         <!-- نقاط التنقل للبانر -->
         <div class="swiper-pagination"></div>
     </div>
@@ -142,13 +130,13 @@
                 <div class="modal-price-wrapper" id="modalProductPriceWrapper"></div>
                 <div class="modal-desc" id="modalProductDesc">لا يوجد وصف متاح لهذا المنتج حالياً.</div>
                 <div class="policy-accordion">
-                    <div class="policy-item" onclick="this.classList.toggle('open')">
+                    <div class="policy-item" id="shippingPolicyItem" onclick="this.classList.toggle('open')" style="display:none;">
                         <div class="policy-header">سياسة الشحن والتوصيل <i class="fas fa-chevron-down"></i></div>
-                        <div class="policy-content">يتم شحن الطلبات خلال 2 إلى 4 أيام عمل لجميع المحافظات. رسوم الشحن تحسب عند إتمام الطلب بناءً على محافظتك.</div>
+                        <div class="policy-content" id="shippingPolicyText"></div>
                     </div>
-                    <div class="policy-item" onclick="this.classList.toggle('open')">
+                    <div class="policy-item" id="returnPolicyItem" onclick="this.classList.toggle('open')" style="display:none;">
                         <div class="policy-header">سياسة الاستبدال والاسترجاع <i class="fas fa-chevron-down"></i></div>
-                        <div class="policy-content">يحق للعميل استبدال أو استرجاع المنتج خلال 14 يوماً من تاريخ الاستلام، بشرط أن يكون المنتج في حالته الأصلية.</div>
+                        <div class="policy-content" id="returnPolicyText"></div>
                     </div>
                 </div>
                 <div id="modalBtnContainer"></div>
@@ -248,6 +236,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-    <script type="module" src="app.js?v=20260905-2"></script>
+    <script type="module" src="app.js?v=20260912-3"></script>
 </body>
 </html>
