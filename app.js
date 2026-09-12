@@ -352,11 +352,13 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             const configured = storeSettings.paymentMethods;
             const methods = configured && typeof configured === 'object'
                 ? configured
-                : { cod: true, paymob: false };
-            if (methods.cod === true) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
-            if (methods.paymob === true || storeSettings.paymob?.enabled === true) {
-                pmSelect.innerHTML += '<option value="Paymob">💳 الدفع الإلكتروني - Paymob</option>';
-            }
+                : { cod: true, wallet: false, instapay: false };
+            const manual = storeSettings.manualPayment && typeof storeSettings.manualPayment === 'object'
+                ? storeSettings.manualPayment
+                : {};
+            if (methods.cod !== false) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
+            if (methods.wallet === true && Array.isArray(manual.walletNumbers) && manual.walletNumbers.some(Boolean)) pmSelect.innerHTML += '<option value="محفظة الكترونية">📱 محفظة الكترونية</option>';
+            if (methods.instapay === true && String(manual.instapayDetails || '').trim()) pmSelect.innerHTML += '<option value="انستا باي">🔵 انستا باي</option>';
             if (!pmSelect.options.length) pmSelect.innerHTML = '<option value="" disabled selected>لا توجد طريقة دفع متاحة حالياً</option>';
         }
 
@@ -824,56 +826,6 @@ function getCurrentOrderSummary() {
     };
 }
 
-async function requestWhatsAppOrderConfirmation(orderId, customer, items, total, shippingCost = 0) {
-    const config = storeSettings.whatsappConfirmation || {};
-    if (config.enabled === false) return;
-    const apiBase = apiUrl('/').replace(/\/$/, '').replace(/\/api$/i, '');
-    const configuredEndpoint = String(config.endpoint || '').trim();
-    const isPublicPage = !/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-    const endpointIsStaleLocalhost = isPublicPage && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/.*)?$/i.test(configuredEndpoint);
-    const endpoint = (!configuredEndpoint || endpointIsStaleLocalhost)
-        ? (apiBase ? `${apiBase}/whatsapp/order-confirmation` : '/whatsapp/order-confirmation')
-        : configuredEndpoint;
-
-    let phone = String(customer.phone || '').replace(/\D/g, '');
-    if (phone.startsWith('00')) phone = phone.slice(2);
-    if (phone.startsWith('0')) phone = `20${phone.slice(1)}`;
-    const requestedAt = Date.now();
-    const confirmation = { status: 'pending', requestedAt };
-    await update(ref(db, `orders/${orderId}`), { customerConfirmation: confirmation }).catch(() => {});
-
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                orderDbId: orderId,
-                orderId,
-                phone,
-                customer,
-                items,
-                total,
-                shippingCost,
-                requestedAt
-            })
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `WhatsApp ${response.status}`);
-        await update(ref(db, `orders/${orderId}/customerConfirmation`), {
-            status: 'pending',
-            requestedAt,
-            messageId: data.messageId || null
-        });
-    } catch (error) {
-        console.error('WhatsApp order confirmation failed:', error);
-        await update(ref(db, `orders/${orderId}/customerConfirmation`), {
-            status: 'error',
-            requestedAt,
-            error: String(error.message || error)
-        }).catch(() => {});
-    }
-}
-
 // ==== إرسال الطلب ومعالجة بوابات الدفع ====
 window.sendOrder = async () => {
     const name = document.getElementById("custName").value.trim();
@@ -918,7 +870,8 @@ window.sendOrder = async () => {
     try {
         const endpoint = apiUrl('/api/orders');
         const isGithubPages = /.github.io$/i.test(window.location.hostname);
-    const requiresBackend = paymentMethod === 'Paymob';
+    // الدفع اليدوي لا يحتاج بوابة دفع خارجية.
+        const requiresBackend = false;
         let result;
         if (isGithubPages && endpoint === '/api/orders') {
             if (requiresBackend) {
@@ -954,7 +907,7 @@ window.sendOrder = async () => {
             }
         }
 
-        if (result.paymentRequired && result.checkoutUrl) {
+        if (false && result.paymentRequired && result.checkoutUrl) {
             sessionStorage.setItem('pendingPaymobOrderId', result.orderId);
             sessionStorage.setItem('pendingPaymobOrder', JSON.stringify({
                 orderId: result.orderId,
@@ -986,19 +939,13 @@ window.sendOrder = async () => {
             discount: Number(result.discount ?? clientSummary.discount),
             total: Number(result.total ?? clientSummary.total)
         };
-        // لا تجعل بطء WhatsApp يمنع إظهار نجاح الطلب بعد تسجيله في الـBackend.
-        void requestWhatsAppOrderConfirmation(
-            result.orderId,
-            payload.customer,
-            cart.map(item => ({ id:item.id, name:item.name, qty:item.qty, price:item.price })),
-            completedOrder.total,
-            completedOrder.shippingCost
-        );
-        completeOrderSuccess(completedOrder);
+        completeOrderSuccess({ ...completedOrder, paymentMethod });
         Swal.fire({
             icon: 'success',
             title: 'تم استلام الطلب',
-            text: 'تم تسجيل طلبك بنجاح وسيتم التواصل معك لتأكيده.',
+            text: paymentMethod === 'كاش'
+                ? 'تم تسجيل طلبك بنجاح وسيتم تحصيل المبلغ عند الاستلام.'
+                : 'تم تسجيل طلبك بنجاح. أرسل إثبات الدفع عبر تيليجرام أو واتساب ليتم مراجعته يدوياً.',
             confirmButtonColor: 'var(--secondary)'
         });
     } catch (error) {
@@ -1050,7 +997,7 @@ async function handlePaymentReturn() {
             populateSuccessSummary({ orderId, ...summary });
             if (successText) successText.innerText = 'الرجاء الاحتفاظ بالرقم السري لمتابعة حالة طلبك.';
             if (pendingOrder?.customer) {
-                await requestWhatsAppOrderConfirmation(orderId, pendingOrder.customer, pendingOrder.items || [], summary.total, summary.shippingCost);
+                // تم إلغاء التأكيد التلقائي عبر WhatsApp ضمن تدفق الدفع اليدوي.
             }
             sessionStorage.removeItem('pendingPaymobOrderId');
             sessionStorage.removeItem('pendingPaymobOrder');
@@ -1078,6 +1025,37 @@ function populateSuccessSummary(order) {
     document.getElementById("successTotal").innerText = `${Math.round(Number(order.total || 0))} ج.م`;
 }
 
+function renderManualPaymentNextSteps(paymentMethod, orderId) {
+    const successScreen = document.getElementById('successScreen');
+    if (!successScreen) return;
+    let box = document.getElementById('manualPaymentNextSteps');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'manualPaymentNextSteps';
+        box.style.cssText = 'margin:16px 0;padding:16px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;text-align:right;line-height:1.8;';
+        successScreen.appendChild(box);
+    }
+    const manual = storeSettings.manualPayment && typeof storeSettings.manualPayment === 'object' ? storeSettings.manualPayment : {};
+    if (paymentMethod === 'كاش') {
+        box.innerHTML = '<strong>طريقة الدفع:</strong> الدفع عند الاستلام';
+        box.style.display = 'block';
+        return;
+    }
+    const walletNumbers = Array.isArray(manual.walletNumbers) ? manual.walletNumbers.filter(Boolean) : [];
+    let html = '<strong>طريقة الدفع:</strong> ' + escapeHtml(paymentMethod) + '<br>';
+    if (paymentMethod === 'محفظة الكترونية' && walletNumbers.length) html += '<div><strong>أرقام المحفظة:</strong><br>' + walletNumbers.map(n => '<span dir="ltr">' + escapeHtml(n) + '</span>').join('<br>') + '</div>';
+    if (paymentMethod === 'انستا باي' && manual.instapayDetails) html += '<div><strong>بيانات إنستا باي:</strong><br>' + escapeHtml(manual.instapayDetails).replace(/\n/g, '<br>') + '</div>';
+    const telegram = String(manual.telegramUrl || '').trim();
+    const whatsapp = String(manual.whatsappNumber || '').replace(/\D/g, '');
+    const links = [];
+    if (telegram) links.push('<a href="' + escapeHtml(telegram) + '" target="_blank" rel="noopener" style="color:#1683d8;font-weight:700;">فتح تيليجرام وإرسال إثبات الدفع</a>');
+    if (whatsapp) links.push('<a href="https://wa.me/' + whatsapp + '?text=' + encodeURIComponent('إثبات دفع الطلب ' + orderId) + '" target="_blank" rel="noopener" style="color:#16a34a;font-weight:700;">التواصل عبر واتساب</a>');
+    html += links.length ? '<div style="margin-top:8px;">' + links.join(' أو ') + '</div>' : '<div>سيتم التواصل معك يدوياً لتزويدك بتفاصيل الدفع.</div>';
+    html += '<div style="color:#64748b;font-size:13px;margin-top:6px;">رقم الطلب: ' + escapeHtml(orderId || '') + '</div>';
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
+
 function completeOrderSuccess(order) {
     const btn = document.getElementById("submitOrderBtn");
     btn.innerHTML = `تأكيد وإرسال الطلب <i class="fas fa-check-circle"></i>`;
@@ -1086,6 +1064,7 @@ function completeOrderSuccess(order) {
     document.getElementById("checkoutForm").style.display = "none";
     document.getElementById("successScreen").style.display = "block";
     populateSuccessSummary(order);
+    renderManualPaymentNextSteps(order.paymentMethod || 'كاش', order.orderId);
     markCartCompleted(order.orderId);
     
     cart = [];
