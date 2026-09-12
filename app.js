@@ -414,7 +414,9 @@ onValue(ref(db, 'storeReviews'), (snapshot) => {
     `).join('');
     if (emptyMessage) emptyMessage.style.display = photos.length ? 'none' : 'flex';
     document.querySelector('.reviewsSwiper')?.classList.toggle('is-empty', !photos.length);
-    requestAnimationFrame(() => reviewsSwiperInstance?.update());
+    requestAnimationFrame(() => {
+        if (reviewsSwiperInstance) { reviewsSwiperInstance.update(); reviewsSwiperInstance.slideTo(0, 0); }
+    });
 });
 
 // ==== تهيئة السلايدر (Swiper) ====
@@ -429,6 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
         rewind: true,
         observer: true,
         observeParents: true,
+        watchOverflow: false,
         navigation: { nextEl: '.reviews-next', prevEl: '.reviews-prev' },
         breakpoints: {
             640: { slidesPerView: 2.3, spaceBetween: 16 },
