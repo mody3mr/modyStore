@@ -2,7 +2,6 @@
 // Secrets stay on the backend. The dashboard only calls /whatsapp/order-confirmation.
 
 const crypto = require('crypto');
-const express = require('express');
 
 function normalizePhone(value = '') {
   let phone = String(value).replace(/\D/g, '');
@@ -11,7 +10,8 @@ function normalizePhone(value = '') {
   return phone;
 }
 
-function createWhatsAppRouter({ db }) {
+function createWhatsAppRouter({ db, express }) {
+  if (!express) throw new Error('Express instance is required for the WhatsApp router.');
   const router = express.Router();
   const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || 'v23.0';
   const accessToken = process.env.META_ACCESS_TOKEN || '';
@@ -30,12 +30,18 @@ function createWhatsAppRouter({ db }) {
     if (!orderDbId || !orderId || !phone) throw new Error('orderDbId, orderId and phone are required.');
 
     const graphUrl = `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`;
+    const quantity = (body.items || []).reduce((sum, item) => sum + Math.max(0, Number(item.qty) || 0), 0);
     const components = [
+      // The approved Arabic (EGY) template uses positional variables:
+      // name, order number, quantity, total, address, region, shipping.
       { type: 'body', parameters: [
-        { type: 'text', parameter_name: 'customer_name', text: String(body.customer?.name || 'عميل') },
-        { type: 'text', parameter_name: 'order_id', text: orderId },
-        { type: 'text', parameter_name: 'items', text: (body.items || []).map(i => `${i.name} x${i.qty}`).join('، ') || 'لا توجد منتجات' },
-        { type: 'text', parameter_name: 'total', text: `${Math.round(Number(body.total || 0))} ج.م` }
+        { type: 'text', text: String(body.customer?.name || 'عميل') },
+        { type: 'text', text: orderId },
+        { type: 'text', text: String(quantity || 0) },
+        { type: 'text', text: `${Math.round(Number(body.total || 0))} جنيه` },
+        { type: 'text', text: String(body.customer?.address || '-') },
+        { type: 'text', text: String(body.customer?.region || body.customer?.city || '-') },
+        { type: 'text', text: `${Math.round(Number(body.shippingCost || 0))} جنيه` }
       ] },
       { type: 'button', sub_type: 'quick_reply', index: '0', parameters: [{ type: 'payload', payload: `confirm_order:${orderDbId}` }] },
       { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: `cancel_order:${orderDbId}` }] }
@@ -108,9 +114,28 @@ function createWhatsAppRouter({ db }) {
 
   router.post('/order-confirmation', async (req, res) => {
     try {
-      res.json(await sendTemplate(req.body || {}));
+      const body = req.body || {};
+      const result = await sendTemplate(body);
+      const orderDbId = String(body.orderDbId || '').trim();
+      if (orderDbId) {
+        await db.ref(`orders/${orderDbId}/customerConfirmation`).update({
+          status: 'pending',
+          requestedAt: Number(body.requestedAt) || Date.now(),
+          messageId: result.messageId || null,
+          error: null
+        });
+      }
+      res.json(result);
     } catch (error) {
       console.error('WhatsApp send failed:', error.details || error.message);
+      const orderDbId = String(req.body?.orderDbId || '').trim();
+      if (orderDbId) {
+        await db.ref(`orders/${orderDbId}/customerConfirmation`).update({
+          status: 'error',
+          requestedAt: Number(req.body?.requestedAt) || Date.now(),
+          error: String(error.message || 'WhatsApp send failed').slice(0, 500)
+        }).catch(() => {});
+      }
       res.status(error.status || 500).json({ error: error.message || 'WhatsApp send failed' });
     }
   });
