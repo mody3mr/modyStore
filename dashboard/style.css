@@ -992,3 +992,12 @@ body.dark-mode .reviews-empty { background: var(--card-bg); }
 @media screen and (max-width: 768px) {
     .reviews-stats { grid-template-columns: 1fr; }
 }
+/* Final UI overrides */
+.payment-settings-grid{grid-template-columns:1fr!important}
+.customer-photo-card{width:100%;min-width:0}
+.shipping-company-modal{max-width:760px}.shipping-subheader{margin-top:28px}
+body.dark-mode .settings-section-title h3,body.dark-mode .settings-card-head h3,body.dark-mode .analytics-section-head h3,body.dark-mode .stat-info h3,body.dark-mode .input-group label,body.dark-mode .settings-field label{color:#e2e8f0!important}
+body.dark-mode .settings-card-head p,body.dark-mode .settings-section-title p,body.dark-mode .meta-info,body.dark-mode .settings-field span,body.dark-mode .analytics-section-head p{color:#94a3b8!important}
+body.dark-mode .settings-input-wrap,body.dark-mode .settings-textarea-wrap,body.dark-mode .filter-bar,body.dark-mode .modal-actions,body.dark-mode .payment-setting,body.dark-mode .social-setting{background:#172236!important;color:#e2e8f0;border-color:#263449}
+body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#172236!important;color:#e2e8f0!important;border-color:#334155!important}
+body.dark-mode table td,body.dark-mode table th{color:#cbd5e1;border-color:#263449}
