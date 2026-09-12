@@ -19,7 +19,13 @@ const db = getDatabase(app);
 const STORE_API_BASE_URL = "https://disperser-slideshow-daily.ngrok-free.dev";
 
 function apiUrl(path) {
-    const configured = String(storeSettings.orderApiBaseUrl || STORE_API_BASE_URL || '').trim();
+    let configured = String(storeSettings.orderApiBaseUrl || STORE_API_BASE_URL || '').trim();
+    // Ignore an old localhost value when the storefront is hosted publicly.
+    if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/api)?$/i.test(configured) || /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)) {
+        // keep configured value
+    } else {
+        configured = STORE_API_BASE_URL;
+    }
     const base = configured.replace(/\/$/, "");
     const requestPath = path.startsWith("/") ? path : `/${path}`;
     // Accept both `https://host` and `https://host/api` in the dashboard.
@@ -171,7 +177,7 @@ function renderHero(heroConfig) {
         const imageUrl = slide.dataset.heroImage;
         if (imageUrl) slide.style.backgroundImage = `url("${imageUrl.replace(/["\\]/g, '\\$&')}")`;
     });
-    root.hidden = slides.length === 0;
+    root.hidden = !enabled || slides.length === 0;
     requestAnimationFrame(initHeroSwiper);
 }
 
@@ -316,8 +322,14 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
         if (closedMessage) closedMessage.textContent = closed.message || 'يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.';
         const shippingPolicy = document.getElementById('shippingPolicyText');
         const returnPolicy = document.getElementById('returnPolicyText');
-        if (shippingPolicy && storeSettings.policies?.shipping) shippingPolicy.textContent = storeSettings.policies.shipping;
-        if (returnPolicy && storeSettings.policies?.returns) returnPolicy.textContent = storeSettings.policies.returns;
+        const shippingItem = document.getElementById('shippingPolicyItem');
+        const returnItem = document.getElementById('returnPolicyItem');
+        const shippingEnabled = storeSettings.policies?.shippingEnabled === true && String(storeSettings.policies?.shipping || '').trim();
+        const returnEnabled = storeSettings.policies?.returnsEnabled === true && String(storeSettings.policies?.returns || '').trim();
+        if (shippingPolicy) shippingPolicy.textContent = shippingEnabled || '';
+        if (returnPolicy) returnPolicy.textContent = returnEnabled || '';
+        if (shippingItem) shippingItem.style.display = shippingEnabled ? '' : 'none';
+        if (returnItem) returnItem.style.display = returnEnabled ? '' : 'none';
         renderHero(storeSettings.hero || null);
         
         // الشريط الإخباري
@@ -340,14 +352,11 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             const configured = storeSettings.paymentMethods;
             const methods = configured && typeof configured === 'object'
                 ? configured
-                : { cod: true, paymob: false, wallet: false, instapay: false, visa: false };
+                : { cod: true, paymob: false };
             if (methods.cod === true) pmSelect.innerHTML += '<option value="كاش">💵 الدفع عند الاستلام</option>';
             if (methods.paymob === true || storeSettings.paymob?.enabled === true) {
                 pmSelect.innerHTML += '<option value="Paymob">💳 الدفع الإلكتروني - Paymob</option>';
             }
-            if (methods.wallet === true) pmSelect.innerHTML += '<option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>';
-            if (methods.instapay === true) pmSelect.innerHTML += '<option value="إنستا باي">⚡ إنستا باي (InstaPay)</option>';
-            if (methods.visa === true) pmSelect.innerHTML += '<option value="فيزا">💳 فيزا / ماستركارد</option>';
             if (!pmSelect.options.length) pmSelect.innerHTML = '<option value="" disabled selected>لا توجد طريقة دفع متاحة حالياً</option>';
         }
 
@@ -817,9 +826,14 @@ function getCurrentOrderSummary() {
 
 async function requestWhatsAppOrderConfirmation(orderId, customer, items, total, shippingCost = 0) {
     const config = storeSettings.whatsappConfirmation || {};
-    if (config.enabled !== true) return;
-    const apiBase = String(storeSettings.orderApiBaseUrl || '').trim().replace(/\/+$/, '').replace(/\/api$/i, '');
-    const endpoint = String(config.endpoint || (apiBase ? `${apiBase}/whatsapp/order-confirmation` : '/whatsapp/order-confirmation')).trim();
+    if (config.enabled === false) return;
+    const apiBase = apiUrl('/').replace(/\/$/, '').replace(/\/api$/i, '');
+    const configuredEndpoint = String(config.endpoint || '').trim();
+    const isPublicPage = !/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+    const endpointIsStaleLocalhost = isPublicPage && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/.*)?$/i.test(configuredEndpoint);
+    const endpoint = (!configuredEndpoint || endpointIsStaleLocalhost)
+        ? (apiBase ? `${apiBase}/whatsapp/order-confirmation` : '/whatsapp/order-confirmation')
+        : configuredEndpoint;
 
     let phone = String(customer.phone || '').replace(/\D/g, '');
     if (phone.startsWith('00')) phone = phone.slice(2);
@@ -904,7 +918,7 @@ window.sendOrder = async () => {
     try {
         const endpoint = apiUrl('/api/orders');
         const isGithubPages = /.github.io$/i.test(window.location.hostname);
-        const requiresBackend = paymentMethod === 'Paymob' || paymentMethod === 'فيزا';
+    const requiresBackend = paymentMethod === 'Paymob';
         let result;
         if (isGithubPages && endpoint === '/api/orders') {
             if (requiresBackend) {
