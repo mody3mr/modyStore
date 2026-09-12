@@ -490,7 +490,7 @@ window.generateReport = (filterType, element) => {
     }
 
     let filteredTotal = 0; 
-    let paymentStats = { "الدفع عند الاستلام (COD)": 0, "Paymob (Visa)": 0 };
+    let paymentStats = { "الدفع عند الاستلام (COD)": 0, "محفظة/إنستا باي": 0 };
     let productSales = {};
 
     allOrders.forEach(order => {
@@ -500,8 +500,8 @@ window.generateReport = (filterType, element) => {
             filteredTotal += (order.total || 0); 
             const pMethod = order.paymentMethod || "";
             
-            if (pMethod === 'Paymob' || pMethod.includes("فيزا")) {
-                paymentStats["Paymob (Visa)"] += order.total;
+            if (pMethod === 'محفظة الكترونية' || pMethod === 'انستا باي') {
+                paymentStats["محفظة/إنستا باي"] += order.total;
             } else {
                 paymentStats["الدفع عند الاستلام (COD)"] += order.total;
             }
@@ -534,8 +534,8 @@ window.generateReport = (filterType, element) => {
                 <span class="amount">${Math.round(paymentStats["الدفع عند الاستلام (COD)"])} ج</span>
             </div>
             <div class="payment-row">
-                <span><i class="fas fa-credit-card text-primary"></i> فيزا</span> 
-                <span class="amount">${Math.round(paymentStats["Paymob (Visa)"])} ج</span>
+                <span><i class="fas fa-credit-card text-primary"></i> دفع يدوي</span> 
+                <span class="amount">${Math.round(paymentStats["محفظة/إنستا باي"])} ج</span>
             </div>
             <div style="font-size:11px; color:#94a3b8; text-align:center; margin-top:5px;">* الصافي بعد الشحن والخصومات</div>
         `;
@@ -3132,11 +3132,11 @@ if (myProfileBtn && myProfileMenu) {
         const range=calcReportRange(type,el);if(!range)return;
         document.querySelectorAll('.report-filters button').forEach(b=>b.classList.remove('active'));if(el?.tagName==='BUTTON')el.classList.add('active');
         if(type!=='specific'&&document.getElementById('reportSpecificDate'))document.getElementById('reportSpecificDate').value='';
-        let total=0,totalDiscount=0;const paymentStats={'كاش':0,'Paymob (Visa)':0};const sales={};
+        let total=0,totalDiscount=0;const paymentStats={'كاش':0,'محفظة/إنستا باي':0};const sales={};
         (allOrders||[]).forEach(order=>{
             if(['ملغي','مرتجع'].includes(order.status)||n(order.createdAt)<range.start||n(order.createdAt)>range.end)return;
             total+=n(order.total);totalDiscount+=n(order.discount);
-            const pm=order.paymentMethod||'';if(pm==='Paymob'||pm.includes('فيزا'))paymentStats['Paymob (Visa)']+=n(order.total);else paymentStats['كاش']+=n(order.total);
+            const pm=order.paymentMethod||'';if(pm==='محفظة الكترونية'||pm==='انستا باي')paymentStats['محفظة/إنستا باي']+=n(order.total);else paymentStats['كاش']+=n(order.total);
             const subtotal=(order.items||[]).reduce((s,i)=>s+n(i.qty)*n(i.price),0)||1;
             (order.items||[]).forEach(item=>{
                 const gross=n(item.qty)*n(item.price);const itemDisc=n(item.discountAmount??item.discount??0)||n(order.discount)*(gross/subtotal);
@@ -4544,9 +4544,7 @@ if (myProfileBtn && myProfileMenu) {
         const before = { status: order.status, processedAt: order.processedAt, shippedAt: order.shippedAt, deliveredAt: order.deliveredAt, customerConfirmation: order.customerConfirmation };
         const now = Date.now();
         const updates = { status: newStatus };
-        const shouldSendConfirmation = newStatus === 'جاري التجهيز'
-            && oldStatus !== 'جاري التجهيز'
-            && !['pending','confirmed'].includes(order.customerConfirmation?.status);
+        const shouldSendConfirmation = false;
         if (newStatus === 'جاري التجهيز') updates.processedAt = now;
         if (newStatus === 'تم الشحن') updates.shippedAt = now;
         if (newStatus === 'تم تسليمه') updates.deliveredAt = now;
@@ -4942,6 +4940,14 @@ if (myProfileBtn && myProfileMenu) {
             const options = statuses.map(st=>`<option value="${escFinal(st)}" ${order.status===st?'selected':''}>${st}</option>`).join('');
             const statusHtml = canChange ? `<select class="status-select" onchange="requestOrderStatusUpdate('${escFinal(order.dbId)}',this,'${escFinal(order.status)}','${escFinal(order.displayId||order.orderId)}')">${options}</select>` : `<span class="badge ${order.status==='تم الشحن'?'badge-active':'badge-inactive'}">${escFinal(order.status)}</span>`;
             const c = order.customerConfirmation || {};
+            const pc = order.paymentConfirmation || {};
+            const paymentHtml = pc.status === 'confirmed'
+                ? '<span class="order-confirmation-badge confirmed"><i class="fas fa-circle-check"></i> الدفع مؤكد</span>'
+                : pc.status === 'rejected'
+                    ? '<span class="order-confirmation-badge cancelled"><i class="fas fa-circle-xmark"></i> الدفع مرفوض</span>'
+                    : (order.paymentMethod === 'محفظة الكترونية' || order.paymentMethod === 'انستا باي')
+                        ? '<button class="payment-confirm-btn" onclick="setPaymentConfirmation(\'' + escFinal(order.dbId) + '\',\'confirmed\')">تأكيد الدفع</button>'
+                        : '<span class="order-confirmation-badge neutral">تحصيل عند الاستلام</span>';
             let confirmHtml = '<span class="order-confirmation-badge neutral">—</span>';
             if (c.status) {
                 const st = c.status;
@@ -4951,7 +4957,7 @@ if (myProfileBtn && myProfileMenu) {
                 else if (st === 'manual') confirmHtml=`<span class="order-confirmation-badge manual"><i class="fab fa-whatsapp"></i> إرسال يدوي</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
                 else confirmHtml='<span class="order-confirmation-badge pending"><i class="fas fa-clock"></i> في انتظار العميل</span>';
             }
-            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td>${confirmHtml}</td></tr>`;
+            return `<tr><td style="font-weight:900;color:var(--primary);">#${escFinal(order.displayId||order.orderId)}</td><td><b>${escFinal(order.customer?.name||'بدون اسم')}</b><br><span class="meta-info">${escFinal(order.paymentMethod||'الدفع عند الاستلام')}</span></td><td><span class="source-chip">${escFinal(order.source||'الموقع الإلكتروني')}</span></td><td dir="ltr" class="meta-info">${escFinal(formatDateTime(order.createdAt))}</td><td style="font-weight:bold;color:var(--secondary);">${Math.round(order.total||0)} ج.م</td><td>${statusHtml}</td><td><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">${paymentHtml}${confirmHtml}</div></td></tr>`;
         }).join('');
     };
 
@@ -5047,4 +5053,89 @@ if (myProfileBtn && myProfileMenu) {
         closeModal('editFinanceModal');
         window.showAlert?.('تم حفظ التعديل.','success');
     };
+})();
+
+
+// ===================== الدفع اليدوي وإعداداته =====================
+(() => {
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const hideLegacySection = selector => {
+        const card = document.querySelector(selector);
+        if (!card) return;
+        card.style.display = 'none';
+        card.previousElementSibling?.classList?.add('manual-payment-legacy-hidden');
+    };
+    const ensureManualSettings = () => {
+        hideLegacySection('.paymob-settings-card');
+        hideLegacySection('.whatsapp-confirmation-settings-card');
+        const oldPaymob = document.querySelector('#setPayPaymob')?.closest('label');
+        if (oldPaymob) oldPaymob.style.display = 'none';
+        if (document.getElementById('manualPaymentSettingsCard')) return;
+        const saveBar = document.querySelector('.settings-save-bar');
+        if (!saveBar || !saveBar.parentElement) return;
+        const card = document.createElement('section');
+        card.id = 'manualPaymentSettingsCard';
+        card.className = 'settings-card settings-card-full';
+        card.style.cssText = 'margin:18px 0;border:1px solid #dbeafe;border-radius:20px;background:linear-gradient(135deg,#ffffff,#f7fbff);box-shadow:0 12px 30px rgba(15,23,42,.06);';
+        const syncPaymentToggle = (mainId, detailId) => { const main = document.getElementById(mainId), detail = document.getElementById(detailId); if (!main || !detail) return; main.addEventListener('change', () => { detail.checked = main.checked; }); detail.addEventListener('change', () => { main.checked = detail.checked; }); };
+                card.innerHTML = '<div class="settings-card-head"><div class="settings-card-icon purple"><i class="fas fa-hand-holding-dollar"></i></div><div><h3>الدفع اليدوي</h3><p>الإعدادات تبدأ فارغة. فعّل الطريقة وأدخل بياناتك ثم احفظ.</p></div></div>' +
+            '<div class="payment-settings-grid" style="margin-bottom:18px;">' +
+            '<label class="payment-setting"><input type="checkbox" id="setPayWallet"><span class="payment-check"><i class="fas fa-mobile-screen-button"></i></span><span><b>محفظة الكترونية</b><small>تحويل وإرسال إثبات الدفع</small></span><em></em></label>' +
+            '<label class="payment-setting"><input type="checkbox" id="setPayInstapay"><span class="payment-check"><i class="fas fa-circle-nodes"></i></span><span><b>انستا باي</b><small>تحويل وإرسال إثبات الدفع</small></span><em></em></label></div>' +
+            '<div class="settings-grid">' +
+            '<div class="settings-field"><label>رابط تيليجرام <span>اختياري — اتركه فارغاً إذا لم تستخدمه</span></label><div class="settings-input-wrap"><i class="fab fa-telegram-plane"></i><input id="setPaymentTelegram" type="url" dir="ltr" placeholder="https://t.me/your_bot"></div></div>' +
+            '<div class="settings-field"><label>رقم واتساب الاحتياطي <span>اختياري وبصيغة دولية</span></label><div class="settings-input-wrap"><i class="fab fa-whatsapp"></i><input id="setPaymentWhatsapp" type="text" dir="ltr" placeholder="2010xxxxxxxx"></div></div>' +
+            '<div class="settings-field"><label>أرقام المحفظة <span>رقم في كل سطر — بدون قيمة افتراضية</span></label><div class="settings-textarea-wrap"><textarea id="setWalletNumbers" rows="4" dir="ltr" placeholder="01xxxxxxxxx\n01yyyyyyyyy"></textarea></div><label class="mini-switch"><input id="setWalletEnabled" type="checkbox"><span></span></label></div>' +
+            '<div class="settings-field"><label>بيانات إنستا باي <span>اسم المستخدم أو التعليمات</span></label><div class="settings-textarea-wrap"><textarea id="setInstapayDetails" rows="4" placeholder="اكتب بيانات إنستا باي هنا..."></textarea></div><label class="mini-switch"><input id="setInstapayEnabled" type="checkbox"><span></span></label></div>' +
+            '</div><div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:#eff6ff;color:#1e3a8a;font-size:13px;">يظهر زر الدفع للعميل فقط عند تفعيل الطريقة وإدخال بياناتها. تأكيد الدفع من الداشبورد يدوي.</div>';
+        saveBar.parentElement.insertBefore(card, saveBar);
+        syncPaymentToggle('setPayWallet','setWalletEnabled');
+        syncPaymentToggle('setPayInstapay','setInstapayEnabled');
+    };
+    window.setPaymentConfirmation = async (orderId, status) => {
+        if (window.currentUserRole && window.currentUserRole !== 'Admin') return window.showAlert?.('تأكيد الدفع متاح للمدير فقط.','error');
+        const order = (window.allOrders || []).find?.(o => o.dbId === orderId);
+        const patch = { paymentConfirmation: { status, source: 'dashboard', confirmedAt: Date.now(), confirmedBy: window.currentUser?.email || 'Admin' } };
+        try {
+            await update(ref(db, 'orders/' + orderId), patch);
+            if (order) order.paymentConfirmation = patch.paymentConfirmation;
+            window.showAlert?.(status === 'confirmed' ? 'تم تأكيد الدفع.' : 'تم تحديث حالة الدفع.','success');
+            window.renderOrdersTable?.();
+        } catch (e) { console.error(e); window.showAlert?.('تعذر تحديث حالة الدفع.','error'); }
+    };
+    const oldSaveManual = window.saveSettings;
+    window.saveSettings = async () => {
+        ensureManualSettings();
+        const result = await oldSaveManual?.();
+        const walletNumbers = (document.getElementById('setWalletNumbers')?.value || '').split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+        const manualPayment = {
+            walletEnabled: document.getElementById('setWalletEnabled')?.checked === true,
+            instapayEnabled: document.getElementById('setInstapayEnabled')?.checked === true,
+            walletNumbers,
+            instapayDetails: document.getElementById('setInstapayDetails')?.value.trim() || '',
+            telegramUrl: document.getElementById('setPaymentTelegram')?.value.trim() || '',
+            whatsappNumber: document.getElementById('setPaymentWhatsapp')?.value.trim() || ''
+        };
+        const paymentMethods = {
+            cod: document.getElementById('setPayCod')?.checked !== false,
+            wallet: document.getElementById('setPayWallet')?.checked === true,
+            instapay: document.getElementById('setPayInstapay')?.checked === true
+        };
+        await update(ref(db, 'storeSettings'), { paymentMethods, manualPayment, paymob: null, whatsappConfirmation: null });
+        window.showAlert?.('تم حفظ إعدادات الدفع اليدوي بنجاح.','success');
+        return result;
+    };
+    onValue(ref(db, 'storeSettings'), snap => {
+        ensureManualSettings();
+        const d = snap.val() || {}, p = d.paymentMethods || {}, m = d.manualPayment || {};
+        const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+        const check = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value === true; };
+        check('setPayCod', p.cod !== false); check('setPayWallet', p.wallet === true); check('setPayInstapay', p.instapay === true);
+        check('setWalletEnabled', m.walletEnabled === true); check('setInstapayEnabled', m.instapayEnabled === true);
+        set('setWalletNumbers', Array.isArray(m.walletNumbers) ? m.walletNumbers.join('\n') : '');
+        set('setInstapayDetails', m.instapayDetails || ''); set('setPaymentTelegram', m.telegramUrl || ''); set('setPaymentWhatsapp', m.whatsappNumber || '');
+        document.querySelectorAll('#filterOrderPayment option').forEach(o => { if (o.value === 'Paymob' || /Paymob/i.test(o.textContent)) o.remove(); });
+    });
+    ensureManualSettings();
+    setTimeout(ensureManualSettings, 800);
 })();
