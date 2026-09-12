@@ -490,12 +490,7 @@ window.generateReport = (filterType, element) => {
     }
 
     let filteredTotal = 0; 
-    let paymentStats = { 
-        "الدفع عند الاستلام (COD)": 0, 
-        "محفظة إلكترونية": 0, 
-        "إنستا باي (InstaPay)": 0, 
-        "فيزا / بطاقة ائتمان": 0 
-    };
+    let paymentStats = { "الدفع عند الاستلام (COD)": 0, "Paymob (Visa)": 0 };
     let productSales = {};
 
     allOrders.forEach(order => {
@@ -505,12 +500,8 @@ window.generateReport = (filterType, element) => {
             filteredTotal += (order.total || 0); 
             const pMethod = order.paymentMethod || "";
             
-            if (pMethod.includes("محفظة")) {
-                paymentStats["محفظة إلكترونية"] += order.total;
-            } else if (pMethod.includes("إنستا")) {
-                paymentStats["إنستا باي (InstaPay)"] += order.total;
-            } else if (pMethod.includes("فيزا")) {
-                paymentStats["فيزا / بطاقة ائتمان"] += order.total;
+            if (pMethod === 'Paymob' || pMethod.includes("فيزا")) {
+                paymentStats["Paymob (Visa)"] += order.total;
             } else {
                 paymentStats["الدفع عند الاستلام (COD)"] += order.total;
             }
@@ -543,16 +534,8 @@ window.generateReport = (filterType, element) => {
                 <span class="amount">${Math.round(paymentStats["الدفع عند الاستلام (COD)"])} ج</span>
             </div>
             <div class="payment-row">
-                <span><i class="fas fa-mobile-alt" style="color:#8b5cf6;"></i> محفظة</span> 
-                <span class="amount">${Math.round(paymentStats["محفظة إلكترونية"])} ج</span>
-            </div>
-            <div class="payment-row">
-                <span><i class="fas fa-bolt" style="color:#0ea5e9;"></i> إنستا</span> 
-                <span class="amount">${Math.round(paymentStats["إنستا باي (InstaPay)"])} ج</span>
-            </div>
-            <div class="payment-row">
                 <span><i class="fas fa-credit-card text-primary"></i> فيزا</span> 
-                <span class="amount">${Math.round(paymentStats["فيزا / بطاقة ائتمان"])} ج</span>
+                <span class="amount">${Math.round(paymentStats["Paymob (Visa)"])} ج</span>
             </div>
             <div style="font-size:11px; color:#94a3b8; text-align:center; margin-top:5px;">* الصافي بعد الشحن والخصومات</div>
         `;
@@ -2822,7 +2805,9 @@ window.saveSettings = () => {
         },
         policies: {
             shipping: document.getElementById("setShippingPolicy")?.value.trim() || "",
-            returns: document.getElementById("setReturnPolicy")?.value.trim() || ""
+            shippingEnabled: document.getElementById("setShippingPolicyEnabled")?.checked === true,
+            returns: document.getElementById("setReturnPolicy")?.value.trim() || "",
+            returnsEnabled: document.getElementById("setReturnPolicyEnabled")?.checked === true
         },
         hero: {
             enabled: document.getElementById("setHeroEnabled")?.checked !== false,
@@ -2848,9 +2833,6 @@ window.saveSettings = () => {
         paymentMethods: {
             cod: document.getElementById("setPayCod") ? document.getElementById("setPayCod").checked : true,
             paymob: document.getElementById("setPayPaymob") ? document.getElementById("setPayPaymob").checked : false,
-            wallet: document.getElementById("setPayWallet") ? document.getElementById("setPayWallet").checked : false,
-            instapay: document.getElementById("setPayInsta") ? document.getElementById("setPayInsta").checked : false,
-            visa: document.getElementById("setPayVisa") ? document.getElementById("setPayVisa").checked : false
         }
     };
 
@@ -2876,7 +2858,9 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             if (document.getElementById("setClosedTitle")) document.getElementById("setClosedTitle").value = d.closedStore?.title || "نأخذ استراحة قصيرة ونعود قريباً";
             if (document.getElementById("setClosedMessage")) document.getElementById("setClosedMessage").value = d.closedStore?.message || "يمكنك تصفح المنتجات الآن، وسنفتح استقبال الطلبات قريباً.";
             if (document.getElementById("setShippingPolicy")) document.getElementById("setShippingPolicy").value = d.policies?.shipping || "";
+            if (document.getElementById("setShippingPolicyEnabled")) document.getElementById("setShippingPolicyEnabled").checked = d.policies?.shippingEnabled === true;
             if (document.getElementById("setReturnPolicy")) document.getElementById("setReturnPolicy").value = d.policies?.returns || "";
+            if (document.getElementById("setReturnPolicyEnabled")) document.getElementById("setReturnPolicyEnabled").checked = d.policies?.returnsEnabled === true;
             if (document.getElementById("setHeroEnabled")) document.getElementById("setHeroEnabled").checked = d.hero?.enabled !== false;
             const bannerValue = d.hero ? (Array.isArray(d.hero.slides) ? d.hero.slides : []) : null;
             if (window.loadBannerSlides) window.loadBannerSlides(bannerValue);
@@ -2904,9 +2888,6 @@ onValue(ref(db, 'storeSettings'), (snapshot) => {
             if (d.paymentMethods) {
                 if (document.getElementById("setPayCod")) document.getElementById("setPayCod").checked = d.paymentMethods.cod;
                 if (document.getElementById("setPayPaymob")) document.getElementById("setPayPaymob").checked = d.paymentMethods.paymob ?? d.paymob?.enabled ?? false;
-                if (document.getElementById("setPayWallet")) document.getElementById("setPayWallet").checked = d.paymentMethods.wallet;
-                if (document.getElementById("setPayInsta")) document.getElementById("setPayInsta").checked = d.paymentMethods.instapay;
-                if (document.getElementById("setPayVisa")) document.getElementById("setPayVisa").checked = d.paymentMethods.visa;
             }
         }
     } catch(err) {
@@ -3151,11 +3132,11 @@ if (myProfileBtn && myProfileMenu) {
         const range=calcReportRange(type,el);if(!range)return;
         document.querySelectorAll('.report-filters button').forEach(b=>b.classList.remove('active'));if(el?.tagName==='BUTTON')el.classList.add('active');
         if(type!=='specific'&&document.getElementById('reportSpecificDate'))document.getElementById('reportSpecificDate').value='';
-        let total=0,totalDiscount=0;const paymentStats={'كاش':0,'محفظة':0,'إنستا':0,'فيزا':0};const sales={};
+        let total=0,totalDiscount=0;const paymentStats={'كاش':0,'Paymob (Visa)':0};const sales={};
         (allOrders||[]).forEach(order=>{
             if(['ملغي','مرتجع'].includes(order.status)||n(order.createdAt)<range.start||n(order.createdAt)>range.end)return;
             total+=n(order.total);totalDiscount+=n(order.discount);
-            const pm=order.paymentMethod||'';if(pm.includes('محفظة'))paymentStats['محفظة']+=n(order.total);else if(pm.includes('إنستا'))paymentStats['إنستا']+=n(order.total);else if(pm.includes('فيزا'))paymentStats['فيزا']+=n(order.total);else paymentStats['كاش']+=n(order.total);
+            const pm=order.paymentMethod||'';if(pm==='Paymob'||pm.includes('فيزا'))paymentStats['Paymob (Visa)']+=n(order.total);else paymentStats['كاش']+=n(order.total);
             const subtotal=(order.items||[]).reduce((s,i)=>s+n(i.qty)*n(i.price),0)||1;
             (order.items||[]).forEach(item=>{
                 const gross=n(item.qty)*n(item.price);const itemDisc=n(item.discountAmount??item.discount??0)||n(order.discount)*(gross/subtotal);
@@ -4437,7 +4418,7 @@ if (myProfileBtn && myProfileMenu) {
                 const s=document.getElementById('pushSetupStatus'); if(s)s.innerText='أدخل VAPID Key من إعدادات Firebase أولاً';
                 return;
             }
-            fcmRegistration=await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+            fcmRegistration=await navigator.serviceWorker.register('../firebase-messaging-sw.js');
             const messaging=getMessaging(app);
             const permission=Notification.permission==='granted'? 'granted' : await Notification.requestPermission();
             if(permission!=='granted')return;
@@ -4793,7 +4774,7 @@ if (myProfileBtn && myProfileMenu) {
     // WhatsApp confirmation bridge.
     // The browser never stores a WhatsApp secret; it calls a secure backend.
     // ---------------------------------------------------------------
-    let whatsappConfirmationSettings = { enabled:false, endpoint:'', from:'' };
+    let whatsappConfirmationSettings = { enabled:true, endpoint:'', from:'' };
     const normalizeEgyptPhone = (phone='') => {
         let p = String(phone || '').replace(/[^0-9+]/g,'');
         if (p.startsWith('00')) p = '+' + p.slice(2);
@@ -4824,7 +4805,14 @@ if (myProfileBtn && myProfileMenu) {
                 {id:'cancel_order',title:'إلغاء الطلب'}
             ]
         });
-        if (!whatsappConfirmationSettings.enabled || !whatsappConfirmationSettings.endpoint) {
+        const configuredEndpoint = String(whatsappConfirmationSettings.endpoint || '').trim();
+        const apiBaseInput = String(document.getElementById('setOrderApiBaseUrl')?.value || '').trim().replace(/\/+$/, '');
+        const isPublicPage = !/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+        const staleLocalhost = isPublicPage && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/.*)?$/i.test(configuredEndpoint);
+        const endpoint = (!configuredEndpoint || staleLocalhost)
+            ? (apiBaseInput ? `${apiBaseInput}/whatsapp/order-confirmation` : '')
+            : configuredEndpoint;
+        if (!whatsappConfirmationSettings.enabled || !endpoint) {
             // Safe fallback: keep the dashboard state and offer a prefilled chat.
             const wa = `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
             order.customerConfirmation = { status:'manual', requestedAt:Date.now(), fallbackUrl:wa };
@@ -4835,7 +4823,7 @@ if (myProfileBtn && myProfileMenu) {
         order.customerConfirmation = { status:'pending', requestedAt:Date.now() };
         renderOrdersNow();
         try {
-            const res = await fetch(whatsappConfirmationSettings.endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
             if (!res.ok) throw new Error(`Backend ${res.status}`);
             const data = await res.json().catch(()=>({}));
             await update(ref(db,`orders/${order.dbId}`),{customerConfirmation:{status:'pending',requestedAt:payload.requestedAt||Date.now(),messageId:data.messageId||null}});
@@ -4852,7 +4840,7 @@ if (myProfileBtn && myProfileMenu) {
     };
     const syncWhatsAppSettings = d => {
         const w = d?.whatsappConfirmation || {};
-        whatsappConfirmationSettings = { enabled:!!w.enabled, endpoint:String(w.endpoint||''), from:String(w.from||'') };
+        whatsappConfirmationSettings = { enabled:w.enabled !== false, endpoint:String(w.endpoint||''), from:String(w.from||'') };
         const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val||'';};
         const check=(id,val)=>{const e=document.getElementById(id);if(e)e.checked=!!val;};
         check('setWhatsappConfirmationEnabled',w.enabled); set('setWhatsappConfirmationEndpoint',w.endpoint); set('setWhatsappConfirmationFrom',w.from);
@@ -4955,8 +4943,8 @@ if (myProfileBtn && myProfileMenu) {
             const statusHtml = canChange ? `<select class="status-select" onchange="requestOrderStatusUpdate('${escFinal(order.dbId)}',this,'${escFinal(order.status)}','${escFinal(order.displayId||order.orderId)}')">${options}</select>` : `<span class="badge ${order.status==='تم الشحن'?'badge-active':'badge-inactive'}">${escFinal(order.status)}</span>`;
             const c = order.customerConfirmation || {};
             let confirmHtml = '<span class="order-confirmation-badge neutral">—</span>';
-            if (order.status === 'جاري التجهيز' || c.status) {
-                const st = c.status || 'pending';
+            if (c.status) {
+                const st = c.status;
                 if (st === 'confirmed') confirmHtml='<span class="order-confirmation-badge confirmed"><i class="fas fa-circle-check"></i> تم التأكيد</span>';
                 else if (st === 'cancelled') confirmHtml='<span class="order-confirmation-badge cancelled"><i class="fas fa-circle-xmark"></i> ألغاه العميل</span>';
                 else if (st === 'error') confirmHtml=`<span class="order-confirmation-badge error"><i class="fas fa-triangle-exclamation"></i> فشل الإرسال</span>${c.fallbackUrl?`<a class="wa-fallback-link" href="${escFinal(c.fallbackUrl)}" target="_blank" rel="noopener">فتح WhatsApp</a>`:''}`;
@@ -4975,7 +4963,7 @@ if (myProfileBtn && myProfileMenu) {
         const box = document.getElementById('orderCustomerConfirmationBox');
         if (box) {
             const c=order?.customerConfirmation||{};
-            const state = c.status==='confirmed' ? '<span class="order-confirmation-badge confirmed">✅ تم تأكيد الطلب من العميل</span>' : c.status==='cancelled' ? '<span class="order-confirmation-badge cancelled">❌ العميل ألغى الطلب</span>' : order?.status==='جاري التجهيز' ? '<span class="order-confirmation-badge pending">⏳ في انتظار تأكيد العميل</span>' : '';
+            const state = c.status==='confirmed' ? '<span class="order-confirmation-badge confirmed">✅ تم تأكيد الطلب من العميل</span>' : c.status==='cancelled' ? '<span class="order-confirmation-badge cancelled">❌ العميل ألغى الطلب</span>' : c.status==='pending' ? '<span class="order-confirmation-badge pending">⏳ في انتظار تأكيد العميل</span>' : c.status==='error' ? '<span class="order-confirmation-badge error">⚠️ فشل إرسال رسالة التأكيد</span>' : '';
             box.style.display=state?'block':'none'; box.innerHTML=state ? `<div><strong>حالة تأكيد العميل:</strong>${state}</div>` : '';
         }
         return result;
