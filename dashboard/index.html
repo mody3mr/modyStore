@@ -7,7 +7,7 @@
     <!-- خطوط جوجل والأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260908-1">
+    <link rel="stylesheet" href="style.css?v=20260912-3">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231e293b'/%3E%3Cpath d='M34 8 17 36h12l-2 20 20-30H35z' fill='%23f59e0b'/%3E%3C/svg%3E">
     
     <!-- مكتبات التفاعل والأنيميشن -->
@@ -832,10 +832,7 @@
                         </div>
                         <div class="payment-settings-grid">
                             <label class="payment-setting"><input type="checkbox" id="setPayCod"><span class="payment-check"><i class="fas fa-money-bill-wave"></i></span><span><b>كاش</b><small>عند الاستلام</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayPaymob"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Paymob</b><small>دفع إلكتروني</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayWallet"><span class="payment-check"><i class="fas fa-mobile-screen-button"></i></span><span><b>محفظة إلكترونية</b><small>دفع بالمحفظة</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayInsta"><span class="payment-check"><i class="fas fa-bolt"></i></span><span><b>InstaPay</b><small>تحويل فوري</small></span><em></em></label>
-                            <label class="payment-setting"><input type="checkbox" id="setPayVisa"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Visa / Mastercard</b><small>بطاقات بنكية</small></span><em></em></label>
+                            <label class="payment-setting"><input type="checkbox" id="setPayPaymob"><span class="payment-check"><i class="fas fa-credit-card"></i></span><span><b>Paymob</b><small>دفع إلكتروني بالفيزا</small></span><em></em></label>
                         </div>
                     </section>
                 </div>
@@ -850,8 +847,8 @@
                         <div><h3>سياسات المتجر</h3><p>اكتب شروطًا واضحة ومباشرة للعملاء.</p></div>
                     </div>
                     <div class="settings-grid policy-editor-grid">
-                        <div class="settings-field"><label>سياسة الشحن والتوصيل</label><div class="settings-textarea-wrap"><textarea id="setShippingPolicy" rows="6" placeholder="اكتب مدة ورسوم وشروط الشحن..."></textarea></div></div>
-                        <div class="settings-field"><label>سياسة الاستبدال والاسترجاع</label><div class="settings-textarea-wrap"><textarea id="setReturnPolicy" rows="6" placeholder="اكتب مدة وشروط الاستبدال والاسترجاع..."></textarea></div></div>
+                        <div class="settings-field policy-editor-field"><label>سياسة الشحن والتوصيل <span>يمكنك تفعيلها أو إخفاؤها</span></label><div class="policy-editor-control"><div class="settings-textarea-wrap"><textarea id="setShippingPolicy" rows="6" placeholder="اكتب سياسة الشحن والتوصيل هنا..."></textarea></div><label class="mini-switch" title="إظهار سياسة الشحن"><input type="checkbox" id="setShippingPolicyEnabled"><span></span></label></div></div>
+                        <div class="settings-field policy-editor-field"><label>سياسة الاستبدال والاسترجاع <span>يمكنك تفعيلها أو إخفاؤها</span></label><div class="policy-editor-control"><div class="settings-textarea-wrap"><textarea id="setReturnPolicy" rows="6" placeholder="اكتب سياسة الاستبدال والاسترجاع هنا..."></textarea></div><label class="mini-switch" title="إظهار سياسة الاستبدال والاسترجاع"><input type="checkbox" id="setReturnPolicyEnabled"><span></span></label></div></div>
                     </div>
                 </section>
 
@@ -904,13 +901,13 @@
                 </section>
                 <div class="settings-section-title">
                     <div><span class="section-kicker">ORDERS</span><h3>تأكيد الطلب عبر WhatsApp</h3></div>
-                    <p>عند تحويل الطلب إلى «جاري التجهيز» يتم إرسال بيانات الطلب إلى الـ Backend لإرسال رسالة التأكيد للعميل.</p>
+                    <p>بعد إنشاء الطلب يرسل الـBackend رسالة تأكيد للعميل مباشرة، ثم تتحدث الحالة عند الضغط على زر التأكيد أو الإلغاء.</p>
                 </div>
                 <section class="settings-card whatsapp-confirmation-settings-card">
                     <div class="settings-card-head">
                         <div class="settings-card-icon green"><i class="fab fa-whatsapp"></i></div>
                         <div><h3>WhatsApp Order Confirmation</h3><p>الـ Secret / Access Token يظل داخل الـ Backend ولا يوضع في الواجهة.</p></div>
-                        <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setWhatsappConfirmationEnabled"><span></span></label>
+                        <label class="mini-switch" style="margin-right:auto;"><input type="checkbox" id="setWhatsappConfirmationEnabled" checked><span></span></label>
                     </div>
                     <div class="settings-grid">
                         <div class="settings-field"><label>Backend Endpoint <span>مثال: https://api.example.com/whatsapp/order-confirmation</span></label><div class="settings-input-wrap"><i class="fas fa-server"></i><input type="url" id="setWhatsappConfirmationEndpoint" dir="ltr" placeholder="https://api.example.com/whatsapp/order-confirmation"></div></div>
@@ -1456,6 +1453,6 @@
     <div id="printRoot"></div>
 
     <!-- ربط ملف الجافاسكريبت -->
-    <script type="module" src="app.js?v=20260908-1"></script>
+    <script type="module" src="app.js?v=20260912-3"></script>
 </body>
 </html>
