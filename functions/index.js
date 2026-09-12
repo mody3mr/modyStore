@@ -20,6 +20,8 @@ const PAYMOB_REDIRECT_URL = defineSecret('PAYMOB_REDIRECT_URL');
 exports.notifyNewOrder = onValueCreated('/orders/{orderId}', async (event) => {
   const order = event.data.val();
   if (!order) return null;
+  // The local Backend sends its own push for public storefront orders.
+  if (order.backendHandlesPush === true) return null;
 
   const snap = await db.ref('pushTokens').get();
   if (!snap.exists()) return null;
