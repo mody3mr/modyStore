@@ -986,7 +986,8 @@ window.sendOrder = async () => {
             discount: Number(result.discount ?? clientSummary.discount),
             total: Number(result.total ?? clientSummary.total)
         };
-        await requestWhatsAppOrderConfirmation(
+        // لا تجعل بطء WhatsApp يمنع إظهار نجاح الطلب بعد تسجيله في الـBackend.
+        void requestWhatsAppOrderConfirmation(
             result.orderId,
             payload.customer,
             cart.map(item => ({ id:item.id, name:item.name, qty:item.qty, price:item.price })),
